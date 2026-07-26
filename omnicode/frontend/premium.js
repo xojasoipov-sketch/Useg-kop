@@ -52,7 +52,6 @@ const KeyVault = {
     return k;
   },
 
-  /** Birlashtirilgan JSON format */
   exampleJson() {
     return {
       groq_keys: ['gsk_...'],
@@ -65,13 +64,40 @@ const KeyVault = {
     };
   },
 
-  /** JSON dan barcha kalitlarni yuklash */
+  /** Bir nechta JSON bo'laklarini birlashtirish (chatdan ketma-ket yuborilgan) */
+  normalizeRaw(raw) {
+    let s = (raw || '').trim();
+    if (!s) throw new Error('JSON bo\'sh');
+    // Bir nechta JSON obyekt ketma-ket yozilgan bo'lsa — merge
+    if (s.includes('}\n{') || s.includes('}{')) {
+      const parts = s.split(/\}\s*\{/).map((p, i, arr) => {
+        if (i === 0) return p + '}';
+        if (i === arr.length - 1) return '{' + p;
+        return '{' + p + '}';
+      });
+      const merged = {};
+      for (const p of parts) {
+        try {
+          Object.assign(merged, JSON.parse(p));
+        } catch {}
+      }
+      if (Object.keys(merged).length) return merged;
+    }
+    return JSON.parse(s);
+  },
+
   importJson(raw) {
     let data = raw;
     if (typeof raw === 'string') {
-      try { data = JSON.parse(raw); } catch (e) { throw new Error('JSON noto\'g\'ri: ' + e.message); }
+      try { data = this.normalizeRaw(raw); } catch (e) {
+        try { data = JSON.parse(raw); } catch (e2) {
+          throw new Error('JSON noto\'g\'ri: ' + (e2.message || e.message));
+        }
+      }
     }
-    if (!data || typeof data !== 'object') throw new Error('JSON obyekt bo\'lishi kerak');
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new Error('JSON obyekt bo\'lishi kerak');
+    }
 
     const k = { ...this.slots() };
     const asArr = (v) => {
@@ -80,7 +106,7 @@ const KeyVault = {
       return [String(v).trim()].filter(Boolean);
     };
 
-    const or = asArr(data.or_keys || data.openrouter_keys || data.openrouter);
+    const or = asArr(data.or_keys || data.openrouter_keys || data.openrouter || data.or);
     or.forEach((key, i) => { if (i < 8) k['or' + (i + 1)] = key; });
     if (or.length) k.or_pool = or;
 
@@ -154,11 +180,15 @@ const KeyVault = {
     })();
 
     fields.innerHTML = `
-      <label class="sh-label">JSON bir martalik yuklash</label>
-      <textarea id="kv-json" class="sh-input" rows="5" style="height:110px;font-family:monospace;font-size:11px" placeholder='{"groq_keys":["gsk_..."],"or_keys":["sk-or-v1-..."],"cerebras_keys":["csk_..."],"mistral_keys":["..."]}'></textarea>
+      <label class="sh-label">Barcha AI kalitlar — bitta JSON</label>
+      <textarea id="kv-json" class="sh-input" rows="6" style="height:120px;font-family:monospace;font-size:11px" placeholder='{"groq_keys":["gsk_..."],"or_keys":["sk-or-v1-..."],"cerebras_keys":["csk_..."],"mistral_keys":["..."]}'></textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 20px 8px">
+        <button type="button" class="sh-btn" style="margin:0;padding:12px" onclick="KeyVault.importAndTest()">JSON yukla + test</button>
+        <button type="button" class="sh-btn" style="margin:0;background:var(--bg3);color:var(--text);padding:12px" onclick="KeyVault.importFromTextarea()">Faqat yukla</button>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 20px 12px">
-        <button type="button" class="sh-btn" style="margin:0;background:var(--bg3);color:var(--text);padding:12px" onclick="KeyVault.importFromTextarea()">JSON yukla</button>
-        <button type="button" class="sh-btn" style="margin:0;background:var(--bg3);color:var(--text);padding:12px" onclick="KeyVault.pasteExample()">Namuna</button>
+        <button type="button" class="sh-btn" style="margin:0;background:var(--bg3);color:var(--text);padding:10px;font-size:12px" onclick="KeyVault.pasteExample()">Namuna</button>
+        <button type="button" class="sh-btn" style="margin:0;background:var(--bg3);color:var(--text);padding:10px;font-size:12px" onclick="KeyVault.copyExport()">Eksport nusxa</button>
       </div>
       <div style="padding:0 20px 12px;font-size:11px;color:var(--text3)">Hovuz: ${poolHint}</div>
       <div id="kv-test-report" style="padding:0 20px 12px;font-size:12px;line-height:1.5">${last ? this.formatReport(last) : ''}</div>
@@ -167,12 +197,18 @@ const KeyVault = {
         <label class="sh-label">${p.label}</label>
         <div class="key-input-row">
           <input id="kv-${p.id}" class="sh-input key-input" type="${p.type.startsWith('supabase') ? 'text' : 'password'}"
-            placeholder="${p.hint}" value="${String(p.value || '').replace(/"/g, '"')}">
+            placeholder="${p.hint}" value="">
           <button type="button" class="key-test-btn" onclick="KeyVault.testOne('${p.id}','${p.type}')" title="Tekshirish">${Ic.zap(16)}</button>
         </div>
-        <div class="key-status" id="kv-st-${p.id}"></div>
+        <div class="key-status" id="kv-st-${p.id}">${p.value ? 'Saqlangan · ' + this.mask(p.value) : ''}</div>
       </div>`).join('') +
-      `<button type="button" class="sh-btn" style="margin-top:8px;background:var(--bg3);color:var(--text)" onclick="KeyVault.testAllPools()">Barcha kalitlarni test (ishlaydi / ishlamaydi)</button>`;
+      `<button type="button" class="sh-btn" style="margin-top:8px;background:var(--bg3);color:var(--text)" onclick="KeyVault.testAllPools()">Qayta test (ishlaydi / ishlamaydi)</button>`;
+
+    // qiymatlarni xavfsiz to'ldirish (HTML inject oldini olish)
+    for (const p of list) {
+      const el = document.getElementById('kv-' + p.id);
+      if (el && p.value) el.value = p.value;
+    }
 
     document.getElementById('connector-sheet-title').textContent = 'API kalitlar';
     Settings._conn = 'vault';
@@ -184,15 +220,40 @@ const KeyVault = {
     if (el) el.value = JSON.stringify(this.exampleJson(), null, 2);
   },
 
+  copyExport() {
+    const j = JSON.stringify(this.exportJson(), null, 2);
+    navigator.clipboard.writeText(j).then(() => toast('JSON nusxa olindi')).catch(() => {
+      const el = document.getElementById('kv-json');
+      if (el) el.value = j;
+      toast('JSON maydonga yozildi');
+    });
+  },
+
   importFromTextarea() {
     const el = document.getElementById('kv-json');
     const raw = (el?.value || '').trim();
     if (!raw) { toast('JSON joylang'); return; }
     try {
-      this.importJson(raw);
-      toast('Kalitlar yuklandi');
-      this.open(); // qayta chizish
+      const k = this.importJson(raw);
+      const n = (k.or_pool || []).length + (k.groq_pool || []).length + (k.cerebras_pool || []).length + (k.mistral_pool || []).length;
+      toast(n + ' kalit yuklandi');
+      this.open();
       this.refreshStatusUI();
+    } catch (e) {
+      toast(e.message || 'Import xato');
+    }
+  },
+
+  /** Asosiy: JSON yukla + darhol test */
+  async importAndTest() {
+    const el = document.getElementById('kv-json');
+    const raw = (el?.value || '').trim();
+    if (!raw) { toast('JSON joylang'); return; }
+    try {
+      this.importJson(raw);
+      toast('Yuklandi — test boshlanmoqda...');
+      this.open();
+      await this.testAllPools();
     } catch (e) {
       toast(e.message || 'Import xato');
     }
@@ -215,7 +276,7 @@ const KeyVault = {
       const el = document.getElementById('kv-' + p.id);
       if (!el) continue;
       const v = el.value.trim();
-      if (v) k[p.id] = v; else delete k[p.id];
+      if (v) k[p.id] = v; else if (!k[p.id]) delete k[p.id];
     }
     Store.set('keys', k);
     Settings.refresh?.();
@@ -307,13 +368,11 @@ const KeyVault = {
     }
   },
 
-  /** Barcha pool kalitlarni test — ishlaydi / ishlamaydi */
   async testAllPools() {
     toast('Barcha kalitlar tekshirilmoqda...');
     const k = this.slots();
     const working = [];
     const failed = [];
-
     const jobs = [];
 
     const orList = k.or_pool || [k.or1, k.or2, k.or3, k.or4].filter(Boolean);
@@ -332,7 +391,6 @@ const KeyVault = {
     if (k.supabaseUrl) jobs.push({ type: 'supabase_url', label: 'SB URL', key: k.supabaseUrl, slot: 'supabaseUrl' });
     if (k.supabaseAnon) jobs.push({ type: 'supabase_key', label: 'SB anon', key: k.supabaseAnon, slot: 'supabaseAnon' });
 
-    // formdagi qiymatlarni ham qo'shish
     for (const p of this.listProviders()) {
       const el = document.getElementById('kv-' + p.id);
       const v = el?.value?.trim();
@@ -352,7 +410,6 @@ const KeyVault = {
       }
     }
 
-    // faqat ishlaydiganlarni asosiy slotlarga yozish (rotatsiya uchun)
     const next = { ...k };
     const okOr = working.filter(w => w.type === 'openrouter').map(w => w.key);
     const okG = working.filter(w => w.type === 'groq').map(w => w.key);
@@ -380,14 +437,12 @@ const KeyVault = {
     const box = document.getElementById('kv-test-report');
     if (box) box.innerHTML = this.formatReport(report);
 
-    toast(`Ishlaydi: ${working.length} · Ishlamaydi: ${failed.length}`);
+    toast('Ishlaydi: ' + working.length + ' · Ishlamaydi: ' + failed.length);
     this.refreshStatusUI();
     return report;
   },
 
-  async testAll() {
-    return this.testAllPools();
-  },
+  async testAll() { return this.testAllPools(); },
 
   refreshStatusUI() {
     const k = this.slots();
@@ -417,14 +472,12 @@ const KeyVault = {
   },
 };
 
-// AIRouter uchun key rotatsiya (or_pool / groq_pool)
 (function patchKeyRotation() {
   if (typeof AIRouter === 'undefined') return;
-  const _orKeys = AIRouter.openRouterKeys?.bind(AIRouter);
   AIRouter.openRouterKeys = function () {
     const k = Store.get('keys', {});
     if (k.or_pool?.length) return k.or_pool.filter(Boolean);
-    return _orKeys ? _orKeys() : [k.or1, k.or2, k.or3, k.or4].filter(Boolean);
+    return [k.or1, k.or2, k.or3, k.or4].filter(Boolean);
   };
 })();
 
@@ -454,10 +507,7 @@ const KeyVault = {
     const res = await fetch('https://api.github.com' + path, { method, headers, body: body ? JSON.stringify(body) : null });
     if (!res.ok) {
       let msg = 'GitHub ' + res.status;
-      try {
-        const e = await res.json();
-        msg = e.message || msg;
-      } catch {}
+      try { const e = await res.json(); msg = e.message || msg; } catch {}
       if (res.status === 401) msg = 'Token yaroqsiz (401)';
       if (res.status === 403) msg = 'Ruxsat yo\'q — scope: repo (403)';
       if (res.status === 404) msg = 'Repo/fayl topilmadi (404)';
