@@ -1,5 +1,5 @@
 'use strict';
-// Premium icons (feather-style) · Key vault + live test · GitHub harden
+// Premium icons · Key vault + live test · GitHub harden
 
 const Ic = {
   _svg(paths, size = 20) {
@@ -33,9 +33,9 @@ const Ic = {
   zap: (s) => Ic._svg('<path d="M13 2 3 14h8l-1 8 10-12h-8l1-8z"/>', s),
   shield: (s) => Ic._svg('<path d="M12 2 4 5v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/>', s),
   link: (s) => Ic._svg('<path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.1"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1"/>', s),
+  upload: (s) => Ic._svg('<path d="M12 16V5"/><path d="m8 9 4-4 4 4"/><path d="M4 19h16"/>', s),
 };
 
-// Inject icons into DOM nodes with data-ic="name"
 function renderIcons(root = document) {
   root.querySelectorAll('[data-ic]').forEach(el => {
     const name = el.getAttribute('data-ic');
@@ -44,18 +44,13 @@ function renderIcons(root = document) {
   });
 }
 
-// ═══ KEY VAULT — many keys + live test ═══════════════════════════
 const KeyVault = {
-  slots() {
-    return Store.get('keys', {});
-  },
-
+  slots() { return Store.get('keys', {}); },
   set(partial) {
     const k = { ...this.slots(), ...partial };
     Store.set('keys', k);
     return k;
   },
-
   listProviders() {
     const k = this.slots();
     return [
@@ -65,11 +60,10 @@ const KeyVault = {
       { id: 'or4', label: 'OpenRouter #4', type: 'openrouter', value: k.or4 || '', hint: 'sk-or-v1-...' },
       { id: 'groq', label: 'Groq', type: 'groq', value: k.groq || '', hint: 'gsk_...' },
       { id: 'github', label: 'GitHub PAT', type: 'github', value: k.github || '', hint: 'ghp_... yoki github_pat_...' },
-      { id: 'supabaseUrl', label: 'Supabase URL', type: 'text', value: k.supabaseUrl || '', hint: 'https://xxx.supabase.co' },
-      { id: 'supabaseAnon', label: 'Supabase anon', type: 'text', value: k.supabaseAnon || '', hint: 'eyJ...' },
+      { id: 'supabaseUrl', label: 'Supabase URL', type: 'supabase_url', value: k.supabaseUrl || '', hint: 'https://xxx.supabase.co' },
+      { id: 'supabaseAnon', label: 'Supabase anon key', type: 'supabase_key', value: k.supabaseAnon || '', hint: 'eyJ... yoki sb_publishable_...' },
     ];
   },
-
   open() {
     const list = this.listProviders();
     const fields = document.getElementById('connector-fields');
@@ -78,103 +72,96 @@ const KeyVault = {
       <div class="key-row" data-key-id="${p.id}">
         <label class="sh-label">${p.label}</label>
         <div class="key-input-row">
-          <input id="kv-${p.id}" class="sh-input key-input" type="${p.type === 'text' ? 'text' : 'password'}"
+          <input id="kv-${p.id}" class="sh-input key-input" type="${p.type.startsWith('supabase') || p.type === 'text' ? 'text' : 'password'}"
             placeholder="${p.hint}" value="${(p.value || '').replace(/"/g, '"')}">
-          <button type="button" class="key-test-btn" onclick="KeyVault.testOne('${p.id}','${p.type}')" title="Tekshirish">
-            ${Ic.zap(16)}
-          </button>
+          <button type="button" class="key-test-btn" onclick="KeyVault.testOne('${p.id}','${p.type}')" title="Tekshirish">${Ic.zap(16)}</button>
         </div>
         <div class="key-status" id="kv-st-${p.id}"></div>
-      </div>
-    `).join('') +
-      `<button type="button" class="sh-btn secondary" style="margin-top:8px;background:var(--bg3);color:var(--text)" onclick="KeyVault.testAll()">Barcha kalitlarni tekshirish</button>`;
-
+      </div>`).join('') +
+      `<button type="button" class="sh-btn" style="margin-top:8px;background:var(--bg3);color:var(--text)" onclick="KeyVault.testAll()">Barcha kalitlarni tekshirish</button>`;
     document.getElementById('connector-sheet-title').textContent = 'API kalitlar';
     Settings._conn = 'vault';
     Sheet.open('connector-sheet');
   },
-
   saveFromForm() {
-    const partial = {};
+    const k = { ...this.slots() };
     for (const p of this.listProviders()) {
       const el = document.getElementById('kv-' + p.id);
-      if (el) {
-        const v = el.value.trim();
-        if (v) partial[p.id] = v;
-        else if (this.slots()[p.id]) partial[p.id] = ''; // allow clear
-      }
-    }
-    // clean empty
-    const k = { ...this.slots() };
-    for (const [id, v] of Object.entries(partial)) {
-      if (v) k[id] = v; else delete k[id];
+      if (!el) continue;
+      const v = el.value.trim();
+      if (v) k[p.id] = v; else delete k[p.id];
     }
     Store.set('keys', k);
     Settings.refresh?.();
     this.refreshStatusUI();
     toast('Kalitlar saqlandi');
     Sheet.close('connector-sheet');
+    if (typeof SB !== 'undefined' && SB.ready()) {
+      SB.test().then(r => {
+        const el = document.getElementById('sb-status');
+        if (el) { el.textContent = r.ok ? 'Ulangan' : 'Sozla'; el.className = r.ok ? 's-connected' : 's-val'; }
+      });
+    }
   },
-
   setStatus(id, ok, msg) {
     const el = document.getElementById('kv-st-' + id);
     if (!el) return;
     el.className = 'key-status ' + (ok === null ? '' : ok ? 'ok' : 'err');
     el.textContent = msg || '';
   },
-
   async testOne(id, type) {
     const el = document.getElementById('kv-' + id);
     const key = (el?.value || this.slots()[id] || '').trim();
-    if (!key && type !== 'text') {
+    if (!key && !type.startsWith('supabase')) {
       this.setStatus(id, false, 'Kalit bo\'sh');
       return false;
     }
     this.setStatus(id, null, 'Tekshirilmoqda...');
     try {
       if (type === 'openrouter') {
-        const res = await fetch('https://openrouter.ai/api/v1/models', {
-          headers: { Authorization: `Bearer ${key}` },
-        });
+        const res = await fetch('https://openrouter.ai/api/v1/models', { headers: { Authorization: `Bearer ${key}` } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         this.setStatus(id, true, 'OpenRouter OK');
         return true;
       }
       if (type === 'groq') {
-        const res = await fetch('https://api.groq.com/openai/v1/models', {
-          headers: { Authorization: `Bearer ${key}` },
-        });
+        const res = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: `Bearer ${key}` } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         this.setStatus(id, true, 'Groq OK');
         return true;
       }
       if (type === 'github') {
         const res = await fetch('https://api.github.com/user', {
-          headers: {
-            Authorization: `Bearer ${key}`,
-            Accept: 'application/vnd.github+json',
-            'X-GitHub-Api-Version': '2022-11-28',
-            'User-Agent': 'OmniCode-SadiPrime',
-          },
+          headers: { Authorization: `Bearer ${key}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'OmniCode-SadiPrime' },
         });
-        if (!res.ok) {
-          const e = await res.json().catch(() => ({}));
-          throw new Error(e.message || 'HTTP ' + res.status);
-        }
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || 'HTTP ' + res.status); }
         const u = await res.json();
-        this.setStatus(id, true, `@${u.login} · OK`);
+        this.setStatus(id, true, '@' + u.login + ' · OK');
         Store.set('gh_user', { login: u.login, name: u.name });
         return true;
       }
-      if (id === 'supabaseUrl' || type === 'text') {
-        if (id === 'supabaseUrl') {
-          if (!/^https:\/\/.+\.supabase\.co/.test(key) && !key.startsWith('https://')) {
-            throw new Error('URL noto\'g\'ri');
-          }
-          this.setStatus(id, true, 'URL format OK');
-          return true;
+      if (type === 'supabase_url') {
+        if (!key.startsWith('https://')) throw new Error('URL https:// bilan boshlansin');
+        this.setStatus(id, true, 'URL OK');
+        return true;
+      }
+      if (type === 'supabase_key') {
+        // save temp and test via SB if available
+        const url = (document.getElementById('kv-supabaseUrl')?.value || this.slots().supabaseUrl || '').trim();
+        if (!url) throw new Error('Avval Supabase URL');
+        const res = await fetch(url.replace(/\/$/, '') + '/rest/v1/', {
+          headers: { apikey: key, Authorization: 'Bearer ' + key },
+        });
+        // 200 or 404 on root is fine; 401 bad key
+        if (res.status === 401) throw new Error('Anon key yaroqsiz');
+        this.setStatus(id, true, 'Anon key qabul qilindi');
+        if (typeof SB !== 'undefined') {
+          const prev = this.slots();
+          Store.set('keys', { ...prev, supabaseUrl: url, supabaseAnon: key });
+          const t = await SB.test();
+          this.setStatus(id, t.ok, t.msg);
+          return t.ok;
         }
-        this.setStatus(id, true, 'Saqlangan');
         return true;
       }
       this.setStatus(id, true, 'OK');
@@ -184,43 +171,43 @@ const KeyVault = {
       return false;
     }
   },
-
   async testAll() {
     toast('Kalitlar tekshirilmoqda...');
     const results = [];
     for (const p of this.listProviders()) {
-      if (p.id === 'supabaseAnon') continue;
-      const ok = await this.testOne(p.id, p.type);
-      results.push({ id: p.id, ok });
+      results.push({ id: p.id, ok: await this.testOne(p.id, p.type) });
     }
-    const good = results.filter(r => r.ok).length;
-    toast(`${good}/${results.length} kalit ishlayapti`);
+    toast(results.filter(r => r.ok).length + '/' + results.length + ' ishlayapti');
     Settings.refresh?.();
   },
-
   refreshStatusUI() {
     const k = this.slots();
     const or = document.getElementById('or-status');
     const gh = document.getElementById('gh-status');
     const groq = document.getElementById('groq-status');
+    const sb = document.getElementById('sb-status');
     if (or) {
-      const n = [k.or1, k.or2, k.or3, k.or4].filter(Boolean).length;
-      or.textContent = n ? `${n} kalit` : 'Yo\'q';
+      const n = [k.or1, k.or2, k.or3, k.or4, k.groq].filter(Boolean).length;
+      or.textContent = n ? n + ' kalit' : 'Yo\'q';
       or.className = n ? 's-connected' : 's-val';
     }
     if (gh) {
       const u = Store.get('gh_user', null);
-      gh.textContent = k.github ? (u?.login ? `@${u.login}` : 'Token bor') : 'Yo\'q';
+      gh.textContent = k.github ? (u?.login ? '@' + u.login : 'Token bor') : 'Yo\'q';
       gh.className = k.github ? 's-connected' : 's-val';
     }
     if (groq) {
       groq.textContent = k.groq ? 'Ulangan' : 'Yo\'q';
       groq.className = k.groq ? 's-connected' : 's-val';
     }
+    if (sb) {
+      const ok = !!(k.supabaseUrl && k.supabaseAnon);
+      sb.textContent = ok ? 'Sozlangan' : 'Yo\'q';
+      sb.className = ok ? 's-connected' : 's-val';
+    }
   },
 };
 
-// Hook Settings.save for vault
 (function () {
   const _save = Settings.save.bind(Settings);
   Settings.save = function () {
@@ -229,96 +216,58 @@ const KeyVault = {
     return _save();
   };
   const _ref = Settings.refresh.bind(Settings);
-  Settings.refresh = function () {
-    _ref();
-    KeyVault.refreshStatusUI();
-  };
+  Settings.refresh = function () { _ref(); KeyVault.refreshStatusUI(); };
 })();
 
-// ═══ GITHUB HARDEN ═══════════════════════════════════════════════
 (function hardenGit() {
-  Git.token = function () {
-    return (Store.get('keys', {}).github || '').trim();
-  };
-
+  Git.token = function () { return (Store.get('keys', {}).github || '').trim(); };
   Git.request = async function (path, method = 'GET', body = null) {
     const token = this.token();
     if (!token) throw new Error('GitHub token yo\'q. Sozlamalar → API kalitlar');
     const headers = {
-      Authorization: `Bearer ${token}`,
+      Authorization: 'Bearer ' + token,
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
       'User-Agent': 'OmniCode-SadiPrime/1.0',
     };
     if (body) headers['Content-Type'] = 'application/json';
-    const res = await fetch('https://api.github.com' + path, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : null,
-    });
+    const res = await fetch('https://api.github.com' + path, { method, headers, body: body ? JSON.stringify(body) : null });
     if (!res.ok) {
-      let msg = `GitHub ${res.status}`;
+      let msg = 'GitHub ' + res.status;
       try {
         const e = await res.json();
         msg = e.message || msg;
         if (e.errors?.length) msg += ': ' + e.errors.map(x => x.message || x.code).join(', ');
       } catch {}
-      if (res.status === 401) msg = 'Token yaroqsiz yoki muddati o\'tgan (401)';
-      if (res.status === 403) msg = 'Ruxsat yo\'q — token scope: repo (403)';
-      if (res.status === 404) msg = 'Repo yoki fayl topilmadi (404). Owner/repo tekshiring';
+      if (res.status === 401) msg = 'Token yaroqsiz (401)';
+      if (res.status === 403) msg = 'Ruxsat yo\'q — scope: repo (403)';
+      if (res.status === 404) msg = 'Repo/fayl topilmadi (404)';
       throw new Error(msg);
     }
     if (res.status === 204) return null;
     return res.json();
   };
-
   Git.pushFile = async function (owner, repo, path, content, branch = 'main', message = null) {
     const sha = await this.getSHA(owner, repo, path, branch);
-    // UTF-8 safe base64
     const bytes = new TextEncoder().encode(content);
     let bin = '';
     bytes.forEach(b => { bin += String.fromCharCode(b); });
     const b64 = btoa(bin);
-    return this.request(`/repos/${owner}/${repo}/contents/${path}`, 'PUT', {
-      message: message || `feat: update ${path} via OmniCode`,
+    return this.request('/repos/' + owner + '/' + repo + '/contents/' + path, 'PUT', {
+      message: message || ('feat: update ' + path + ' via OmniCode'),
       content: b64,
       branch,
       ...(sha ? { sha } : {}),
     });
   };
-
-  Git.ensureRepo = async function (name, isPrivate = false) {
-    try {
-      const me = await this.me();
-      try {
-        return await this.request(`/repos/${me.login}/${name}`);
-      } catch {
-        return await this.createRepo(name, isPrivate);
-      }
-    } catch (e) {
-      throw e;
-    }
-  };
-
-  // Better deploy UX: validate token first
   const _push = Deploy.push.bind(Deploy);
   Deploy.push = async function (projectId, owner, repo, branch) {
-    if (!Git.token()) {
-      toast('Avval GitHub token qo\'ying');
-      KeyVault.open();
-      return;
-    }
+    if (!Git.token()) { toast('Avval GitHub token'); KeyVault.open(); return; }
     return _push(projectId, owner, repo, branch);
   };
 })();
 
-// KeysPanel → KeyVault
-if (typeof KeysPanel !== 'undefined') {
-  KeysPanel.open = () => KeyVault.open();
-}
-
+if (typeof KeysPanel !== 'undefined') KeysPanel.open = () => KeyVault.open();
 document.addEventListener('DOMContentLoaded', () => renderIcons());
-// also run soon in case DOM already ready
 setTimeout(() => renderIcons(), 50);
-
-console.log('✓ premium.js — icons, KeyVault, Git');
+console.log('✓ premium.js');
