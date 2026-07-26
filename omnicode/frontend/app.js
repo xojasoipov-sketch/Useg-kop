@@ -2146,7 +2146,7 @@ Nima quramiz?`, false);
           </div>
           <div id="or-key-list-setup" style="margin-top:6px;font-size:11px;color:#3fb950"></div>
         </div>
-        ${hasAny || AIRouter.keys().length ? `<div style="color:#3fb950;font-size:12px;text-align:center">✅ ${[keys.cerebras&&'Cerebras',keys.groq&&'Groq',AIRouter.keys().length&&\`OpenRouter(${AIRouter.keys().length})\`,keys.anthropic&&'Anthropic',keys.gemini&&'Gemini'].filter(Boolean).join(', ')} ulangan</div>` : ''}
+        ${(hasAny || AIRouter.keys().length) ? '<div style="color:#3fb950;font-size:12px;text-align:center">✅ ' + [keys.cerebras&&'Cerebras',keys.groq&&'Groq',AIRouter.keys().length&&('OpenRouter('+AIRouter.keys().length+')'),keys.anthropic&&'Anthropic',keys.gemini&&'Gemini'].filter(Boolean).join(', ') + ' ulangan</div>' : ''}
         <button onclick="App.nav('settings')"
           style="padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer">
           Barcha kalitlar → Sozlamalar
