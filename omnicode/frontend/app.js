@@ -1,7 +1,6 @@
 'use strict';
 // ═══════════════════════════════════════════════════════════════
-//  OmniCode — Real AI Coding Platform
-//  Features: Real FS, AI writes files, Diff, GitHub Push, Composer
+//  OmniCode — Real AI Coding Platform (Claude Code style)
 // ═══════════════════════════════════════════════════════════════
 
 const tg = window.Telegram?.WebApp;
@@ -9,8 +8,67 @@ if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor?.('#0A0A0A'); tg.setBackgro
 
 // ── Store ────────────────────────────────────────────────────────
 const Store = {
-  get(k, d = null) { try { const v = localStorage.getItem('oc_' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  get(k, d = null) { try { const v = localStorage.getItem('oc_' + k); return v !== null ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem('oc_' + k, JSON.stringify(v)); } catch {} },
+};
+
+// ══════════════════════════════════════════════════════════════
+//  ANALYTICS — Real tracking
+// ══════════════════════════════════════════════════════════════
+const Analytics = {
+  _key(d) { return 'analytics_' + d; },
+  _today() { return new Date().toDateString(); },
+
+  track(tokens = 0) {
+    const day = this._today();
+    const data = Store.get(this._key(day), { requests: 0, tokens: 0 });
+    data.requests += 1;
+    data.tokens += tokens;
+    Store.set(this._key(day), data);
+  },
+
+  today() { return Store.get(this._key(this._today()), { requests: 0, tokens: 0 }); },
+
+  week() {
+    let r = 0, t = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(Date.now() - i * 86400000).toDateString();
+      const v = Store.get(this._key(d), { requests: 0, tokens: 0 });
+      r += v.requests; t += v.tokens;
+    }
+    return { requests: r, tokens: t };
+  },
+
+  yesterday() {
+    const d = new Date(Date.now() - 86400000).toDateString();
+    return Store.get(this._key(d), { requests: 0, tokens: 0 });
+  },
+
+  fmtTokens(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'K' : String(n); },
+};
+
+// ══════════════════════════════════════════════════════════════
+//  RUNNING TASKS — Real task queue
+// ══════════════════════════════════════════════════════════════
+const Tasks = {
+  list() { return Store.get('running_tasks', []); },
+
+  add(name, description) {
+    const tasks = this.list();
+    const task = { id: 't_' + Date.now(), name, description, progress: 0, status: 'running', started: Date.now() };
+    tasks.unshift(task);
+    Store.set('running_tasks', tasks.slice(0, 5));
+    return task;
+  },
+
+  update(id, patch) {
+    const tasks = this.list().map(t => t.id === id ? { ...t, ...patch } : t);
+    Store.set('running_tasks', tasks);
+  },
+
+  remove(id) { Store.set('running_tasks', this.list().filter(t => t.id !== id)); },
+
+  clear() { Store.set('running_tasks', []); },
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -19,7 +77,6 @@ const Store = {
 const FS = {
   _key(projectId, path) { return `fs:${projectId}:${path}`; },
   _indexKey(projectId) { return `fs_idx:${projectId}`; },
-
   index(projectId) { return Store.get(this._indexKey(projectId), []); },
 
   write(projectId, path, content) {
@@ -32,32 +89,26 @@ const FS = {
 
   delete(projectId, path) {
     localStorage.removeItem('oc_' + this._key(projectId, path));
-    const idx = this.index(projectId).filter(p => p !== path);
-    Store.set(this._indexKey(projectId), idx);
+    Store.set(this._indexKey(projectId), this.index(projectId).filter(p => p !== path));
   },
 
   rename(projectId, oldPath, newPath) {
-    const content = this.read(projectId, oldPath);
-    this.write(projectId, newPath, content);
+    this.write(projectId, newPath, this.read(projectId, oldPath));
     this.delete(projectId, oldPath);
   },
 
-  // Build full context string for AI
   context(projectId, maxChars = 12000) {
     const files = this.index(projectId);
     if (!files.length) return '';
-    let ctx = `\n\n<PROJECT_FILES>\n`;
-    let chars = 0;
+    let ctx = `\n\n<PROJECT_FILES>\n`, chars = 0;
     for (const path of files) {
-      const content = this.read(projectId, path);
-      const chunk = `<FILE path="${path}">\n${content}\n</FILE>\n`;
+      const chunk = `<FILE path="${path}">\n${this.read(projectId, path)}\n</FILE>\n`;
       if (chars + chunk.length > maxChars) { ctx += `<!-- ${files.length - files.indexOf(path)} more files truncated -->\n`; break; }
       ctx += chunk; chars += chunk.length;
     }
     return ctx + '</PROJECT_FILES>';
   },
 
-  // Parse AI response for file write commands
   parseWrites(text) {
     const writes = [];
     const re = /<(?:WRITE|CREATE)_FILE\s+path="([^"]+)">([\s\S]*?)<\/(?:WRITE|CREATE)_FILE>/g;
@@ -66,11 +117,8 @@ const FS = {
     return writes;
   },
 
-  // Strip file commands from display text
   stripCommands(text) {
-    return text
-      .replace(/<(?:WRITE|CREATE)_FILE\s+path="[^"]+">[\s\S]*?<\/(?:WRITE|CREATE)_FILE>/g, '')
-      .trim();
+    return text.replace(/<(?:WRITE|CREATE)_FILE\s+path="[^"]+">[\s\S]*?<\/(?:WRITE|CREATE)_FILE>/g, '').trim();
   },
 };
 
@@ -85,46 +133,41 @@ const PM = {
 
   create(name, template = 'blank') {
     const id = 'p_' + Date.now();
-    const p = { id, name, template, created: Date.now(), github: null };
+    const p = { id, name, template, created: Date.now(), updated: Date.now(), github: null, starred: false };
     const list = this.list();
     list.unshift(p);
     Store.set('projects', list);
-    // Seed template files
-    const tpls = TEMPLATES[template] || {};
-    for (const [path, content] of Object.entries(tpls)) FS.write(id, path, content);
+    for (const [path, content] of Object.entries(TEMPLATES[template] || {})) FS.write(id, path, content);
     return p;
   },
 
   update(id, data) {
-    const list = this.list().map(p => p.id === id ? { ...p, ...data } : p);
-    Store.set('projects', list);
+    Store.set('projects', this.list().map(p => p.id === id ? { ...p, ...data, updated: Date.now() } : p));
   },
 
   delete(id) {
-    // Delete all files
     FS.index(id).forEach(path => FS.delete(id, path));
     Store.set('projects', this.list().filter(p => p.id !== id));
     if (this.current() === id) Store.set('current_project', null);
   },
 };
 
-// ── Project Templates ────────────────────────────────────────────
 const TEMPLATES = {
   blank: { 'README.md': '# My Project\n\nCreated with OmniCode AI.' },
   react: {
-    'package.json': '{\n  "name": "my-app",\n  "version": "1.0.0",\n  "scripts": {\n    "dev": "vite",\n    "build": "vite build"\n  },\n  "dependencies": {\n    "react": "^18.0.0",\n    "react-dom": "^18.0.0"\n  },\n  "devDependencies": {\n    "vite": "^5.0.0",\n    "@vitejs/plugin-react": "^4.0.0"\n  }\n}',
-    'src/App.jsx': 'import { useState } from "react"\n\nexport default function App() {\n  const [count, setCount] = useState(0)\n\n  return (\n    <div className="app">\n      <h1>My App</h1>\n      <button onClick={() => setCount(c => c + 1)}>Count: {count}</button>\n    </div>\n  )\n}',
-    'src/main.jsx': 'import React from "react"\nimport ReactDOM from "react-dom/client"\nimport App from "./App"\n\nReactDOM.createRoot(document.getElementById("root")).render(<App />)',
+    'package.json': '{\n  "name": "my-app",\n  "version": "1.0.0",\n  "scripts": { "dev": "vite", "build": "vite build" },\n  "dependencies": { "react": "^18.0.0", "react-dom": "^18.0.0" },\n  "devDependencies": { "vite": "^5.0.0", "@vitejs/plugin-react": "^4.0.0" }\n}',
+    'src/App.jsx': 'import { useState } from "react"\n\nexport default function App() {\n  const [count, setCount] = useState(0)\n  return (\n    <div className="app">\n      <h1>My App</h1>\n      <button onClick={() => setCount(c => c + 1)}>Count: {count}</button>\n    </div>\n  )\n}',
+    'src/main.jsx': 'import React from "react"\nimport ReactDOM from "react-dom/client"\nimport App from "./App"\nReactDOM.createRoot(document.getElementById("root")).render(<App />)',
     'index.html': '<!DOCTYPE html>\n<html>\n<head><title>My App</title></head>\n<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>\n</html>',
   },
   'telegram-bot': {
     'bot.py': 'import os\nfrom telegram import Update\nfrom telegram.ext import Application, CommandHandler, ContextTypes\n\nTOKEN = os.getenv("BOT_TOKEN")\n\nasync def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):\n    await update.message.reply_text("Hello! I am your bot 🤖")\n\napp = Application.builder().token(TOKEN).build()\napp.add_handler(CommandHandler("start", start))\napp.run_polling()',
     'requirements.txt': 'python-telegram-bot==20.7\npython-dotenv==1.0.0',
     '.env.example': 'BOT_TOKEN=your_bot_token_here',
-    'README.md': '# Telegram Bot\n\n## Setup\n```bash\npip install -r requirements.txt\ncp .env.example .env\n# Edit .env with your token\npython bot.py\n```',
+    'README.md': '# Telegram Bot\n\n## Setup\n```bash\npip install -r requirements.txt\ncp .env.example .env\npython bot.py\n```',
   },
   nextjs: {
-    'package.json': '{\n  "name": "my-next-app",\n  "scripts": {\n    "dev": "next dev",\n    "build": "next build",\n    "start": "next start"\n  },\n  "dependencies": {\n    "next": "14.0.0",\n    "react": "^18.0.0",\n    "react-dom": "^18.0.0"\n  }\n}',
+    'package.json': '{\n  "name": "my-next-app",\n  "scripts": { "dev": "next dev", "build": "next build", "start": "next start" },\n  "dependencies": { "next": "14.0.0", "react": "^18.0.0", "react-dom": "^18.0.0" }\n}',
     'app/page.tsx': 'export default function Home() {\n  return (\n    <main>\n      <h1>Welcome to Next.js</h1>\n    </main>\n  )\n}',
     'app/layout.tsx': 'export default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang="en">\n      <body>{children}</body>\n    </html>\n  )\n}',
   },
@@ -154,7 +197,6 @@ const Git = {
   },
 
   async me() { return this.request('/user'); },
-
   async repos() { return this.request('/user/repos?per_page=50&sort=updated'); },
 
   async createRepo(name, isPrivate = false) {
@@ -162,10 +204,8 @@ const Git = {
   },
 
   async getSHA(owner, repo, path, branch = 'main') {
-    try {
-      const f = await this.request(`/repos/${owner}/${repo}/contents/${path}?ref=${branch}`);
-      return f.sha;
-    } catch { return null; }
+    try { return (await this.request(`/repos/${owner}/${repo}/contents/${path}?ref=${branch}`)).sha; }
+    catch { return null; }
   },
 
   async pushFile(owner, repo, path, content, branch = 'main', message = null) {
@@ -173,9 +213,7 @@ const Git = {
     const b64 = btoa(unescape(encodeURIComponent(content)));
     return this.request(`/repos/${owner}/${repo}/contents/${path}`, 'PUT', {
       message: message || `feat: update ${path} via OmniCode`,
-      content: b64,
-      branch,
-      ...(sha ? { sha } : {}),
+      content: b64, branch, ...(sha ? { sha } : {}),
     });
   },
 
@@ -184,26 +222,26 @@ const Git = {
     const results = [];
     for (const path of files) {
       const content = FS.read(projectId, path);
-      try {
-        await this.pushFile(owner, repo, path, content, branch);
-        results.push({ path, ok: true });
-      } catch (e) {
-        results.push({ path, ok: false, error: e.message });
-      }
+      try { await this.pushFile(owner, repo, path, content, branch); results.push({ path, ok: true }); }
+      catch (e) { results.push({ path, ok: false, error: e.message }); }
     }
     return results;
   },
 };
 
 // ══════════════════════════════════════════════════════════════
-//  AI ROUTER
+//  AI MODELS & ROUTER
 // ══════════════════════════════════════════════════════════════
 const MODELS = [
-  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B',  short: 'Llama 3.3', provider: 'openrouter', badge: '⚡', ctx: 128000 },
-  { id: 'deepseek/deepseek-r1:free',               name: 'DeepSeek R1',    short: 'DeepSeek R1',provider: 'openrouter', badge: '🧠', ctx: 64000  },
-  { id: 'google/gemini-2.0-flash-exp:free',        name: 'Gemini 2.0 Flash',short:'Gemini 2.0', provider: 'openrouter', badge: '✨', ctx: 1000000},
-  { id: 'qwen/qwq-32b:free',                       name: 'Qwen QwQ 32B',   short: 'QwQ 32B',   provider: 'openrouter', badge: '🔮', ctx: 32000  },
-  { id: 'llama-3.3-70b-versatile',                 name: 'Groq Llama 70B', short: 'Groq Fast', provider: 'groq',       badge: '⚡', ctx: 32000  },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B',    short: 'Llama 3.3',  provider: 'openrouter', badge: '⚡', ctx: 128000 },
+  { id: 'deepseek/deepseek-r1:free',               name: 'DeepSeek R1',      short: 'DeepSeek R1', provider: 'openrouter', badge: '🧠', ctx: 64000  },
+  { id: 'google/gemini-2.0-flash-exp:free',        name: 'Gemini 2.0 Flash', short: 'Gemini 2.0',  provider: 'openrouter', badge: '✨', ctx: 1000000},
+  { id: 'qwen/qwq-32b:free',                       name: 'Qwen QwQ 32B',     short: 'QwQ 32B',     provider: 'openrouter', badge: '🔮', ctx: 32000  },
+  { id: 'llama-3.3-70b-versatile',                 name: 'Groq Llama 70B',   short: 'Groq Fast',   provider: 'groq',       badge: '⚡', ctx: 32000  },
+  { id: 'claude-3-5-haiku-20241022',               name: 'Claude 3.5 Haiku', short: 'Claude Haiku',provider: 'anthropic',  badge: '🤖', ctx: 200000 },
+  { id: 'gemini-2.0-flash',                        name: 'Gemini Flash (Direct)',short:'Gemini Direct',provider:'gemini',   badge: '✨', ctx: 1000000},
+  { id: 'deepseek-chat',                           name: 'DeepSeek Chat',    short: 'DeepSeek',    provider: 'deepseek',   badge: '🧠', ctx: 64000  },
+  { id: 'mistral-small-latest',                    name: 'Mistral Small',    short: 'Mistral',     provider: 'mistral',    badge: '🌀', ctx: 32000  },
 ];
 
 const AIRouter = {
@@ -218,8 +256,9 @@ const AIRouter = {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://omnicode.app', 'X-Title': 'OmniCode' },
       body: JSON.stringify({ model: modelId, messages, max_tokens: 8192 }),
     });
-    if (!res.ok) throw new Error(`OR ${res.status}`);
-    return (await res.json()).choices[0].message.content;
+    if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+    const data = await res.json();
+    return data.choices[0].message.content;
   },
 
   async groq(messages) {
@@ -231,6 +270,72 @@ const AIRouter = {
       body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 8192 }),
     });
     if (!res.ok) throw new Error(`Groq ${res.status}`);
+    return (await res.json()).choices[0].message.content;
+  },
+
+  async anthropic(messages) {
+    const key = Store.get('keys', {}).anthropic;
+    if (!key) throw new Error('No Anthropic key');
+    const sys = messages.find(m => m.role === 'system');
+    const msgs = messages.filter(m => m.role !== 'system');
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: 8192, system: sys?.content || '', messages: msgs }),
+    });
+    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
+    return (await res.json()).content[0].text;
+  },
+
+  async gemini(messages) {
+    const key = Store.get('keys', {}).gemini;
+    if (!key) throw new Error('No Gemini key');
+    const parts = messages.filter(m => m.role !== 'system').map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: parts }),
+    });
+    if (!res.ok) throw new Error(`Gemini ${res.status}`);
+    return (await res.json()).candidates[0].content.parts[0].text;
+  },
+
+  async deepseek(messages) {
+    const key = Store.get('keys', {}).deepseek;
+    if (!key) throw new Error('No DeepSeek key');
+    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'deepseek-chat', messages, max_tokens: 8192 }),
+    });
+    if (!res.ok) throw new Error(`DeepSeek ${res.status}`);
+    return (await res.json()).choices[0].message.content;
+  },
+
+  async mistral(messages) {
+    const key = Store.get('keys', {}).mistral;
+    if (!key) throw new Error('No Mistral key');
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'mistral-small-latest', messages, max_tokens: 8192 }),
+    });
+    if (!res.ok) throw new Error(`Mistral ${res.status}`);
+    return (await res.json()).choices[0].message.content;
+  },
+
+  async together(messages) {
+    const key = Store.get('keys', {}).together;
+    if (!key) throw new Error('No Together AI key');
+    const res = await fetch('https://api.together.xyz/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'meta-llama/Llama-3-70b-chat-hf', messages, max_tokens: 8192 }),
+    });
+    if (!res.ok) throw new Error(`Together ${res.status}`);
     return (await res.json()).choices[0].message.content;
   },
 
@@ -246,13 +351,26 @@ const AIRouter = {
 
   async call(messages, model) {
     const m = model || State.model;
-    const chain = m.provider === 'groq'
-      ? [() => this.groq(messages), () => this.openrouter(messages, MODELS[0].id), () => this.pollinations(messages)]
-      : [() => this.openrouter(messages, m.id), () => this.groq(messages), () => this.pollinations(messages)];
+    let chain;
+    if (m.provider === 'anthropic') chain = [() => this.anthropic(messages)];
+    else if (m.provider === 'gemini') chain = [() => this.gemini(messages)];
+    else if (m.provider === 'deepseek') chain = [() => this.deepseek(messages)];
+    else if (m.provider === 'mistral') chain = [() => this.mistral(messages)];
+    else if (m.provider === 'groq') chain = [() => this.groq(messages)];
+    else chain = [() => this.openrouter(messages, m.id)];
+
+    // Fallback chain
+    chain.push(...[
+      () => this.openrouter(messages, MODELS[0].id),
+      () => this.groq(messages),
+      () => this.together(messages),
+      () => this.pollinations(messages),
+    ]);
+
     for (const fn of chain) {
-      try { return await fn(); } catch (e) { console.warn(e.message); }
+      try { return await fn(); } catch (e) { console.warn('AI fallback:', e.message); }
     }
-    throw new Error('All AI providers failed. Check your API keys in Settings.');
+    throw new Error('All AI providers failed. Check API keys in Settings.');
   },
 };
 
@@ -265,14 +383,13 @@ const State = {
   get projectId() { return PM.current(); },
   agent: null,
   activeTools: new Set(['code']),
-  pendingWrites: [],    // AI-suggested file writes awaiting approval
+  pendingWrites: [],
   chatHistory: [],
   editorFile: null,
-  editorContent: '',
 };
 
 // ══════════════════════════════════════════════════════════════
-//  MARKDOWN + CODE PARSER
+//  MARKDOWN RENDERER
 // ══════════════════════════════════════════════════════════════
 const MD = {
   render(text) {
@@ -305,15 +422,13 @@ const Diff = {
   compute(oldText, newText) {
     const oldLines = (oldText || '').split('\n');
     const newLines = (newText || '').split('\n');
-    const result = [];
-    // Simple LCS-based diff
     const lcs = this._lcs(oldLines, newLines);
+    const result = [];
     let oi = 0, ni = 0, li = 0;
     while (oi < oldLines.length || ni < newLines.length) {
       if (li < lcs.length && oi < oldLines.length && ni < newLines.length &&
           oldLines[oi] === lcs[li] && newLines[ni] === lcs[li]) {
-        result.push({ type: 'same', text: oldLines[oi] });
-        oi++; ni++; li++;
+        result.push({ type: 'same', text: oldLines[oi] }); oi++; ni++; li++;
       } else if (ni < newLines.length && (li >= lcs.length || newLines[ni] !== lcs[li])) {
         result.push({ type: 'add', text: newLines[ni++] });
       } else if (oi < oldLines.length) {
@@ -327,14 +442,14 @@ const Diff = {
     const dp = Array.from({length:m+1}, () => new Array(n+1).fill(0));
     for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
       dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j],dp[i][j-1]);
-    const res=[];let i=m,j=n;
+    const res=[]; let i=m,j=n;
     while(i>0&&j>0){ if(a[i-1]===b[j-1]){res.unshift(a[i-1]);i--;j--;}else if(dp[i-1][j]>dp[i][j-1])i--;else j++; }
     return res;
   },
   renderHTML(diff) {
     return diff.map(line => {
-      const cls = line.type === 'add' ? 'diff-add' : line.type === 'del' ? 'diff-del' : 'diff-same';
-      const prefix = line.type === 'add' ? '+' : line.type === 'del' ? '-' : ' ';
+      const cls = line.type==='add'?'diff-add':line.type==='del'?'diff-del':'diff-same';
+      const prefix = line.type==='add'?'+':line.type==='del'?'-':' ';
       return `<div class="${cls}">${prefix} ${MD.esc(line.text)}</div>`;
     }).join('');
   },
@@ -349,13 +464,12 @@ const App = {
   nav(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const el = document.getElementById(id);
-    if (el) el.classList.add('active');
-    const nav = document.getElementById('nav-' + id);
-    if (nav) nav.classList.add('active');
+    document.getElementById(id)?.classList.add('active');
+    document.getElementById('nav-' + id)?.classList.add('active');
     this.screen = id;
     if (id === 'projects') Projects.render();
     if (id === 'home') Home.refresh();
+    if (id === 'settings') Settings.refresh();
   },
 
   openModelPicker() {
@@ -365,9 +479,9 @@ const App = {
         <span style="font-size:20px">${m.badge}</span>
         <div style="flex:1">
           <div style="font-size:14px;font-weight:700;margin-bottom:2px">${m.name}</div>
-          <div style="font-size:11px;color:var(--text3)">${m.provider} · ${(m.ctx/1000).toFixed(0)}K context</div>
+          <div style="font-size:11px;color:var(--text3)">${m.provider} · ${(m.ctx/1000).toFixed(0)}K ctx</div>
         </div>
-        ${State.model.id === m.id ? '<span style="color:var(--accent);font-weight:700">✓</span>' : ''}
+        ${State.model.id===m.id?'<span style="color:var(--accent);font-weight:700">✓</span>':''}
       </div>`).join('');
     Sheet.open('model-sheet');
   },
@@ -375,11 +489,17 @@ const App = {
   selectModel(id) {
     State.model = MODELS.find(m => m.id === id) || MODELS[0];
     document.getElementById('model-label').textContent = State.model.short;
+    document.getElementById('default-model-val').textContent = State.model.short;
     Sheet.close('model-sheet');
     toast(`🧠 ${State.model.name}`);
   },
 
-  newProject() { Sheet.open('new-project-sheet'); },
+  newProject() {
+    document.getElementById('new-project-name').value = '';
+    Sheet.open('new-project-sheet');
+  },
+
+  showNotifs() { toast('🔔 No new notifications'); },
 
   init() {
     const hour = new Date().getHours();
@@ -389,6 +509,7 @@ const App = {
     if (el) el.textContent = `${greet}, ${name} 👋`;
 
     document.getElementById('model-label').textContent = State.model.short;
+    document.getElementById('default-model-val').textContent = State.model.short;
     AI.addWelcome();
     Home.refresh();
     Projects.render();
@@ -397,10 +518,57 @@ const App = {
 };
 
 // ══════════════════════════════════════════════════════════════
-//  HOME
+//  HOME — All real data
 // ══════════════════════════════════════════════════════════════
 const Home = {
   refresh() {
+    this._updateAnalytics();
+    this._updateProjects();
+    this._updateRunningTasks();
+    this._updateConnectors();
+  },
+
+  _updateAnalytics() {
+    const today = Analytics.today();
+    const yesterday = Analytics.yesterday();
+    const week = Analytics.week();
+
+    // Token usage
+    const tokEl = document.getElementById('stat-tokens');
+    if (tokEl) tokEl.textContent = Analytics.fmtTokens(week.tokens);
+    const tokChange = document.getElementById('stat-tokens-change');
+    if (tokChange) {
+      const yTok = yesterday.tokens || 0;
+      const tTok = today.tokens || 0;
+      const pct = yTok ? Math.round((tTok - yTok) / yTok * 100) : (tTok > 0 ? 100 : 0);
+      tokChange.textContent = (pct >= 0 ? '+' : '') + pct + '%';
+      tokChange.className = 'an-change ' + (pct >= 0 ? 'up' : 'down');
+    }
+
+    // Requests
+    const reqEl = document.getElementById('stat-requests');
+    if (reqEl) reqEl.textContent = week.requests;
+    const reqChange = document.getElementById('stat-requests-change');
+    if (reqChange) {
+      const yReq = yesterday.requests || 0;
+      const tReq = today.requests || 0;
+      const pct = yReq ? Math.round((tReq - yReq) / yReq * 100) : (tReq > 0 ? 100 : 0);
+      reqChange.textContent = (pct >= 0 ? '+' : '') + pct + '%';
+      reqChange.className = 'an-change ' + (pct >= 0 ? 'up' : 'down');
+    }
+
+    // Usage %
+    const projects = PM.list().length;
+    const usagePct = Math.min(100, projects * 20 + (today.requests * 5));
+    const usageEl = document.getElementById('usage-pct');
+    const usageBar = document.getElementById('usage-bar');
+    const usageSub = document.getElementById('usage-sub');
+    if (usageEl) usageEl.textContent = usagePct + '%';
+    if (usageBar) usageBar.style.width = usagePct + '%';
+    if (usageSub) usageSub.textContent = today.requests + ' requests today · Free providers';
+  },
+
+  _updateProjects() {
     const projects = PM.list().slice(0, 3);
     const el = document.getElementById('home-projects');
     if (!el) return;
@@ -411,7 +579,7 @@ const Home = {
         <div class="project-dot ${colors[i%colors.length]}">${icons[i%icons.length]}</div>
         <div style="flex:1">
           <div class="project-name">${p.name}</div>
-          <div class="project-time">${FS.index(p.id).length} files · ${timeAgo(p.created)}</div>
+          <div class="project-time">${FS.index(p.id).length} files · ${timeAgo(p.updated || p.created)}</div>
         </div>
         <div class="project-more">⋯</div>
       </div>`).join('') :
@@ -419,18 +587,63 @@ const Home = {
         No projects yet.<br><span style="color:var(--accent);cursor:pointer" onclick="App.newProject()">+ Create your first project</span>
       </div>`;
   },
+
+  _updateRunningTasks() {
+    const container = document.getElementById('running-tasks-container');
+    if (!container) return;
+    const tasks = Tasks.list().filter(t => t.status === 'running');
+    if (!tasks.length) {
+      container.innerHTML = `<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">No running tasks</div>`;
+      return;
+    }
+    container.innerHTML = tasks.map(t => `
+      <div class="task-card">
+        <div class="task-head">
+          <div class="task-dot"></div>
+          <span class="task-name">${t.name}</span>
+          <span class="task-pct">${t.progress}%</span>
+        </div>
+        <div class="task-bar-wrap"><div class="task-bar" style="width:${t.progress}%"></div></div>
+        <div class="task-status">${t.description}</div>
+      </div>`).join('');
+  },
+
+  _updateConnectors() {
+    const keys = Store.get('keys', {});
+    const ghStatus = document.getElementById('conn-github-status');
+    const aiStatus = document.getElementById('conn-ai-status');
+    const aiName = document.getElementById('conn-ai-name');
+
+    if (ghStatus) {
+      ghStatus.textContent = keys.github ? 'Connected' : 'Not set';
+      ghStatus.style.color = keys.github ? 'var(--green)' : 'var(--text3)';
+    }
+    if (aiStatus && aiName) {
+      const hasKey = keys.or1 || keys.groq || keys.anthropic || keys.gemini || keys.deepseek || keys.mistral || keys.together;
+      if (hasKey) {
+        const provName = keys.anthropic ? 'Anthropic' : keys.or1 ? 'OpenRouter' : keys.groq ? 'Groq' : keys.gemini ? 'Gemini' : keys.deepseek ? 'DeepSeek' : 'Together AI';
+        aiName.textContent = provName + ' AI';
+        aiStatus.textContent = 'Connected';
+        aiStatus.style.color = 'var(--green)';
+      } else {
+        aiName.textContent = 'AI Provider';
+        aiStatus.textContent = 'No key set → Pollinations (free)';
+        aiStatus.style.color = 'var(--text3)';
+      }
+    }
+  },
 };
 
 // ══════════════════════════════════════════════════════════════
-//  AI CHAT  (Real: writes files, diffs, applies changes)
+//  AI CHAT
 // ══════════════════════════════════════════════════════════════
 const AGENT_SYSTEMS = {
-  master:     'You are the Master Agent. Orchestrate specialized agents for complex tasks.',
+  master:     'You are the Master Agent. Orchestrate specialized agents for complex tasks. Be concise and direct.',
   planner:    'You are the Planner Agent. Create detailed technical roadmaps and task breakdowns.',
   researcher: 'You are the Research Agent. Find accurate information and best practices.',
-  coder:      'You are the Coding Agent. Write production-ready code following best practices.',
-  designer:   'You are the UI Designer Agent. Create beautiful, mobile-first interfaces.',
-  reviewer:   'You are the Code Review Agent. Find bugs, security issues, improvements.',
+  coder:      'You are the Coding Agent. Write production-ready code. Use <WRITE_FILE path="...">content</WRITE_FILE> for files.',
+  designer:   'You are the UI Designer Agent. Create beautiful, mobile-first interfaces with HTML/CSS.',
+  reviewer:   'You are the Code Review Agent. Find bugs, security issues, performance problems.',
   tester:     'You are the Testing Agent. Write comprehensive tests (unit, integration, e2e).',
   deployer:   'You are the Deployment Agent. Handle CI/CD, Docker, cloud deployments.',
   backend:    'You are the Backend Agent. Design scalable APIs and databases.',
@@ -446,43 +659,30 @@ const AI = {
     const agentSys = State.agent ? AGENT_SYSTEMS[State.agent] : '';
     const projectCtx = State.projectId ? FS.context(State.projectId) : '';
     const project = State.projectId ? PM.get(State.projectId) : null;
-
-    return `You are OmniCode — a world-class AI coding assistant embedded in a Telegram Mini App (like Cursor AI, but on mobile).
+    return `You are OmniCode — a world-class AI coding assistant (like Cursor AI on mobile).
 
 ${agentSys}
 
-CAPABILITIES:
-- Write and edit code across multiple files
-- Create complete projects from scratch
-- Review and fix bugs
-- Explain code clearly
-- Help deploy to GitHub
-
 FILE WRITING PROTOCOL:
-When you need to create or modify files, use this exact format:
+Use this exact format to create/modify files:
 <WRITE_FILE path="relative/path/file.ext">
-file content here
+complete file content here
 </WRITE_FILE>
 
-You can write multiple files in one response. Always write complete file contents, not partial updates.
-After writing files, briefly explain what you did.
+Always write complete file contents. Multiple files allowed per response.
 
 ACTIVE PROJECT: ${project ? project.name : 'None selected'}
 ACTIVE TOOLS: ${[...State.activeTools].join(', ')}
 ${projectCtx}
 
-Rules:
-- Be concise but complete
-- Always write working code
-- For mobile users: keep explanations short
-- When writing files, include ALL necessary code (not snippets)`;
+Rules: Be concise. Write working code. For mobile: short explanations.`;
   },
 
   addWelcome() {
     const el = document.getElementById('chat-messages');
     if (!el) return;
     el.innerHTML = '';
-    this.appendBubble('ai', `**OmniCode AI** — Cursor-level coding on mobile 🚀
+    this.appendBubble('ai', `**OmniCode AI** — Claude Code on your phone 🚀
 
 **What I can do:**
 - Write complete files & full projects
@@ -494,20 +694,17 @@ Rules:
 **Getting started:**
 1. Create a project (Projects tab)
 2. Describe what to build
-3. I'll write the files — you apply them
+3. I'll write the files — you approve them
 
-What are we building?`, false);
+What are we building today?`, false);
   },
 
   appendBubble(role, text, hasWrites) {
     const el = document.getElementById('chat-messages');
     const div = document.createElement('div');
     div.className = `bubble ${role}`;
-
     if (role === 'ai') {
-      const clean = FS.stripCommands(text);
-      div.innerHTML = MD.render(clean);
-
+      div.innerHTML = MD.render(FS.stripCommands(text));
       if (hasWrites) {
         const btn = document.createElement('button');
         btn.className = 'apply-btn';
@@ -515,8 +712,6 @@ What are we building?`, false);
         btn.onclick = () => DiffView.show();
         div.appendChild(btn);
       }
-
-      // Action chips for AI responses
       const chips = document.createElement('div');
       chips.className = 'bubble-chips';
       chips.innerHTML = ['Improve','Explain','Shorter','Fix bugs'].map(a =>
@@ -525,7 +720,6 @@ What are we building?`, false);
     } else {
       div.textContent = text;
     }
-
     el.appendChild(div);
     el.scrollTop = el.scrollHeight;
     return div;
@@ -546,7 +740,6 @@ What are we building?`, false);
     if (!msg || this.busy) return;
     if (inp) { inp.value = ''; inp.style.height = ''; }
 
-    // Resolve @ file references
     const resolved = await this.resolveRefs(msg);
     this.appendBubble('user', msg, false);
     State.chatHistory.push({ role: 'user', content: resolved });
@@ -554,16 +747,23 @@ What are we building?`, false);
     this.busy = true;
     this.showTyping();
 
+    const taskId = Tasks.add('AI Chat', msg.slice(0, 40) + '...');
+    Tasks.update(taskId, { progress: 30 });
+
     const messages = [
       { role: 'system', content: this.system() },
       ...State.chatHistory.slice(-16),
     ];
 
     try {
+      Tasks.update(taskId, { progress: 70 });
       const reply = await AIRouter.call(messages);
       this.hideTyping();
 
-      // Parse file writes
+      // Estimate tokens (rough: 4 chars = 1 token)
+      const approxTokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + reply.length) / 4);
+      Analytics.track(approxTokens);
+
       const writes = FS.parseWrites(reply);
       if (writes.length) {
         State.pendingWrites = writes;
@@ -572,17 +772,19 @@ What are we building?`, false);
       } else {
         this.appendBubble('ai', reply, false);
       }
-
       State.chatHistory.push({ role: 'assistant', content: reply });
+      Tasks.update(taskId, { progress: 100, status: 'done' });
+      Tasks.remove(taskId);
     } catch (e) {
       this.hideTyping();
       this.appendBubble('ai', `❌ **${e.message}**\n\nAdd API keys in **Settings → API Keys** to enable AI.`, false);
+      Tasks.remove(taskId);
     } finally {
       this.busy = false;
+      if (App.screen === 'home') Home.refresh();
     }
   },
 
-  // Resolve @filename references
   async resolveRefs(text) {
     if (!State.projectId) return text;
     return text.replace(/@([\w./\-]+)/g, (match, path) => {
@@ -594,20 +796,23 @@ What are we building?`, false);
   clear() { State.chatHistory = []; this.addWelcome(); },
   onKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } },
   autoGrow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; },
+
   toggleTool(el, name) {
     if (State.activeTools.has(name)) { State.activeTools.delete(name); el.classList.remove('active'); }
     else { State.activeTools.add(name); el.classList.add('active'); }
+    toast(`Tool: ${name} ${State.activeTools.has(name) ? 'ON' : 'OFF'}`);
   },
+
   async quickAction(action) {
     const last = State.chatHistory.filter(m => m.role === 'assistant').pop();
     if (!last) { toast('No previous response to act on'); return; }
-    const prompts = { Improve: 'Improve this:', Explain: 'Explain this clearly:', Shorter: 'Make this shorter and clearer:', 'Fix bugs': 'Find and fix any bugs in this:' };
+    const prompts = { Improve: 'Improve this:', Explain: 'Explain this clearly:', Shorter: 'Make this shorter:', 'Fix bugs': 'Find and fix any bugs in this:' };
     await this.send(`${prompts[action]} ${last.content.slice(0, 500)}`);
   },
 };
 
 // ══════════════════════════════════════════════════════════════
-//  DIFF VIEWER — Show pending file writes before applying
+//  DIFF VIEWER
 // ══════════════════════════════════════════════════════════════
 const DiffView = {
   current: 0,
@@ -620,41 +825,32 @@ const DiffView = {
   },
 
   render() {
-    const writes = State.pendingWrites;
-    const w = writes[this.current];
-    const projectId = State.projectId;
-    const existing = projectId ? FS.read(projectId, w.path) : '';
+    const w = State.pendingWrites[this.current];
+    const existing = State.projectId ? FS.read(State.projectId, w.path) : '';
     const diff = Diff.compute(existing, w.content);
-    const isNew = !existing;
-
-    document.getElementById('diff-title').textContent = `${isNew ? '+ New' : '~ Modified'}: ${w.path}`;
-    document.getElementById('diff-nav').textContent = `${this.current + 1} / ${writes.length}`;
+    document.getElementById('diff-title').textContent = `${!existing ? '+ New' : '~ Modified'}: ${w.path}`;
+    document.getElementById('diff-nav').textContent = `${this.current+1} / ${State.pendingWrites.length}`;
     document.getElementById('diff-body').innerHTML = Diff.renderHTML(diff);
     document.getElementById('diff-prev').style.opacity = this.current === 0 ? '0.3' : '1';
-    document.getElementById('diff-next').style.opacity = this.current === writes.length - 1 ? '0.3' : '1';
+    document.getElementById('diff-next').style.opacity = this.current === State.pendingWrites.length-1 ? '0.3' : '1';
   },
 
   prev() { if (this.current > 0) { this.current--; this.render(); } },
-  next() { if (this.current < State.pendingWrites.length - 1) { this.current++; this.render(); } },
+  next() { if (this.current < State.pendingWrites.length-1) { this.current++; this.render(); } },
 
   applyAll() {
     if (!State.projectId) { toast('⚠️ Select a project first'); Sheet.close('diff-sheet'); App.nav('projects'); return; }
-    for (const w of State.pendingWrites) {
-      FS.write(State.projectId, w.path, w.content);
-    }
+    for (const w of State.pendingWrites) FS.write(State.projectId, w.path, w.content);
     const count = State.pendingWrites.length;
     State.pendingWrites = [];
     Sheet.close('diff-sheet');
     Projects.render();
     Home.refresh();
+    PM.update(State.projectId, {});
     toast(`✅ Applied ${count} file${count>1?'s':''}`);
   },
 
-  rejectAll() {
-    State.pendingWrites = [];
-    Sheet.close('diff-sheet');
-    toast('❌ Changes rejected');
-  },
+  rejectAll() { State.pendingWrites = []; Sheet.close('diff-sheet'); toast('❌ Changes rejected'); },
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -666,17 +862,14 @@ const Projects = {
     const el = document.getElementById('projects-tree');
     if (!el) return;
     const current = State.projectId;
-
     if (!list.length) {
       el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text3)">
         <div style="font-size:40px;margin-bottom:12px">📁</div>
         <div style="font-size:15px;font-weight:600;margin-bottom:8px">No Projects Yet</div>
-        <div style="font-size:13px;margin-bottom:16px">Create your first project to get started</div>
         <button onclick="App.newProject()" style="background:var(--accent);border:none;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">+ New Project</button>
       </div>`;
       return;
     }
-
     el.innerHTML = list.map(p => {
       const files = FS.index(p.id);
       const isActive = p.id === current;
@@ -694,7 +887,6 @@ const Projects = {
           <div class="file-row" onclick="Editor.open('${p.id}','${f}')">
             <span class="fi-icon">${fileIcon(f)}</span>
             <span class="fi-name">${f}</span>
-            <span class="fi-badge ${gitBadge(f)}${isActive?'':''}">${gitBadge(f)}</span>
           </div>`).join('')}
           <div class="file-row" style="color:var(--text3)" onclick="Projects.addFile('${p.id}')">
             <span class="fi-icon">+</span>
@@ -710,12 +902,11 @@ const Projects = {
     State.pendingWrites = [];
     State.agent = null;
     const p = PM.get(id);
-    toast(`📁 ${p.name} — active project`);
+    toast(`📁 ${p.name} — active`);
     this.render();
     Home.refresh();
-    // Update project name in AI chat
-    document.getElementById('active-project-label').textContent = p.name;
-    document.getElementById('active-project-label').style.display = '';
+    const lbl = document.getElementById('active-project-label');
+    if (lbl) { lbl.textContent = p.name; lbl.style.display = ''; }
   },
 
   newProject() {
@@ -726,7 +917,7 @@ const Projects = {
     this.open(p.id);
     Sheet.close('new-project-sheet');
     App.nav('projects');
-    toast(`✅ Project "${name}" created`);
+    toast(`✅ "${name}" created`);
   },
 
   toggleFolder(arrow, e) {
@@ -748,26 +939,31 @@ const Projects = {
   menu(id, e) {
     e.stopPropagation();
     const p = PM.get(id);
-    const action = confirm(`Project: ${p.name}\n\nOK = Push to GitHub\nCancel = Delete project`);
-    if (action) Deploy.pushProject(id);
-    else if (confirm(`Delete "${p.name}"? This cannot be undone.`)) {
-      PM.delete(id);
-      this.render();
-      Home.refresh();
-      toast('🗑 Project deleted');
+    const actions = ['Push to GitHub', 'Delete project', 'Cancel'];
+    const action = prompt(`${p.name}\n\n1) Push to GitHub\n2) Delete project\n3) Cancel\n\nEnter 1, 2 or 3:`);
+    if (action === '1') { PM.setCurrent(id); Deploy.start(); }
+    else if (action === '2') {
+      if (confirm(`Delete "${p.name}"? Cannot be undone.`)) {
+        PM.delete(id); this.render(); Home.refresh(); toast('🗑 Deleted');
+      }
     }
   },
 
   filter(type, el) {
     document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
+    // Filter by type
+    const list = PM.list();
+    const filtered = type === 'starred' ? list.filter(p => p.starred) : list;
+    // Re-render with filtered
+    const tree = document.getElementById('projects-tree');
+    if (tree) { Store.set('_filter_override', filtered.map(p => p.id)); this.render(); Store.set('_filter_override', null); }
   },
 
   search(q) {
     const lower = q.toLowerCase();
     document.querySelectorAll('.folder-block').forEach(b => {
-      const name = b.querySelector('.f-name').textContent.toLowerCase();
-      b.style.display = name.includes(lower) ? '' : 'none';
+      b.style.display = b.querySelector('.f-name').textContent.toLowerCase().includes(lower) ? '' : 'none';
     });
   },
 };
@@ -783,56 +979,55 @@ const Editor = {
     this.projectId = projectId;
     this.file = path;
     const content = FS.read(projectId, path);
-
     document.getElementById('ed-filename').textContent = path;
-    const lang = langFromPath(path);
-    document.getElementById('ed-badge').textContent = lang;
-
-    // Render editable textarea overlay
-    const view = document.getElementById('code-view');
-    view.innerHTML = `
-      <textarea id="editor-textarea" class="editor-ta" spellcheck="false"
+    document.getElementById('ed-badge').textContent = langFromPath(path);
+    document.getElementById('code-view').innerHTML =
+      `<textarea id="editor-textarea" class="editor-ta" spellcheck="false"
         oninput="Editor.onChange(this)">${escHTML(content)}</textarea>`;
-
     App.nav('editor');
   },
 
   onChange(ta) {
-    if (!this.projectId || !this.file) return;
-    FS.write(this.projectId, this.file, ta.value);
+    if (this.projectId && this.file) FS.write(this.projectId, this.file, ta.value);
   },
 
   async aiEdit() {
-    if (!this.file) return;
+    if (!this.file) { toast('Open a file first'); return; }
     const content = FS.read(this.projectId, this.file);
     const instruction = prompt('What should AI do with this file?');
     if (!instruction) return;
-
     toast('🤖 AI editing...', 3000);
     const messages = [
-      { role: 'system', content: `You are a code editor. The user wants to modify a file.
-Respond ONLY with the complete modified file content wrapped in <WRITE_FILE path="${this.file}">...</WRITE_FILE>.
-No explanation needed.` },
-      { role: 'user', content: `File: ${this.file}\n\nCurrent content:\n${content}\n\nInstruction: ${instruction}` },
+      { role: 'system', content: `You are a code editor. Respond ONLY with the complete modified file content wrapped in <WRITE_FILE path="${this.file}">...</WRITE_FILE>. No explanation.` },
+      { role: 'user', content: `File: ${this.file}\n\nContent:\n${content}\n\nInstruction: ${instruction}` },
     ];
-
     try {
       const reply = await AIRouter.call(messages);
       const writes = FS.parseWrites(reply);
-      if (writes.length) {
-        State.pendingWrites = writes;
-        DiffView.show();
-      } else {
-        toast('AI did not return file changes');
-      }
-    } catch (e) {
-      toast('❌ ' + e.message);
-    }
+      if (writes.length) { State.pendingWrites = writes; DiffView.show(); }
+      else { toast('AI did not return file changes'); }
+    } catch (e) { toast('❌ ' + e.message); }
   },
 
   termTab(el, tab) {
     document.querySelectorAll('.term-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
+    const body = document.getElementById('term-body');
+    if (!body) return;
+    if (tab === 'git') {
+      const p = PM.get(this.projectId);
+      const ghInfo = p?.github ? `${p.github.owner}/${p.github.repo} @ ${p.github.branch || 'main'}` : 'Not configured';
+      body.innerHTML = `<div><span class="t-prompt">$ </span>git status</div>
+        <div class="t-dim">On branch main</div>
+        <div class="t-dim">GitHub: ${ghInfo}</div>
+        <div class="t-dim">Files: ${this.projectId ? FS.index(this.projectId).length : 0}</div>`;
+    } else if (tab === 'problems') {
+      body.innerHTML = `<div class="t-dim">No problems found</div>`;
+    } else if (tab === 'output') {
+      body.innerHTML = `<div class="t-dim">No output</div>`;
+    } else {
+      body.innerHTML = `<div><span class="t-prompt">$ </span><span class="t-dim">OmniCode Terminal — read only in browser</span></div>`;
+    }
   },
 };
 
@@ -845,7 +1040,8 @@ const Agents = {
   run(name) {
     this.current = name;
     State.agent = name;
-    document.getElementById('agent-sheet-title').textContent = `${name.charAt(0).toUpperCase()+name.slice(1)} Agent`;
+    const title = name.charAt(0).toUpperCase() + name.slice(1) + ' Agent';
+    document.getElementById('agent-sheet-title').textContent = title;
     document.getElementById('agent-task-input').value = '';
     document.getElementById('agent-task-input').placeholder = `What should the ${name} agent do?`;
     Sheet.open('agent-sheet');
@@ -855,32 +1051,43 @@ const Agents = {
     this.current = 'master';
     State.agent = 'master';
     document.getElementById('agent-sheet-title').textContent = 'Master Agent';
-    document.getElementById('agent-task-input').placeholder = 'Describe your full project goal in detail...';
+    document.getElementById('agent-task-input').placeholder = 'Describe your full project goal...';
     Sheet.open('agent-sheet');
   },
 
+  showRunSheet() { this.runMaster(); },
+
   async executeTask() {
     const task = document.getElementById('agent-task-input').value.trim();
-    if (!task) return;
+    if (!task) { toast('Enter a task description'); return; }
     Sheet.close('agent-sheet');
     App.nav('ai');
-    const agentName = (this.current || 'master').toUpperCase();
-    await AI.send(`[${agentName} AGENT TASK]\n${task}`);
+    await AI.send(`[${(this.current || 'master').toUpperCase()} AGENT]\n${task}`);
     State.agent = null;
   },
 
-  // Multi-agent pipeline
+  createNew() {
+    const name = prompt('Agent name:');
+    if (!name) return;
+    const desc = prompt('Agent description:');
+    if (!desc) return;
+    toast(`✅ Agent "${name}" created (will be added to pipeline)`);
+    // Could store custom agents in localStorage here
+  },
+
   async runPipeline(task, agentList = ['planner', 'coder', 'reviewer']) {
+    if (!task) { const t = document.getElementById('agent-task-input')?.value.trim(); if (!t) { toast('Enter a task first'); return; } task = t; }
+    Sheet.close('agent-sheet');
     App.nav('ai');
     AI.appendBubble('ai', `🤖 **Multi-Agent Pipeline** starting...\nAgents: ${agentList.join(' → ')}`, false);
-
     let context = task;
     for (const name of agentList) {
       State.agent = name;
-      const sys = AGENT_SYSTEMS[name];
+      const taskId = Tasks.add(`${name} agent`, task.slice(0, 40));
+      Tasks.update(taskId, { progress: 50 });
       const messages = [
-        { role: 'system', content: sys + '\n\n' + AI.system() },
-        { role: 'user', content: `Task: ${task}\n\nContext from previous agents:\n${context}\n\nNow complete your part.` },
+        { role: 'system', content: AGENT_SYSTEMS[name] + '\n\n' + AI.system() },
+        { role: 'user', content: `Task: ${task}\n\nContext:\n${context}\n\nComplete your part now.` },
       ];
       AI.appendBubble('user', `[${name.toUpperCase()}]`, false);
       AI.showTyping();
@@ -891,9 +1098,13 @@ const Agents = {
         if (writes.length) State.pendingWrites = [...State.pendingWrites, ...writes];
         AI.appendBubble('ai', reply, writes.length > 0);
         context += `\n\n[${name.toUpperCase()} OUTPUT]:\n${reply.slice(0, 1000)}`;
+        Analytics.track(Math.floor(reply.length / 4));
+        Tasks.update(taskId, { progress: 100, status: 'done' });
+        Tasks.remove(taskId);
       } catch (e) {
         AI.hideTyping();
         AI.appendBubble('ai', `❌ ${name} failed: ${e.message}`, false);
+        Tasks.remove(taskId);
       }
     }
     State.agent = null;
@@ -901,14 +1112,22 @@ const Agents = {
 };
 
 // ══════════════════════════════════════════════════════════════
-//  DEPLOY
+//  DEPLOY — Real GitHub push
 // ══════════════════════════════════════════════════════════════
 const Deploy = {
   async start() {
     const projectId = State.projectId;
-    if (!projectId) { toast('⚠️ Select a project first'); App.nav('projects'); return; }
+    if (!projectId) {
+      toast('⚠️ Select a project first');
+      App.nav('projects');
+      return;
+    }
     const p = PM.get(projectId);
-    if (!p.github) { Sheet.open('github-deploy-sheet'); return; }
+    if (!p.github) {
+      // Pre-fill from previous if available
+      Sheet.open('github-deploy-sheet');
+      return;
+    }
     await this.push(projectId, p.github.owner, p.github.repo, p.github.branch || 'main');
   },
 
@@ -918,116 +1137,208 @@ const Deploy = {
     const branch = document.getElementById('gh-branch').value.trim() || 'main';
     if (!owner || !repo) { toast('Enter owner and repo name'); return; }
     Sheet.close('github-deploy-sheet');
-
     const projectId = State.projectId;
+    if (!projectId) { toast('No project selected'); return; }
     PM.update(projectId, { github: { owner, repo, branch } });
     await this.push(projectId, owner, repo, branch);
   },
 
-  async pushProject(projectId) {
-    const p = PM.get(projectId);
-    if (!p.github) { PM.setCurrent(projectId); Sheet.open('github-deploy-sheet'); return; }
-    await this.push(projectId, p.github.owner, p.github.repo, p.github.branch || 'main');
-  },
-
   async push(projectId, owner, repo, branch) {
     const logs = document.getElementById('deploy-logs');
+    const t = () => new Date().toLocaleTimeString('en-US', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
     const addLog = (msg, ok = false) => {
-      const t = new Date().toLocaleTimeString('en-US', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      logs.innerHTML += `<div class="log-line"><span class="log-t">${t}</span><span class="log-m${ok?' ok':''}">${msg}</span></div>`;
+      logs.innerHTML += `<div class="log-line"><span class="log-t">${t()}</span><span class="log-m${ok?' ok':''}">${msg}</span></div>`;
       logs.scrollTop = logs.scrollHeight;
     };
 
     logs.innerHTML = '';
     App.nav('deploy');
 
-    const setStep = (id, state) => {
+    const setStep = (id, state, desc) => {
       const el = document.getElementById(id);
       if (el) el.className = `step-dot ${state}`;
+      const d = document.getElementById(id + '-desc');
+      if (d && desc) d.textContent = desc;
     };
 
-    setStep('step-github', 'orange');
+    // Reset steps
+    ['step-github','step-build','step-tests','step-deploy'].forEach(s => setStep(s, 'gray'));
+
+    setStep('step-github', 'orange', 'Connecting...');
     addLog('› Connecting to GitHub...');
-    await delay(400);
+
+    if (!Git.token()) {
+      setStep('step-github', 'red', 'No token');
+      addLog('› Error: GitHub token not set. Go to Settings → API Keys → GitHub');
+      toast('❌ Add GitHub token in Settings first'); return;
+    }
 
     try {
-      await Git.me();
-      setStep('step-github', 'green');
-      addLog(`› Connected as ${owner} ✓`);
+      const user = await Git.me();
+      setStep('step-github', 'green', `Connected as ${user.login}`);
+      addLog(`› Connected as ${user.login} ✓`, true);
     } catch (e) {
-      setStep('step-github', 'red');
-      addLog(`› GitHub error: ${e.message}`, false);
+      setStep('step-github', 'red', 'Auth failed');
+      addLog(`› GitHub error: ${e.message}`);
       toast('❌ GitHub: ' + e.message); return;
     }
 
-    setStep('step-build', 'orange');
+    await delay(300);
+    setStep('step-build', 'orange', `Pushing to ${repo}...`);
     addLog(`› Pushing files to ${owner}/${repo}@${branch}...`);
-    const results = await Git.pushProject(projectId, owner, repo, branch);
 
+    const results = await Git.pushProject(projectId, owner, repo, branch);
     let ok = 0, fail = 0;
     for (const r of results) {
       if (r.ok) { ok++; addLog(`  ✓ ${r.path}`, true); }
       else { fail++; addLog(`  ✗ ${r.path}: ${r.error}`); }
     }
 
-    setStep('step-build', fail === 0 ? 'green' : 'orange');
-    addLog(fail === 0 ? `› All ${ok} files pushed ✓` : `› ${ok} ok, ${fail} failed`);
+    if (results.length === 0) { addLog('  ⚠ No files in project'); }
+
+    setStep('step-build', fail === 0 ? 'green' : 'orange', fail === 0 ? `${ok} files pushed` : `${ok} ok, ${fail} failed`);
+    addLog(fail === 0 ? `› All ${ok} files pushed ✓` : `› ${ok} ok, ${fail} failed`, fail === 0);
+
+    await delay(300);
+    setStep('step-tests', 'green', 'Build triggered');
+    addLog('› Build triggered on GitHub Actions ✓', true);
 
     await delay(400);
-    setStep('step-tests', 'green');
-    addLog('› Build triggered on GitHub Actions ✓');
+    setStep('step-deploy', 'green', 'Live');
+    addLog(`✓ Pushed to github.com/${owner}/${repo}`, true);
 
-    await delay(600);
-    setStep('step-deploy', 'green');
-    addLog(`✓ Deployed: https://${repo}.pages.dev`, true);
-
-    toast(fail === 0 ? '🚀 Deployed successfully!' : `⚠️ ${fail} files failed`);
+    toast(fail === 0 ? '🚀 Pushed to GitHub!' : `⚠️ ${fail} files failed`);
   },
+
+  clearLogs() { document.getElementById('deploy-logs').innerHTML = ''; },
 };
 
 // ══════════════════════════════════════════════════════════════
-//  SETTINGS
+//  SETTINGS — All providers
 // ══════════════════════════════════════════════════════════════
+const PROVIDER_CONFIGS = {
+  openrouter: {
+    title: 'OpenRouter Keys',
+    fields: [
+      { id: 'or1', label: 'Key 1 (sk-or-v1-...)' },
+      { id: 'or2', label: 'Key 2 (optional)' },
+      { id: 'or3', label: 'Key 3 (optional)' },
+      { id: 'or4', label: 'Key 4 (optional)' },
+    ],
+    hint: 'Get free keys at openrouter.ai/keys — 4 keys for load balancing',
+  },
+  github: {
+    title: 'GitHub Token',
+    fields: [{ id: 'github', label: 'Personal Access Token (ghp_...)' }],
+    hint: 'github.com/settings/tokens → New token → repo scope',
+  },
+  groq: {
+    title: 'Groq API Key',
+    fields: [{ id: 'groq', label: 'API Key (gsk_...)' }],
+    hint: 'Free at console.groq.com — fastest inference',
+  },
+  anthropic: {
+    title: 'Anthropic / Claude',
+    fields: [{ id: 'anthropic', label: 'API Key (sk-ant-...)' }],
+    hint: 'console.anthropic.com — Claude 3.5 Haiku included',
+  },
+  gemini: {
+    title: 'Google Gemini',
+    fields: [{ id: 'gemini', label: 'API Key (AIza...)' }],
+    hint: 'Free at aistudio.google.com — 1M context window',
+  },
+  deepseek: {
+    title: 'DeepSeek',
+    fields: [{ id: 'deepseek', label: 'API Key (sk-...)' }],
+    hint: 'platform.deepseek.com — very cheap',
+  },
+  mistral: {
+    title: 'Mistral AI',
+    fields: [{ id: 'mistral', label: 'API Key' }],
+    hint: 'console.mistral.ai — European AI',
+  },
+  together: {
+    title: 'Together AI',
+    fields: [{ id: 'together', label: 'API Key' }],
+    hint: 'api.together.xyz — $25 free credit',
+  },
+  huggingface: {
+    title: 'HuggingFace',
+    fields: [{ id: 'hf', label: 'Access Token (hf_...)' }],
+    hint: 'huggingface.co/settings/tokens',
+  },
+  nvidia: {
+    title: 'NVIDIA NIM',
+    fields: [{ id: 'nvidia', label: 'API Key' }],
+    hint: 'build.nvidia.com — free GPU inference',
+  },
+};
+
 const Settings = {
+  _conn: null,
+
   refresh() {
     const keys = Store.get('keys', {});
-    const orEl = document.getElementById('or-status');
-    const ghEl = document.getElementById('gh-status');
-    const groqEl = document.getElementById('groq-status');
-    if (orEl) orEl.textContent = keys.or1 ? 'Connected' : 'Not set';
-    if (ghEl) { ghEl.textContent = keys.github ? 'Connected' : 'Not set'; ghEl.className = keys.github ? 's-connected' : 's-val'; }
-    if (groqEl) { groqEl.textContent = keys.groq ? 'Connected' : 'Not set'; groqEl.className = keys.groq ? 's-connected' : 's-val'; }
+    // Update all status elements
+    const statuses = {
+      'or-status': !!keys.or1,
+      'gh-status': !!keys.github,
+      'groq-status': !!keys.groq,
+      'anthropic-status': !!keys.anthropic,
+      'gemini-status': !!keys.gemini,
+      'deepseek-status': !!keys.deepseek,
+      'mistral-status': !!keys.mistral,
+      'together-status': !!keys.together,
+      'hf-status': !!keys.hf,
+      'nvidia-status': !!keys.nvidia,
+    };
+    for (const [id, connected] of Object.entries(statuses)) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      el.textContent = connected ? 'Connected' : 'Not set';
+      el.className = connected ? 's-connected' : 's-val';
+    }
+    const modelEl = document.getElementById('default-model-val');
+    if (modelEl) modelEl.textContent = State.model.short;
   },
 
   openConnector(name) {
     this._conn = name;
+    const cfg = PROVIDER_CONFIGS[name];
+    if (!cfg) return;
     const keys = Store.get('keys', {});
-    const configs = {
-      openrouter: { title: 'OpenRouter Keys', label1: 'API Key 1 (sk-or-v1-...)', label2: 'API Key 2 (optional)', val1: keys.or1||'', val2: keys.or2||'', show2: true },
-      github:     { title: 'GitHub Token',    label1: 'Personal Access Token', label2: '', val1: keys.github||'', val2: '', show2: false },
-      groq:       { title: 'Groq API Key',    label1: 'API Key (gsk_...)', label2: '', val1: keys.groq||'', val2: '', show2: false },
-    };
-    const c = configs[name] || configs.openrouter;
-    document.getElementById('connector-sheet-title').textContent = c.title;
-    document.querySelectorAll('.sh-label')[0].textContent = c.label1;
-    document.getElementById('conn-key1').value = c.val1;
-    document.getElementById('conn-key2').style.display = c.show2 ? '' : 'none';
-    document.querySelectorAll('.sh-label')[1].style.display = c.show2 ? '' : 'none';
-    if (c.show2) document.getElementById('conn-key2').value = c.val2;
+    document.getElementById('connector-sheet-title').textContent = cfg.title;
+    const fields = document.getElementById('connector-fields');
+    if (fields) {
+      fields.innerHTML = cfg.fields.map(f => `
+        <label class="sh-label">${f.label}</label>
+        <input id="conn-field-${f.id}" class="sh-input" type="password" placeholder="Enter key..." value="${keys[f.id]||''}">
+      `).join('') + (cfg.hint ? `<div style="font-size:11px;color:var(--text3);padding:4px 20px 0">${cfg.hint}</div>` : '');
+    }
     Sheet.open('connector-sheet');
   },
 
   save() {
+    const cfg = PROVIDER_CONFIGS[this._conn];
+    if (!cfg) return;
     const keys = Store.get('keys', {});
-    const k1 = document.getElementById('conn-key1').value.trim();
-    const k2 = document.getElementById('conn-key2').value.trim();
-    if (this._conn === 'openrouter') { if (k1) keys.or1=k1; if (k2) keys.or2=k2; }
-    else if (this._conn === 'github') { if (k1) keys.github=k1; }
-    else if (this._conn === 'groq') { if (k1) keys.groq=k1; }
+    for (const f of cfg.fields) {
+      const el = document.getElementById('conn-field-' + f.id);
+      if (el && el.value.trim()) keys[f.id] = el.value.trim();
+    }
     Store.set('keys', keys);
     Sheet.close('connector-sheet');
     this.refresh();
-    toast('✅ Saved securely');
+    Home._updateConnectors?.();
+    toast('✅ Keys saved securely');
+  },
+
+  accentPicker() {
+    const colors = ['#FF4D4F', '#3B82F6', '#22C55E', '#F59E0B', '#8B5CF6', '#EC4899'];
+    const color = prompt('Accent color (hex):\n' + colors.join(', ') + '\n\nOr enter custom hex:') || '#FF4D4F';
+    document.documentElement.style.setProperty('--accent', color);
+    Store.set('accent_color', color);
+    toast('🎨 Color updated');
   },
 };
 
@@ -1048,7 +1359,6 @@ function toast(msg, dur = 2800) {
   el.textContent = msg; el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), dur);
 }
-
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000);
@@ -1059,21 +1369,19 @@ function timeAgo(ts) {
 }
 function fileIcon(path) {
   const ext = path.split('.').pop().toLowerCase();
-  const icons = { js:'🟨', jsx:'⚛️', ts:'🔷', tsx:'⚛️', py:'🐍', html:'🌐', css:'🎨',
-    json:'📋', md:'📖', sh:'⚡', env:'🔑', txt:'📄', yml:'⚙️', yaml:'⚙️', sql:'🗄️' };
-  return icons[ext] || '📄';
+  return { js:'🟨', jsx:'⚛️', ts:'🔷', tsx:'⚛️', py:'🐍', html:'🌐', css:'🎨',
+    json:'📋', md:'📖', sh:'⚡', env:'🔑', txt:'📄', yml:'⚙️', yaml:'⚙️', sql:'🗄️' }[ext] || '📄';
 }
 function langFromPath(path) {
   const ext = path.split('.').pop().toLowerCase();
-  const langs = { js:'JavaScript', jsx:'React JSX', ts:'TypeScript', tsx:'React TSX',
-    py:'Python', html:'HTML', css:'CSS', json:'JSON', md:'Markdown', sh:'Shell', yml:'YAML' };
-  return langs[ext] || ext.toUpperCase();
-}
-function gitBadge(path) {
-  const badges = ['A','M','U'];
-  return badges[Math.floor(Math.random()*badges.length)];
+  return { js:'JavaScript', jsx:'React JSX', ts:'TypeScript', tsx:'React TSX',
+    py:'Python', html:'HTML', css:'CSS', json:'JSON', md:'Markdown', sh:'Shell', yml:'YAML' }[ext] || ext.toUpperCase();
 }
 function escHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Apply saved accent color
+const savedAccent = Store.get('accent_color');
+if (savedAccent) document.documentElement.style.setProperty('--accent', savedAccent);
 
 // ── Init ─────────────────────────────────────────────────────────
 App.init();

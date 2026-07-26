@@ -12,29 +12,28 @@
 </head>
 <body>
 
-<!-- ═══ HOME ═══════════════════════════════════════════════════ -->
+<!-- ═══ HOME ═══════════════════════════════════════════════════════ -->
 <div id="home" class="screen active">
   <div class="scroll-area">
 
-    <!-- Top greeting -->
     <div class="home-top">
       <div class="home-greeting">
         <h2 id="greeting-text">Good Morning, User 👋</h2>
-        <p>Your AI workspace is ready to boost your productivity.</p>
+        <p>Your AI workspace is ready.</p>
       </div>
       <button class="notif-btn" onclick="App.showNotifs()">🔔</button>
     </div>
 
-    <!-- Stats -->
+    <!-- Stats cards -->
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-label">Today's Usage</div>
         <div class="stat-row">
-          <div class="stat-value" id="usage-pct">78%</div>
+          <div class="stat-value" id="usage-pct">0%</div>
           <div class="stat-badge red">📊</div>
         </div>
-        <div class="stat-progress"><div class="stat-bar" id="usage-bar" style="width:78%"></div></div>
-        <div class="stat-sub">4% of daily limit</div>
+        <div class="stat-progress"><div class="stat-bar" id="usage-bar" style="width:0%"></div></div>
+        <div class="stat-sub" id="usage-sub">0 requests today · Free providers</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Credits</div>
@@ -72,109 +71,81 @@
       </div>
     </div>
 
-    <!-- Analytics -->
+    <!-- Analytics — real data from localStorage -->
     <div class="analytics-section">
       <div class="section-head">
-        <span class="section-title">Analytics</span>
+        <span class="section-title">Analytics (7 days)</span>
       </div>
       <div class="analytics-grid">
         <div class="an-card">
           <div class="an-label">Token Usage</div>
-          <div class="an-value">24.5K</div>
+          <div class="an-value" id="stat-tokens">0</div>
           <div class="an-meta">
-            <span class="an-change up">+11%</span>
+            <span class="an-change up" id="stat-tokens-change">+0%</span>
             <span class="an-period">vs yesterday</span>
           </div>
           <div class="mini-chart">
-            <div class="bar h25"></div><div class="bar h40"></div><div class="bar h25"></div>
-            <div class="bar h55"></div><div class="bar h70"></div><div class="bar h55"></div>
-            <div class="bar h85"></div><div class="bar h100"></div>
+            <div class="bar h20"></div><div class="bar h30"></div><div class="bar h25"></div>
+            <div class="bar h40"></div><div class="bar h35"></div><div class="bar h50"></div>
+            <div class="bar h45"></div><div class="bar h60"></div>
           </div>
         </div>
         <div class="an-card">
-          <div class="an-label">Requests</div>
-          <div class="an-value">142</div>
+          <div class="an-label">AI Requests</div>
+          <div class="an-value" id="stat-requests">0</div>
           <div class="an-meta">
-            <span class="an-change up">+8.1%</span>
+            <span class="an-change up" id="stat-requests-change">+0%</span>
             <span class="an-period">vs yesterday</span>
           </div>
           <div class="mini-chart">
-            <div class="bar h10"></div><div class="bar h40"></div><div class="bar h55"></div>
-            <div class="bar h70"></div><div class="bar h40"></div><div class="bar h85"></div>
-            <div class="bar h70"></div><div class="bar h100"></div>
+            <div class="bar h10"></div><div class="bar h30"></div><div class="bar h20"></div>
+            <div class="bar h40"></div><div class="bar h35"></div><div class="bar h55"></div>
+            <div class="bar h45"></div><div class="bar h70"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Recent Projects -->
+    <!-- Recent Projects — real from PM.list() -->
     <div class="recent-section">
       <div class="section-head">
         <span class="section-title">Recent Projects</span>
         <span class="section-link" onclick="App.nav('projects')">View All</span>
       </div>
       <div id="home-projects">
-        <div class="project-item" onclick="App.nav('projects')">
-          <div class="project-dot blue">📊</div>
-          <div style="flex:1">
-            <div class="project-name">SMM Dashboard</div>
-            <div class="project-time">Updated 2m ago</div>
-          </div>
-          <div class="project-more">⋯</div>
-        </div>
-        <div class="project-item" onclick="App.nav('projects')">
-          <div class="project-dot green">🤖</div>
-          <div style="flex:1">
-            <div class="project-name">AI Content Generator</div>
-            <div class="project-time">Updated 1h ago</div>
-          </div>
-          <div class="project-more">⋯</div>
-        </div>
-        <div class="project-item" onclick="App.nav('projects')">
-          <div class="project-dot orange">📈</div>
-          <div style="flex:1">
-            <div class="project-name">TG Growth Tool</div>
-            <div class="project-time">Updated 1d ago</div>
-          </div>
-          <div class="project-more">⋯</div>
-        </div>
+        <div style="text-align:center;padding:20px;color:var(--text3)">Loading...</div>
       </div>
     </div>
 
-    <!-- Running Tasks -->
+    <!-- Running Tasks — real tasks from Tasks module -->
     <div class="running-section">
       <div class="section-head">
         <span class="section-title">Running Tasks</span>
+        <span class="section-link" onclick="Tasks.clear();Home.refresh()">Clear</span>
       </div>
-      <div class="task-card">
-        <div class="task-head">
-          <div class="task-dot"></div>
-          <span class="task-name">AI Content Generation</span>
-          <span class="task-pct">65%</span>
-        </div>
-        <div class="task-bar-wrap"><div class="task-bar" style="width:65%"></div></div>
-        <div class="task-status">In Progress</div>
+      <div id="running-tasks-container">
+        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">No running tasks</div>
       </div>
     </div>
 
-    <!-- Connectors -->
+    <!-- Connectors — real status -->
     <div class="connectors-section">
       <div class="connector-row">
-        <div class="connector-chip">
-          <span class="connector-icon">🔄</span>
+        <div class="connector-chip" onclick="App.nav('settings')">
+          <span class="connector-icon">🐙</span>
           <div class="connector-info">
             <div class="connector-name">GitHub</div>
-            <div class="connector-status">Connected</div>
+            <div class="connector-status" id="conn-github-status">Not set</div>
           </div>
-          <div class="status-dot green"></div>
+          <div class="status-dot gray" id="conn-github-dot"></div>
         </div>
-        <div class="connector-chip">
+        <div class="connector-chip" onclick="App.nav('settings')">
           <span class="connector-icon">🧠</span>
           <div class="connector-info">
-            <div class="connector-name">OpenRouter AI</div>
-            <div class="connector-status">All Systems Operational</div>
+            <div class="connector-name" id="conn-ai-name">AI Provider</div>
+            <div class="connector-status" id="conn-ai-status">No key → Pollinations (free)</div>
           </div>
-          <div class="status-dot green"></div>
+          <div class="status-dot gray" id="conn-ai-dot"></div>
         </div>
       </div>
     </div>
@@ -188,6 +159,7 @@
     <div class="chat-header-left">
       <span class="chat-menu" onclick="App.nav('home')">☰</span>
       <span class="chat-title">AI Chat</span>
+      <span class="active-proj-chip" id="active-project-label"></span>
     </div>
     <span class="chat-edit" onclick="AI.clear()">✏️</span>
   </div>
@@ -205,9 +177,8 @@
 
   <div class="chat-bottom">
     <div class="chat-input-wrap">
-      <textarea id="chat-input" class="chat-input" placeholder="Ask anything..." rows="1"
+      <textarea id="chat-input" class="chat-input" placeholder="Ask anything... (use @filename to reference files)" rows="1"
         onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
-      <button class="input-btn mic">🎤</button>
       <button class="input-btn send" onclick="AI.send()">▶</button>
     </div>
   </div>
@@ -217,7 +188,7 @@
 <div id="projects" class="screen">
   <div class="chat-header">
     <span class="chat-title">Projects</span>
-    <button class="notif-btn" onclick="Projects.newProject()">+</button>
+    <button class="notif-btn" onclick="App.newProject()">+</button>
   </div>
   <div class="scroll-area">
     <div class="search-box">
@@ -229,7 +200,6 @@
       <div class="filter-tab" onclick="Projects.filter('recent',this)">Recent</div>
       <div class="filter-tab" onclick="Projects.filter('starred',this)">Starred</div>
     </div>
-
     <div id="projects-tree"></div>
   </div>
 </div>
@@ -266,85 +236,96 @@
   <div class="scroll-area">
     <div class="agents-page">
 
-      <!-- Master Agent -->
       <div class="master-card" onclick="Agents.runMaster()">
         <div class="master-left">
           <h3>Master Agent</h3>
-          <p>Orchestrates all agents</p>
+          <p>Orchestrates all agents for complex tasks</p>
           <span class="master-badge">● Active</span>
         </div>
         <div class="orb master-orb"></div>
       </div>
 
-      <!-- Agent Grid -->
       <div class="agents-grid">
         <div class="agent-card" onclick="Agents.run('planner')">
-          <div class="ac-top">
-            <div class="ac-icon orange">♦</div>
-            <div class="ac-sdot green"></div>
-          </div>
+          <div class="ac-top"><div class="ac-icon orange">♦</div><div class="ac-sdot green"></div></div>
           <div class="ac-name">Planner</div>
           <div class="ac-desc">Strategic planning & roadmap</div>
           <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('researcher')">
-          <div class="ac-top">
-            <div class="ac-icon blue">🔍</div>
-            <div class="ac-sdot green"></div>
-          </div>
+          <div class="ac-top"><div class="ac-icon blue">🔍</div><div class="ac-sdot green"></div></div>
           <div class="ac-name">Researcher</div>
-          <div class="ac-desc">Web research & analysis</div>
+          <div class="ac-desc">Analysis & best practices</div>
           <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('coder')">
-          <div class="ac-top">
-            <div class="ac-icon green">⟨⟩</div>
-            <div class="ac-sdot green"></div>
-          </div>
+          <div class="ac-top"><div class="ac-icon green">⟨⟩</div><div class="ac-sdot green"></div></div>
           <div class="ac-name">Coder</div>
           <div class="ac-desc">Write clean & efficient code</div>
           <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('designer')">
-          <div class="ac-top">
-            <div class="ac-icon purple">✏️</div>
-            <div class="ac-sdot green"></div>
-          </div>
+          <div class="ac-top"><div class="ac-icon purple">✏️</div><div class="ac-sdot green"></div></div>
           <div class="ac-name">Designer</div>
           <div class="ac-desc">UI/UX & visual design</div>
           <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('reviewer')">
-          <div class="ac-top">
-            <div class="ac-icon red">🔎</div>
-            <div class="ac-sdot green"></div>
-          </div>
+          <div class="ac-top"><div class="ac-icon red">🔎</div><div class="ac-sdot green"></div></div>
           <div class="ac-name">Reviewer</div>
           <div class="ac-desc">Code review & quality</div>
           <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('tester')">
-          <div class="ac-top">
-            <div class="ac-icon yellow">👁</div>
-            <div class="ac-sdot green"></div>
-          </div>
+          <div class="ac-top"><div class="ac-icon yellow">👁</div><div class="ac-sdot green"></div></div>
           <div class="ac-name">Tester</div>
           <div class="ac-desc">Testing & QA automation</div>
           <span class="ac-badge active">Active</span>
         </div>
+        <div class="agent-card" onclick="Agents.run('security')">
+          <div class="ac-top"><div class="ac-icon red">🔒</div><div class="ac-sdot green"></div></div>
+          <div class="ac-name">Security</div>
+          <div class="ac-desc">Vulnerability scanning</div>
+          <span class="ac-badge active">Active</span>
+        </div>
         <div class="agent-card" onclick="Agents.run('deployer')">
-          <div class="ac-top">
-            <div class="ac-icon blue">🚀</div>
-            <div class="ac-sdot green"></div>
-          </div>
-          <div class="ac-name">Deployment</div>
-          <div class="ac-desc">Deploy & monitor applications</div>
+          <div class="ac-top"><div class="ac-icon blue">🚀</div><div class="ac-sdot green"></div></div>
+          <div class="ac-name">Deployer</div>
+          <div class="ac-desc">Deploy & monitor apps</div>
+          <span class="ac-badge active">Active</span>
+        </div>
+        <div class="agent-card" onclick="Agents.run('optimizer')">
+          <div class="ac-top"><div class="ac-icon green">⚡</div><div class="ac-sdot green"></div></div>
+          <div class="ac-name">Optimizer</div>
+          <div class="ac-desc">Performance & efficiency</div>
+          <span class="ac-badge active">Active</span>
+        </div>
+        <div class="agent-card" onclick="Agents.run('docs')">
+          <div class="ac-top"><div class="ac-icon orange">📖</div><div class="ac-sdot green"></div></div>
+          <div class="ac-name">Docs</div>
+          <div class="ac-desc">Documentation writer</div>
+          <span class="ac-badge active">Active</span>
+        </div>
+        <div class="agent-card" onclick="Agents.run('backend')">
+          <div class="ac-top"><div class="ac-icon purple">🗄️</div><div class="ac-sdot green"></div></div>
+          <div class="ac-name">Backend</div>
+          <div class="ac-desc">APIs & databases</div>
           <span class="ac-badge active">Active</span>
         </div>
         <div class="new-agent" onclick="Agents.createNew()">
           <div class="new-plus">+</div>
           <div class="new-label">New Agent</div>
           <div class="new-sub">Create custom AI agent</div>
+        </div>
+      </div>
+
+      <!-- Pipeline section -->
+      <div style="padding:0 16px 16px">
+        <div class="section-head" style="margin-bottom:12px"><span class="section-title">Quick Pipelines</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button onclick="Agents.runPipeline('',['planner','coder','reviewer'])" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;cursor:pointer;text-align:left">🔄 Planner → Coder → Reviewer</button>
+          <button onclick="Agents.runPipeline('',['researcher','coder','tester'])" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;cursor:pointer;text-align:left">🔬 Researcher → Coder → Tester</button>
+          <button onclick="Agents.runPipeline('',['designer','coder','reviewer'])" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;cursor:pointer;text-align:left">🎨 Designer → Coder → Reviewer</button>
         </div>
       </div>
     </div>
@@ -355,66 +336,60 @@
 <div id="deploy" class="screen">
   <div class="chat-header">
     <span class="chat-title">Deploy</span>
-    <span class="ed-more">⋯</span>
+    <span class="ed-more" onclick="Sheet.open('github-deploy-sheet')">⚙️</span>
   </div>
   <div class="scroll-area">
 
     <div class="deploy-hero">
       <div class="orb deploy-orb"></div>
-      <button class="deploy-btn" onclick="Deploy.start()">
-        ▶ Deploy Now
-      </button>
-      <div class="deploy-sub-text">Production Deployment</div>
+      <button class="deploy-btn" onclick="Deploy.start()">▶ Deploy Now</button>
+      <div class="deploy-sub-text">Push project to GitHub</div>
     </div>
 
-    <!-- Status Steps -->
+    <!-- Real Status Steps — start gray until deploy runs -->
     <div class="deploy-status">
       <div class="step-row">
         <div class="step-ico blue">🐙</div>
         <div class="step-inf">
           <div class="step-n">GitHub</div>
-          <div class="step-d">Repository connected</div>
+          <div class="step-d" id="step-github-desc">Ready</div>
         </div>
-        <div class="step-dot green" id="step-github"></div>
+        <div class="step-dot gray" id="step-github"></div>
       </div>
       <div class="step-row">
         <div class="step-ico green">🔨</div>
         <div class="step-inf">
           <div class="step-n">Build</div>
-          <div class="step-d" id="step-build-desc">Build completed</div>
+          <div class="step-d" id="step-build-desc">Waiting</div>
         </div>
-        <div class="step-dot green" id="step-build"></div>
+        <div class="step-dot gray" id="step-build"></div>
       </div>
       <div class="step-row">
         <div class="step-ico purple">✅</div>
         <div class="step-inf">
-          <div class="step-n">Tests</div>
-          <div class="step-d">All tests passed</div>
+          <div class="step-n">Files</div>
+          <div class="step-d" id="step-tests-desc">Waiting</div>
         </div>
-        <div class="step-dot green" id="step-tests"></div>
+        <div class="step-dot gray" id="step-tests"></div>
       </div>
       <div class="step-row">
         <div class="step-ico orange">🚀</div>
         <div class="step-inf">
           <div class="step-n">Deploy</div>
-          <div class="step-d" id="step-deploy-desc">Ready to deploy</div>
+          <div class="step-d" id="step-deploy-desc">Waiting</div>
         </div>
-        <div class="step-dot orange" id="step-deploy"></div>
+        <div class="step-dot gray" id="step-deploy"></div>
       </div>
     </div>
 
-    <!-- Live Logs -->
+    <!-- Live Logs — start empty -->
     <div class="logs-section">
       <div class="section-head">
         <span class="section-title">Live Logs</span>
-        <span class="section-link" onclick="Deploy.clearLogs()">View All</span>
+        <span class="section-link" onclick="Deploy.clearLogs()">Clear</span>
       </div>
       <div class="logs-box" id="deploy-logs">
-        <div class="log-line"><span class="log-t">9:41:02</span><span class="log-m">› Preparing deployment...</span></div>
-        <div class="log-line"><span class="log-t">9:41:04</span><span class="log-m">› Building application...</span></div>
-        <div class="log-line"><span class="log-t">9:41:08</span><span class="log-m">› Running tests...</span></div>
-        <div class="log-line"><span class="log-t">9:41:12</span><span class="log-m">› Deploying to production...</span></div>
-        <div class="log-line"><span class="log-t">9:41:15</span><span class="log-m ok">✓ Deployment successful!</span></div>
+        <div class="log-line"><span class="log-t">--:--:--</span><span class="log-m t-dim">› Press Deploy Now to start...</span></div>
       </div>
     </div>
 
@@ -428,66 +403,81 @@
   </div>
   <div class="scroll-area settings-wrap">
 
+    <!-- AI API Keys -->
     <div class="s-section">
-      <div class="s-section-title">API Keys</div>
+      <div class="s-section-title">AI API Keys</div>
       <div class="s-group">
         <div class="s-row" onclick="Settings.openConnector('openrouter')">
           <div class="s-ico red">🔄</div>
           <span class="s-label">OpenRouter</span>
-          <span class="s-connected" id="or-status">Connected</span>
+          <span id="or-status" class="s-val">Not set</span>
           <span class="s-chevron">›</span>
         </div>
-        <div class="s-row" onclick="Settings.openConnector('github')">
-          <div class="s-ico gray">🐙</div>
-          <span class="s-label">GitHub</span>
-          <span class="s-connected" id="gh-status">Connected</span>
+        <div class="s-row" onclick="Settings.openConnector('anthropic')">
+          <div class="s-ico orange">🤖</div>
+          <span class="s-label">Anthropic / Claude</span>
+          <span id="anthropic-status" class="s-val">Not set</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row" onclick="Settings.openConnector('gemini')">
+          <div class="s-ico blue">✨</div>
+          <span class="s-label">Google Gemini</span>
+          <span id="gemini-status" class="s-val">Not set</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row" onclick="Settings.openConnector('groq')">
-          <div class="s-ico blue">⚡</div>
-          <span class="s-label">Groq</span>
+          <div class="s-ico purple">⚡</div>
+          <span class="s-label">Groq (fastest)</span>
           <span id="groq-status" class="s-val">Not set</span>
           <span class="s-chevron">›</span>
         </div>
+        <div class="s-row" onclick="Settings.openConnector('deepseek')">
+          <div class="s-ico blue">🧠</div>
+          <span class="s-label">DeepSeek</span>
+          <span id="deepseek-status" class="s-val">Not set</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row" onclick="Settings.openConnector('mistral')">
+          <div class="s-ico green">🌀</div>
+          <span class="s-label">Mistral AI</span>
+          <span id="mistral-status" class="s-val">Not set</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row" onclick="Settings.openConnector('together')">
+          <div class="s-ico yellow">🤝</div>
+          <span class="s-label">Together AI</span>
+          <span id="together-status" class="s-val">Not set</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row" onclick="Settings.openConnector('huggingface')">
+          <div class="s-ico orange">🤗</div>
+          <span class="s-label">HuggingFace</span>
+          <span id="hf-status" class="s-val">Not set</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row" onclick="Settings.openConnector('nvidia')">
+          <div class="s-ico green">⚙️</div>
+          <span class="s-label">NVIDIA NIM</span>
+          <span id="nvidia-status" class="s-val">Not set</span>
+          <span class="s-chevron">›</span>
+        </div>
       </div>
     </div>
 
+    <!-- GitHub -->
     <div class="s-section">
-      <div class="s-section-title">Appearance</div>
+      <div class="s-section-title">Code & Deploy</div>
       <div class="s-group">
-        <div class="s-row">
-          <div class="s-ico gray">🌙</div>
-          <span class="s-label">Theme</span>
-          <span class="s-val">Dark</span>
-          <span class="s-chevron">›</span>
-        </div>
-        <div class="s-row" onclick="Settings.accentPicker()">
-          <div class="s-ico red">🎨</div>
-          <span class="s-label">Accent Color</span>
-          <span class="s-val">Red</span>
+        <div class="s-row" onclick="Settings.openConnector('github')">
+          <div class="s-ico gray">🐙</div>
+          <span class="s-label">GitHub Token</span>
+          <span id="gh-status" class="s-val">Not set</span>
           <span class="s-chevron">›</span>
         </div>
       </div>
     </div>
 
-    <div class="s-section">
-      <div class="s-section-title">Preferences</div>
-      <div class="s-group">
-        <div class="s-row">
-          <div class="s-ico blue">🌐</div>
-          <span class="s-label">Language</span>
-          <span class="s-val">English</span>
-          <span class="s-chevron">›</span>
-        </div>
-        <div class="s-row">
-          <div class="s-ico purple">🔔</div>
-          <span class="s-label">Notifications</span>
-          <span class="s-val">Enabled</span>
-          <span class="s-chevron">›</span>
-        </div>
-      </div>
-    </div>
-
+    <!-- AI Config -->
     <div class="s-section">
       <div class="s-section-title">AI Configuration</div>
       <div class="s-group">
@@ -500,25 +490,52 @@
         <div class="s-row">
           <div class="s-ico orange">📊</div>
           <span class="s-label">Max Tokens</span>
-          <span class="s-val">4000</span>
+          <span class="s-val">8192</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row">
+          <div class="s-ico blue">🔄</div>
+          <span class="s-label">Fallback Chain</span>
+          <span class="s-val">OpenRouter → Groq → Pollinations</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Appearance -->
+    <div class="s-section">
+      <div class="s-section-title">Appearance</div>
+      <div class="s-group">
+        <div class="s-row">
+          <div class="s-ico gray">🌙</div>
+          <span class="s-label">Theme</span>
+          <span class="s-val">Dark</span>
+        </div>
+        <div class="s-row" onclick="Settings.accentPicker()">
+          <div class="s-ico red">🎨</div>
+          <span class="s-label">Accent Color</span>
+          <span class="s-val">Custom</span>
           <span class="s-chevron">›</span>
         </div>
       </div>
     </div>
 
+    <!-- About -->
     <div class="s-section">
-      <div class="s-section-title">Privacy & Security</div>
+      <div class="s-section-title">About</div>
       <div class="s-group">
         <div class="s-row">
-          <div class="s-ico gray">🧠</div>
-          <span class="s-label">Memory</span>
-          <span class="s-val">Enabled</span>
-          <span class="s-chevron">›</span>
+          <div class="s-ico blue">ℹ️</div>
+          <span class="s-label">Version</span>
+          <span class="s-val">2.0.0</span>
         </div>
         <div class="s-row">
-          <div class="s-ico gray">🔒</div>
-          <span class="s-label">Data Encryption</span>
-          <span class="s-val">Enabled</span>
+          <div class="s-ico green">🔒</div>
+          <span class="s-label">Storage</span>
+          <span class="s-val">Local only</span>
+        </div>
+        <div class="s-row" onclick="if(confirm('Clear all data?')){localStorage.clear();location.reload();}">
+          <div class="s-ico red">🗑️</div>
+          <span class="s-label">Clear All Data</span>
           <span class="s-chevron">›</span>
         </div>
       </div>
@@ -555,7 +572,7 @@
   </div>
 </nav>
 
-<!-- ═══ AI CHAT: active project label ══════════════════════════ -->
+<!-- ═══ SHARED STYLES ══════════════════════════════════════════ -->
 <style>
 .active-proj-chip{display:none;font-size:11px;font-weight:700;padding:3px 10px;background:rgba(255,77,79,0.12);border:1px solid rgba(255,77,79,0.25);color:var(--accent);border-radius:20px;margin-left:8px}
 .apply-btn{display:block;margin-top:12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;width:100%;text-align:left}
@@ -566,19 +583,17 @@
 .diff-del{color:var(--accent);background:rgba(255,77,79,0.08);text-decoration:line-through}
 .diff-same{color:var(--text3)}
 .diff-body{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;padding:12px;overflow:auto;max-height:50vh;background:var(--bg)}
+.step-dot.gray{background:var(--text3)}
 </style>
 
 <!-- ═══ SHEETS ══════════════════════════════════════════════════ -->
 
-<!-- Connector Sheet -->
+<!-- Connector Sheet — dynamic fields -->
 <div id="connector-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'connector-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
     <div class="sh-title" id="connector-sheet-title">API Keys</div>
-    <label class="sh-label">Key 1</label>
-    <input id="conn-key1" class="sh-input" type="password" placeholder="Enter key...">
-    <label class="sh-label">Key 2 (optional)</label>
-    <input id="conn-key2" class="sh-input" type="password" placeholder="Enter key...">
+    <div id="connector-fields"></div>
     <button class="sh-btn" onclick="Settings.save()">Save Securely</button>
   </div>
 </div>
@@ -592,7 +607,7 @@
     <textarea id="agent-task-input" class="sh-input" rows="3" placeholder="Describe what you want in detail..." style="resize:none;height:80px"></textarea>
     <button class="sh-btn" onclick="Agents.executeTask()">▶ Run Agent</button>
     <label class="sh-label" style="margin-top:8px">Multi-agent pipeline</label>
-    <button onclick="Agents.runPipeline(document.getElementById('agent-task-input').value,['planner','coder','reviewer'])" style="display:block;margin:0 20px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;font-weight:600;padding:12px;border-radius:10px;cursor:pointer;width:calc(100% - 40px)">🤖 Planner → Coder → Reviewer</button>
+    <button onclick="Agents.runPipeline(document.getElementById('agent-task-input').value,['planner','coder','reviewer'])" style="display:block;margin:0 20px 16px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;font-weight:600;padding:12px;border-radius:10px;cursor:pointer;width:calc(100% - 40px)">🤖 Planner → Coder → Reviewer</button>
   </div>
 </div>
 
@@ -654,10 +669,10 @@
     <input id="gh-owner" class="sh-input" placeholder="your-username">
     <label class="sh-label">Repository Name</label>
     <input id="gh-repo" class="sh-input" placeholder="my-app">
-    <label class="sh-label">Branch (default: main)</label>
+    <label class="sh-label">Branch</label>
     <input id="gh-branch" class="sh-input" placeholder="main" value="main">
     <button class="sh-btn" onclick="Deploy.setupAndPush()">🚀 Push & Deploy</button>
-    <label class="sh-label" style="font-size:11px;color:var(--text3);padding:4px 20px 12px">Add GitHub token in Settings first</label>
+    <div style="font-size:11px;color:var(--text3);padding:4px 20px 12px">Add GitHub token in Settings → Code & Deploy first</div>
   </div>
 </div>
 
