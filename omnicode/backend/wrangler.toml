@@ -1,0 +1,24 @@
+name = "omnicode-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "npm run build"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "omnicode-db"
+database_id = "your-d1-database-id"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "omnicode-storage"
+
+[vars]
+ENVIRONMENT = "production"
+
+# Add secrets via: wrangler secret put <KEY>
+# OPENROUTER_KEY_1, OPENROUTER_KEY_2, OPENROUTER_KEY_3, OPENROUTER_KEY_4
+# GROQ_API_KEY, GITHUB_TOKEN, SUPABASE_URL, SUPABASE_KEY
+# BOT_TOKEN, JWT_SECRET

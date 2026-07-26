@@ -1,0 +1,47 @@
+name: Deploy OmniCode
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend (Cloudflare Workers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Install deps
+        run: cd omnicode/backend && npm ci
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: omnicode/backend
+        env:
+          OPENROUTER_KEY_1: ${{ secrets.OPENROUTER_KEY_1 }}
+          OPENROUTER_KEY_2: ${{ secrets.OPENROUTER_KEY_2 }}
+          OPENROUTER_KEY_3: ${{ secrets.OPENROUTER_KEY_3 }}
+          OPENROUTER_KEY_4: ${{ secrets.OPENROUTER_KEY_4 }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+  deploy-frontend:
+    name: Deploy Frontend (Cloudflare Pages)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: pages deploy omnicode/frontend --project-name=omnicode --branch=main

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A0A0A">
+<title>OmniCode — AI Coding Platform</title>
+<link rel="stylesheet" href="styles/main.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ══ HOME SCREEN ══════════════════════════════════════════ -->
+  <div class="screen active" id="screen-home">
+    <div class="scroll">
+
+      <!-- Hero -->
+      <div style="padding:16px 16px 8px">
+        <div class="flex items-center justify-between mb-16">
+          <div>
+            <div style="font-size:22px;font-weight:700">Good morning 👋</div>
+            <div class="text-2 text-sm" id="home-username">Developer</div>
+          </div>
+          <div class="avatar" id="home-avatar">U</div>
+        </div>
+
+        <!-- AI Status Bar -->
+        <div class="card" style="margin-bottom:10px">
+          <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-8">
+              <div class="dot dot-green dot-pulse"></div>
+              <span class="font-600" style="font-size:14px">AI Ready</span>
+            </div>
+            <div id="active-model-pill" class="model-pill">
+              <span>⚡</span>
+              <span id="active-model-name">Llama 3.3</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M2 4L5 7L8 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="flex gap-8">
+            <div class="badge badge-green">4 Providers</div>
+            <div class="badge badge-blue">OpenRouter</div>
+            <div class="badge badge-purple">Groq</div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" style="padding:0;margin-bottom:10px">
+          <div class="stat-card">
+            <div class="stat-label">Projects</div>
+            <div class="stat-value" id="stat-projects">0</div>
+            <div class="stat-sub">Active</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">AI Messages</div>
+            <div class="stat-value" id="stat-messages">0</div>
+            <div class="stat-sub">This session</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section">
+        <div class="section-title">Quick Actions</div>
+      </div>
+      <div class="quick-actions" style="margin-bottom:16px">
+        <button class="quick-btn" onclick="App.quickAction('new-project')">
+          <div class="quick-btn-icon">✨</div>
+          <div class="quick-btn-label">New Project</div>
+        </button>
+        <button class="quick-btn" onclick="App.quickAction('ai-chat')">
+          <div class="quick-btn-icon">💬</div>
+          <div class="quick-btn-label">Ask AI</div>
+        </button>
+        <button class="quick-btn" onclick="App.quickAction('deploy')">
+          <div class="quick-btn-icon">🚀</div>
+          <div class="quick-btn-label">Deploy</div>
+        </button>
+        <button class="quick-btn" onclick="App.quickAction('github')">
+          <div class="quick-btn-icon">🐙</div>
+          <div class="quick-btn-label">GitHub</div>
+        </button>
+        <button class="quick-btn" onclick="App.quickAction('editor')">
+          <div class="quick-btn-icon">📝</div>
+          <div class="quick-btn-label">Editor</div>
+        </button>
+      </div>
+
+      <!-- Recent Projects -->
+      <div class="section">
+        <div class="section-title">Recent Projects</div>
+        <div id="recent-projects">
+          <div class="card" style="text-align:center;padding:24px;color:var(--text-3)">
+            <div style="font-size:32px;margin-bottom:8px">📁</div>
+            <div style="font-size:14px">No projects yet</div>
+            <div style="font-size:12px;margin-top:4px">Tap "New Project" to start</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity -->
+      <div class="section" style="margin-top:8px">
+        <div class="section-title">Activity</div>
+        <div id="activity-list" style="display:flex;flex-direction:column;gap:1px">
+          <div class="row" style="opacity:0.5">
+            <span style="font-size:20px">🤖</span>
+            <div>
+              <div class="row-label" style="font-size:14px">No recent activity</div>
+              <div class="row-sub">Start by creating a project</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ AI CHAT SCREEN ════════════════════════════════════════ -->
+  <div class="screen" id="screen-ai">
+
+    <!-- Header -->
+    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
+      <div style="flex:1">
+        <div class="header-title" style="font-size:17px">AI Assistant</div>
+        <div id="ai-status-text" class="text-sm text-2">Ready</div>
+      </div>
+      <button class="btn-icon" onclick="AI.clearChat()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+        </svg>
+      </button>
+      <button class="btn-icon" onclick="UI.showModelPicker()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Model indicator -->
+    <div style="padding:6px 12px;background:var(--bg-1);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+      <div class="dot dot-green"></div>
+      <span class="text-xs text-2" id="chat-model-label">meta-llama/llama-3.3-70b-instruct:free · OpenRouter</span>
+      <div style="flex:1"></div>
+      <span class="text-xs" id="msg-count-label" style="color:var(--text-3)">0 messages</span>
+    </div>
+
+    <!-- Tool chips -->
+    <div class="chat-toolbar">
+      <div class="tool-chip active" onclick="AI.toggleTool('code')">
+        <span>⚡</span><span>Code</span>
+      </div>
+      <div class="tool-chip" onclick="AI.toggleTool('files')">
+        <span>📁</span><span>Files</span>
+      </div>
+      <div class="tool-chip" onclick="AI.toggleTool('github')">
+        <span>🐙</span><span>GitHub</span>
+      </div>
+      <div class="tool-chip" onclick="AI.toggleTool('deploy')">
+        <span>🚀</span><span>Deploy</span>
+      </div>
+      <div class="tool-chip" onclick="AI.toggleTool('web')">
+        <span>🌐</span><span>Search</span>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-wrap" id="chat-messages">
+      <div class="bubble bubble-ai anim-fade">
+        👋 <strong>OmniCode AI</strong> — your personal AI coding platform.<br><br>
+        I can help you:<br>
+        • Write, debug &amp; review code<br>
+        • Create and manage projects<br>
+        • Push to GitHub automatically<br>
+        • Deploy your apps<br>
+        • Run multi-agent workflows<br><br>
+        What are you building today?
+        <div class="bubble-meta">OmniCode · Llama 3.3 70B</div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="chat-input-wrap">
+      <textarea
+        class="chat-textarea"
+        id="chat-input"
+        placeholder="Ask anything..."
+        rows="1"
+        onkeydown="AI.handleKey(event)"
+        oninput="AI.resize(this)"
+      ></textarea>
+      <button class="send-btn" id="send-btn" onclick="AI.send()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ PROJECTS SCREEN ════════════════════════════════════════ -->
+  <div class="screen" id="screen-projects">
+    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
+      <div class="header-title">Projects</div>
+      <button class="btn btn-primary btn-sm" onclick="Projects.newProject()">
+        + New
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div style="padding:10px 16px;background:var(--bg-1);border-bottom:1px solid var(--border)">
+      <input class="input" placeholder="🔍  Search projects..." oninput="Projects.search(this.value)" style="border-radius:20px;padding:9px 14px">
+    </div>
+
+    <div class="scroll" id="projects-scroll">
+      <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px" id="projects-list">
+        <!-- Populated by JS -->
+        <div style="text-align:center;padding:40px;color:var(--text-3)">
+          <div style="font-size:48px;margin-bottom:12px">🗂️</div>
+          <div style="font-size:16px;font-weight:600;margin-bottom:4px">No projects</div>
+          <div style="font-size:14px">Create your first project to get started</div>
+          <button class="btn btn-primary" style="margin-top:16px" onclick="Projects.newProject()">
+            ✨ Create Project
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ AGENTS SCREEN ══════════════════════════════════════════ -->
+  <div class="screen" id="screen-agents">
+    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
+      <div class="header-title">AI Agents</div>
+      <div class="badge badge-green">
+        <div class="dot dot-green"></div>
+        Ready
+      </div>
+    </div>
+
+    <!-- Master Agent -->
+    <div style="padding:12px 16px">
+      <div class="card" style="background:linear-gradient(135deg,rgba(255,77,79,0.1),rgba(168,85,247,0.1));border-color:rgba(255,77,79,0.2)">
+        <div class="flex items-center gap-12 mb-8">
+          <div style="font-size:32px">🧠</div>
+          <div class="flex-1">
+            <div class="font-700" style="font-size:16px">Master Agent</div>
+            <div class="text-2 text-sm">Orchestrates all agents</div>
+          </div>
+          <div class="badge badge-green">Active</div>
+        </div>
+        <button class="btn btn-primary btn-sm w-full" onclick="Agents.runMaster()">
+          ▶ Run Task
+        </button>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <div class="section">
+        <div class="section-title">Specialist Agents</div>
+      </div>
+      <div class="agent-grid">
+        <div class="agent-card" onclick="Agents.run('planner')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">📋</div>
+          <div class="agent-name">Planner</div>
+          <div class="agent-desc">Breaks tasks into steps</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('researcher')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">🔍</div>
+          <div class="agent-name">Researcher</div>
+          <div class="agent-desc">Finds docs &amp; solutions</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('coder')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">💻</div>
+          <div class="agent-name">Coder</div>
+          <div class="agent-desc">Writes &amp; edits code</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('designer')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">🎨</div>
+          <div class="agent-name">UI Designer</div>
+          <div class="agent-desc">Creates beautiful UIs</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('backend')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">🔧</div>
+          <div class="agent-name">Backend</div>
+          <div class="agent-desc">APIs &amp; databases</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('tester')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">🧪</div>
+          <div class="agent-name">Tester</div>
+          <div class="agent-desc">Writes &amp; runs tests</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('security')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">🔒</div>
+          <div class="agent-name">Security</div>
+          <div class="agent-desc">Audits for vulns</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('reviewer')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">✅</div>
+          <div class="agent-name">Reviewer</div>
+          <div class="agent-desc">Code quality check</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('optimizer')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">⚡</div>
+          <div class="agent-name">Optimizer</div>
+          <div class="agent-desc">Performance tuning</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('deployer')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">🚀</div>
+          <div class="agent-name">Deployer</div>
+          <div class="agent-desc">Handles deployments</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('docs')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">📝</div>
+          <div class="agent-name">Docs Writer</div>
+          <div class="agent-desc">Documentation</div>
+        </div>
+        <div class="agent-card" onclick="Agents.run('devops')">
+          <div class="agent-status idle">Idle</div>
+          <div class="agent-icon">🛠️</div>
+          <div class="agent-name">DevOps</div>
+          <div class="agent-desc">CI/CD pipelines</div>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+    </div>
+  </div>
+
+  <!-- ══ DEPLOY SCREEN ══════════════════════════════════════════ -->
+  <div class="screen" id="screen-deploy">
+    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
+      <div class="header-title">Deploy</div>
+      <div id="deploy-status-badge" class="badge badge-green">Ready</div>
+    </div>
+
+    <div class="scroll">
+
+      <!-- Deploy Button -->
+      <div class="deploy-btn-wrap">
+        <button class="deploy-btn" id="deploy-btn" onclick="Deploy.start()">
+          🚀 Deploy Now
+        </button>
+      </div>
+
+      <!-- Pipeline -->
+      <div class="section">
+        <div class="section-title">Pipeline</div>
+      </div>
+      <div class="pipeline-steps" id="pipeline-steps">
+        <div class="pipeline-step" data-step="commit">
+          <div class="step-icon pending">①</div>
+          <div>
+            <div class="step-label">Git Commit</div>
+            <div class="text-xs text-3">Stage &amp; commit changes</div>
+          </div>
+          <div class="step-time" id="step-commit-time">—</div>
+        </div>
+        <div class="pipeline-step" data-step="push">
+          <div class="step-icon pending">②</div>
+          <div>
+            <div class="step-label">Push to GitHub</div>
+            <div class="text-xs text-3">Sync remote repository</div>
+          </div>
+          <div class="step-time" id="step-push-time">—</div>
+        </div>
+        <div class="pipeline-step" data-step="build">
+          <div class="step-icon pending">③</div>
+          <div>
+            <div class="step-label">Build</div>
+            <div class="text-xs text-3">Compile &amp; bundle</div>
+          </div>
+          <div class="step-time" id="step-build-time">—</div>
+        </div>
+        <div class="pipeline-step" data-step="test">
+          <div class="step-icon pending">④</div>
+          <div>
+            <div class="step-label">Run Tests</div>
+            <div class="text-xs text-3">Automated test suite</div>
+          </div>
+          <div class="step-time" id="step-test-time">—</div>
+        </div>
+        <div class="pipeline-step" data-step="deploy">
+          <div class="step-icon pending">⑤</div>
+          <div>
+            <div class="step-label">Deploy</div>
+            <div class="text-xs text-3">Push to production</div>
+          </div>
+          <div class="step-time" id="step-deploy-time">—</div>
+        </div>
+        <div class="pipeline-step" data-step="health">
+          <div class="step-icon pending">⑥</div>
+          <div>
+            <div class="step-label">Health Check</div>
+            <div class="text-xs text-3">Verify deployment</div>
+          </div>
+          <div class="step-time" id="step-health-time">—</div>
+        </div>
+      </div>
+
+      <!-- Deploy Log -->
+      <div class="section" style="margin-top:16px">
+        <div class="section-title">Deploy Log</div>
+        <div id="deploy-log" style="background:var(--bg-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px;font-family:var(--mono);font-size:12px;color:var(--text-2);min-height:80px;line-height:1.8">
+          <span style="color:var(--text-3)">Waiting for deployment...</span>
+        </div>
+      </div>
+
+      <!-- Deploy History -->
+      <div class="section" style="margin-top:16px">
+        <div class="section-title">History</div>
+        <div style="display:flex;flex-direction:column;gap:1px" id="deploy-history">
+          <div class="row" style="opacity:0.5">
+            <span style="font-size:18px">📭</span>
+            <div class="row-label text-sm">No deployments yet</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS SCREEN ════════════════════════════════════════ -->
+  <div class="screen" id="screen-settings">
+    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
+      <div class="header-title">Settings</div>
+    </div>
+    <div class="scroll">
+
+      <!-- AI Connectors -->
+      <div class="section" style="margin-top:12px">
+        <div class="section-title">AI Connectors</div>
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <div class="row card" style="border-radius:var(--r-lg) var(--r-lg) 0 0;border-bottom:none;margin:0;border-radius:0" onclick="Settings.openConnector('openrouter')">
+            <span style="font-size:20px">🤖</span>
+            <div class="flex-1">
+              <div class="row-label">OpenRouter</div>
+              <div class="row-sub" id="or-status">4 keys configured</div>
+            </div>
+            <div id="or-badge" class="badge badge-green">✓ Active</div>
+          </div>
+          <div class="row card" style="border-radius:0;border-top:none;border-bottom:none;margin:0" onclick="Settings.openConnector('groq')">
+            <span style="font-size:20px">⚡</span>
+            <div class="flex-1">
+              <div class="row-label">Groq</div>
+              <div class="row-sub" id="groq-status">Not configured</div>
+            </div>
+            <div id="groq-badge" class="badge badge-red">Configure</div>
+          </div>
+          <div class="row card" style="border-radius:0;border-top:none;border-bottom:none;margin:0" onclick="Settings.openConnector('github')">
+            <span style="font-size:20px">🐙</span>
+            <div class="flex-1">
+              <div class="row-label">GitHub</div>
+              <div class="row-sub" id="gh-status">Not connected</div>
+            </div>
+            <div id="gh-badge" class="badge badge-red">Connect</div>
+          </div>
+          <div class="row card" style="border-radius:0 0 var(--r-lg) var(--r-lg);border-top:none;margin:0" onclick="Settings.openConnector('cloudflare')">
+            <span style="font-size:20px">🌐</span>
+            <div class="flex-1">
+              <div class="row-label">Cloudflare</div>
+              <div class="row-sub">Workers &amp; R2</div>
+            </div>
+            <div class="badge badge-red">Configure</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Model -->
+      <div class="section" style="margin-top:16px">
+        <div class="section-title">Default Model</div>
+        <div style="display:flex;flex-direction:column;gap:8px" id="model-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="section" style="margin-top:16px">
+        <div class="section-title">About</div>
+        <div class="card">
+          <div class="flex items-center gap-12">
+            <div style="font-size:36px">⚡</div>
+            <div>
+              <div class="font-700" style="font-size:16px">OmniCode</div>
+              <div class="text-2 text-sm">v1.0.0 · Mobile AI Platform</div>
+              <div class="text-3 text-xs" style="margin-top:4px">Cursor × Claude × Telegram</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:20px"></div>
+    </div>
+  </div>
+
+  <!-- ══ BOTTOM NAV ═════════════════════════════════════════════ -->
+  <nav class="nav">
+    <div class="nav-item active" id="nav-home" onclick="App.navigate('home')">
+      <div class="nav-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" id="nav-ai" onclick="App.navigate('ai')">
+      <div class="nav-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <span>AI</span>
+    </div>
+    <div class="nav-item accent" id="nav-projects" onclick="App.navigate('projects')">
+      <div class="nav-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <span>Projects</span>
+    </div>
+    <div class="nav-item" id="nav-agents" onclick="App.navigate('agents')">
+      <div class="nav-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><circle cx="16" cy="10" r="2"/><path d="M12 10v4M8 20h8"/>
+        </svg>
+      </div>
+      <span>Agents</span>
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="App.navigate('settings')">
+      <div class="nav-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </div>
+      <span>Settings</span>
+    </div>
+  </nav>
+
+</div>
+
+<!-- ══ SHEETS / MODALS ════════════════════════════════════════════ -->
+
+<!-- Connector Sheet -->
+<div class="sheet-overlay" id="connector-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheet-title">Configure</div>
+    <div id="sheet-content"></div>
+  </div>
+</div>
+
+<!-- Model Picker Sheet -->
+<div class="sheet-overlay" id="model-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Choose Model</div>
+    <div id="model-picker-list" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+</div>
+
+<!-- Agent Task Sheet -->
+<div class="sheet-overlay" id="agent-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="agent-sheet-title">Run Agent</div>
+    <textarea class="input" id="agent-task-input" placeholder="Describe the task..." style="min-height:100px;resize:none;margin-bottom:12px"></textarea>
+    <button class="btn btn-primary btn-full" onclick="Agents.executeTask()">▶ Execute</button>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
