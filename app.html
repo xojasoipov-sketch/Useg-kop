@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>OmniCode — AI Coding Assistant</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --accent: #7c3aed;
+  --accent2: #a855f7;
+  --green: #3fb950;
+  --red: #f85149;
+  --yellow: #d29922;
+  --blue: #58a6ff;
+  --radius: 12px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Header */
+.header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.logo { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, var(--accent2), var(--blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
+.status-dot.red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.header-right { margin-left: auto; display: flex; gap: 8px; }
+.icon-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.icon-btn:hover, .icon-btn.active { border-color: var(--accent); color: var(--accent2); }
+
+/* Tab bar */
+.tabs { display: flex; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.tab { flex: 1; padding: 10px 4px; text-align: center; font-size: 11px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+.tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+
+/* Panels */
+.panel { flex: 1; overflow: hidden; display: none; flex-direction: column; }
+.panel.active { display: flex; }
+
+/* Chat */
+.messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 90%; padding: 10px 14px; border-radius: var(--radius); font-size: 14px; line-height: 1.5; }
+.msg.user { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+.msg.ai { align-self: flex-start; background: var(--bg2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.msg.ai pre { background: var(--bg3); padding: 8px; border-radius: 6px; overflow-x: auto; font-size: 12px; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+.msg.ai code { background: var(--bg3); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+.msg-time { font-size: 10px; color: var(--text2); margin-top: 4px; }
+.typing { display: flex; gap: 4px; padding: 12px; }
+.typing span { width: 6px; height: 6px; background: var(--text2); border-radius: 50%; animation: bounce 1.2s infinite; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+.chat-input-wrap { padding: 10px 12px; background: var(--bg2); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; }
+.chat-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; padding: 10px 12px; resize: none; outline: none; font-family: var(--font); max-height: 120px; min-height: 40px; }
+.chat-input:focus { border-color: var(--accent); }
+.send-btn { background: var(--accent); color: white; border: none; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-size: 18px; flex-shrink: 0; }
+.send-btn:disabled { opacity: 0.4; }
+
+/* Skills */
+.skills-grid { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
+.skill-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: all 0.2s; }
+.skill-card:hover { border-color: var(--accent); background: var(--bg3); }
+.skill-icon { font-size: 24px; margin-bottom: 6px; }
+.skill-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.skill-desc { font-size: 11px; color: var(--text2); line-height: 1.4; }
+
+/* Files */
+.files-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.files-toolbar { padding: 10px 12px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+.btn { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+.btn:hover { border-color: var(--accent2); }
+.files-list { flex: 0 0 auto; max-height: 140px; overflow-y: auto; border-bottom: 1px solid var(--border); }
+.file-item { padding: 10px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+.file-item:hover, .file-item.active { background: var(--bg3); }
+.file-icon { font-size: 16px; }
+.file-name { font-size: 13px; flex: 1; }
+.file-actions { display: flex; gap: 6px; }
+.file-del { background: none; border: none; color: var(--red); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
+.editor-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.editor-name { font-size: 12px; color: var(--text2); padding: 6px 12px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.editor { flex: 1; background: var(--bg); color: var(--text); border: none; outline: none; font-family: 'Courier New', monospace; font-size: 13px; padding: 12px; resize: none; line-height: 1.6; }
+
+/* Connectors */
+.connectors { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.connector-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.connector-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.connector-icon { font-size: 24px; }
+.connector-name { font-size: 15px; font-weight: 600; }
+.connector-badge { margin-left: auto; font-size: 11px; padding: 3px 8px; border-radius: 20px; background: var(--bg3); border: 1px solid var(--border); color: var(--text2); }
+.connector-badge.connected { background: rgba(63,185,80,0.15); border-color: var(--green); color: var(--green); }
+.input-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+.input-field { width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; font-family: monospace; }
+.input-field:focus { border-color: var(--accent); }
+.input-group { margin-bottom: 10px; }
+.save-btn { width: 100%; padding: 10px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-top: 4px; }
+.save-btn:hover { background: var(--accent2); }
+
+/* GitHub push modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: flex-end; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; padding: 20px; width: 100%; }
+.modal h3 { margin-bottom: 16px; font-size: 16px; }
+.modal-close { float: right; background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; }
+
+/* Toast */
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; }
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error { border-color: var(--red); color: var(--red); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="status-dot" id="statusDot"></div>
+  <div class="logo">⚡ OmniCode</div>
+  <div class="header-right">
+    <button class="icon-btn" onclick="openPushModal()">⬆ Push</button>
+    <button class="icon-btn" id="modelLabel" onclick="switchTab('connectors')">🤖</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('chat')"><span class="tab-icon">💬</span>Chat</div>
+  <div class="tab" onclick="switchTab('skills')"><span class="tab-icon">⚡</span>Skills</div>
+  <div class="tab" onclick="switchTab('files')"><span class="tab-icon">📁</span>Fayllar</div>
+  <div class="tab" onclick="switchTab('connectors')"><span class="tab-icon">🔌</span>Sozlash</div>
+</div>
+
+<!-- CHAT -->
+<div class="panel active" id="panel-chat">
+  <div class="messages" id="messages">
+    <div class="msg ai">
+      👋 Salom! Men OmniCode — AI coding assistant.<br><br>
+      Men qila olaman:<br>
+      • Kod yozish va tushuntirish<br>
+      • Fayllar yaratish (📁 tab)<br>
+      • GitHub ga push (⬆ Push tugmasi)<br>
+      • Skills ishlatish (⚡ tab)<br><br>
+      <strong>Boshlash uchun</strong> → 🔌 Sozlash da API keylarni kiriting.
+    </div>
+  </div>
+  <div class="chat-input-wrap">
+    <textarea class="chat-input" id="chatInput" placeholder="Savolingizni yozing..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+  </div>
+</div>
+
+<!-- SKILLS -->
+<div class="panel" id="panel-skills">
+  <div class="skills-grid" id="skillsGrid"></div>
+</div>
+
+<!-- FILES -->
+<div class="panel" id="panel-files">
+  <div class="files-panel">
+    <div class="files-toolbar">
+      <button class="btn primary" onclick="newFile()">+ Yangi fayl</button>
+      <button class="btn" onclick="saveCurrentFile()">💾 Saqlash</button>
+    </div>
+    <div class="files-list" id="filesList"></div>
+    <div class="editor-area">
+      <div class="editor-name" id="editorName">Fayl tanlanmagan</div>
+      <textarea class="editor" id="editor" placeholder="Fayl tanlang yoki yangi fayl yarating..." spellcheck="false"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- CONNECTORS -->
+<div class="panel" id="panel-connectors">
+  <div class="connectors">
+    <!-- OpenRouter -->
+    <div class="connector-card">
+      <div class="connector-header">
+        <div class="connector-icon">🤖</div>
+        <div class="connector-name">OpenRouter</div>
+        <div class="connector-badge" id="orBadge">Ulanmagan</div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">API Key 1 (asosiy)</div>
+        <input class="input-field" id="orKey1" type="password" placeholder="sk-or-v1-...">
+      </div>
+      <div class="input-group">
+        <div class="input-label">API Key 2</div>
+        <input class="input-field" id="orKey2" type="password" placeholder="sk-or-v1-...">
+      </div>
+      <div class="input-group">
+        <div class="input-label">API Key 3</div>
+        <input class="input-field" id="orKey3" type="password" placeholder="sk-or-v1-...">
+      </div>
+      <div class="input-group">
+        <div class="input-label">API Key 4</div>
+        <input class="input-field" id="orKey4" type="password" placeholder="sk-or-v1-...">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Model</div>
+        <select class="input-field" id="orModel">
+          <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (bepul)</option>
+          <option value="deepseek/deepseek-r1:free">DeepSeek R1 (bepul)</option>
+          <option value="google/gemma-3-27b-it:free">Gemma 3 27B (bepul)</option>
+          <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (bepul)</option>
+          <option value="qwen/qwen-2.5-72b-instruct:free">Qwen 2.5 72B (bepul)</option>
+        </select>
+      </div>
+      <button class="save-btn" onclick="saveConnector('openrouter')">Saqlash va ulash</button>
+    </div>
+
+    <!-- Groq -->
+    <div class="connector-card">
+      <div class="connector-header">
+        <div class="connector-icon">⚡</div>
+        <div class="connector-name">Groq (tez, bepul)</div>
+        <div class="connector-badge" id="groqBadge">Ulanmagan</div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">API Key</div>
+        <input class="input-field" id="groqKey" type="password" placeholder="gsk_...">
+      </div>
+      <button class="save-btn" onclick="saveConnector('groq')">Saqlash va ulash</button>
+    </div>
+
+    <!-- GitHub -->
+    <div class="connector-card">
+      <div class="connector-header">
+        <div class="connector-icon">🐙</div>
+        <div class="connector-name">GitHub</div>
+        <div class="connector-badge" id="ghBadge">Ulanmagan</div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Personal Access Token</div>
+        <input class="input-field" id="ghToken" type="password" placeholder="ghp_...">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Repo (owner/repo)</div>
+        <input class="input-field" id="ghRepo" type="text" placeholder="username/my-repo">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Branch</div>
+        <input class="input-field" id="ghBranch" type="text" placeholder="main" value="main">
+      </div>
+      <button class="save-btn" onclick="saveConnector('github')">Saqlash va ulash</button>
+    </div>
+
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+<!-- Push Modal -->
+<div class="modal-overlay" id="pushModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closePushModal()">✕</button>
+    <h3>⬆ GitHub ga Push</h3>
+    <div class="input-group" style="margin-top:12px">
+      <div class="input-label">Commit xabari</div>
+      <input class="input-field" id="commitMsg" type="text" placeholder="feat: yangi funksiya qo'shildi" value="Update via OmniCode">
+    </div>
+    <div id="pushFilesList" style="margin:12px 0; font-size:13px; color:var(--text2)"></div>
+    <button class="save-btn" onclick="pushToGitHub()">⬆ Push qilish</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const state = {
+  messages: [],
+  files: {},
+  activeFile: null,
+  orKeys: ['', '', '', ''],
+  orKeyIndex: 0,
+  orModel: 'meta-llama/llama-3.3-70b-instruct:free',
+  groqKey: '',
+  ghToken: '',
+  ghRepo: '',
+  ghBranch: 'main',
+  isLoading: false,
+};
+
+const SKILLS = [
+  { icon: '🐍', name: 'Python kod', desc: 'Python skript yoz', prompt: 'Python da kod yoz: ' },
+  { icon: '🌐', name: 'HTML sahifa', desc: 'Web sahifa yarat', prompt: 'Chiroyli HTML+CSS sahifa yoz: ' },
+  { icon: '⚛️', name: 'React', desc: 'React component', prompt: 'React component yoz: ' },
+  { icon: '🔧', name: 'API', desc: 'REST API endpoint', prompt: 'Node.js da REST API yoz: ' },
+  { icon: '🗄️', name: 'SQL', desc: 'Database query', prompt: 'SQL query yoz: ' },
+  { icon: '📱', name: 'Telegram Bot', desc: 'Python Telegram bot', prompt: 'Python Telegram bot kodi yoz: ' },
+  { icon: '🐛', name: 'Bug fix', desc: 'Xatoni tuzat', prompt: 'Quyidagi kodda xatoni tuz va tushuntir:\n\n' },
+  { icon: '📝', name: 'README', desc: 'README fayl', prompt: 'Loyiha uchun README.md yoz: ' },
+  { icon: '🧪', name: 'Test', desc: 'Unit testlar yoz', prompt: 'Quyidagi funksiya uchun unit testlar yoz:\n\n' },
+  { icon: '⚡', name: 'Tezlashtir', desc: 'Kodni optimizatsiya', prompt: 'Quyidagi kodni optimizatsiya qil:\n\n' },
+  { icon: '🔒', name: 'Xavfsizlik', desc: 'Security audit', prompt: 'Quyidagi kodda xavfsizlik muammolarini topib tushuntir:\n\n' },
+  { icon: '📊', name: 'Data', desc: 'Data processing', prompt: 'Python da ma\'lumotlarni qayta ishlash kodi yoz: ' },
+];
+
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem('omnicode') || '{}');
+    if (s.orKeys) state.orKeys = s.orKeys;
+    if (s.orModel) state.orModel = s.orModel;
+    if (s.groqKey) state.groqKey = s.groqKey;
+    if (s.ghToken) state.ghToken = s.ghToken;
+    if (s.ghRepo) state.ghRepo = s.ghRepo;
+    if (s.ghBranch) state.ghBranch = s.ghBranch;
+    if (s.files) state.files = s.files;
+    updateConnectorUI();
+    renderFiles();
+    renderSkills();
+  } catch(e) {}
+}
+
+function saveState() {
+  localStorage.setItem('omnicode', JSON.stringify({
+    orKeys: state.orKeys, orModel: state.orModel,
+    groqKey: state.groqKey, ghToken: state.ghToken,
+    ghRepo: state.ghRepo, ghBranch: state.ghBranch,
+    files: state.files
+  }));
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const tabs = ['chat','skills','files','connectors'];
+    t.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'chat') document.getElementById('chatInput').focus();
+}
+
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function getActiveKey() {
+  const keys = state.orKeys.filter(k => k && k.length > 10);
+  if (!keys.length) return null;
+  const key = keys[state.orKeyIndex % keys.length];
+  state.orKeyIndex++;
+  return key;
+}
+
+async function callAI(userMsg) {
+  const sysPrompt = `Sen OmniCode — telefondan ishlaydigan AI coding assistant.\nFayllar konteksti: ${Object.keys(state.files).length > 0 ? Object.keys(state.files).join(', ') : 'yo\'q'}\n${state.activeFile ? `Hozirgi fayl: ${state.activeFile}\n\`\`\`\n${state.files[state.activeFile]?.substring(0,2000)}\n\`\`\`` : ''}\nKodlarni markdown code block ichida yoz. O'zbekcha javob ber.`;
+
+  const messages = [
+    { role: 'system', content: sysPrompt },
+    ...state.messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+    { role: 'user', content: userMsg }
+  ];
+
+  const orKey = getActiveKey();
+  if (orKey) {
+    try {
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + orKey,
+          'HTTP-Referer': location.origin,
+          'X-Title': 'OmniCode'
+        },
+        body: JSON.stringify({ model: state.orModel, messages, max_tokens: 2048 })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.choices?.[0]?.message?.content) return { text: d.choices[0].message.content, provider: 'OpenRouter' };
+      }
+    } catch(e) {}
+  }
+
+  if (state.groqKey) {
+    try {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.groqKey },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 2048 })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.choices?.[0]?.message?.content) return { text: d.choices[0].message.content, provider: 'Groq' };
+      }
+    } catch(e) {}
+  }
+
+  try {
+    const r = await fetch('https://text.pollinations.ai/openai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'openai', messages })
+    });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.choices?.[0]?.message?.content) return { text: d.choices[0].message.content, provider: 'Pollinations' };
+    }
+  } catch(e) {}
+
+  throw new Error('Barcha provayderlar ishlamadi. API keylarni tekshiring.');
+}
+
+function renderMarkdown(text) {
+  return text
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => `<pre><code>${escHtml(code.trim())}</code></pre>`)
+    .replace(/`([^`]+)`/g, (_, c) => `<code>${escHtml(c)}</code>`)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+}
+
+function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function addMsg(role, content, provider='') {
+  state.messages.push({ role, content });
+  const el = document.createElement('div');
+  el.className = 'msg ' + role;
+  if (role === 'ai') {
+    el.innerHTML = renderMarkdown(content);
+    const codeMatch = content.match(/```(\w+)\n([\s\S]+?)```/);
+    if (codeMatch) {
+      const ext = { python:'py', javascript:'js', js:'js', html:'html', css:'css', sql:'sql', bash:'sh', typescript:'ts' }[codeMatch[1]] || codeMatch[1];
+      const fname = 'generated.' + ext;
+      el.innerHTML += `<br><button onclick="saveToFile('${fname}', this)" style="background:var(--accent);color:white;border:none;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;margin-top:6px">📁 ${fname} ga saqlash</button>`;
+      el._code = codeMatch[2];
+    }
+    if (provider) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'font-size:10px;color:var(--text2);margin-top:4px';
+      badge.textContent = '• ' + provider;
+      el.appendChild(badge);
+    }
+  } else {
+    el.textContent = content;
+  }
+  document.getElementById('messages').appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth' });
+  return el;
+}
+
+function saveToFile(fname, btn) {
+  const msgEl = btn.closest('.msg');
+  const code = msgEl._code;
+  if (!code) return;
+  state.files[fname] = code;
+  saveState();
+  renderFiles();
+  openFile(fname);
+  switchTab('files');
+  toast('✅ ' + fname + ' saqlandi', 'success');
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || state.isLoading) return;
+  input.value = '';
+  input.style.height = 'auto';
+  state.isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+  addMsg('user', text);
+  const typing = document.createElement('div');
+  typing.className = 'msg ai typing';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  document.getElementById('messages').appendChild(typing);
+  typing.scrollIntoView();
+  try {
+    const { text: resp, provider } = await callAI(text);
+    typing.remove();
+    addMsg('ai', resp, provider);
+    updateStatusDot(true);
+  } catch(e) {
+    typing.remove();
+    addMsg('ai', '❌ ' + e.message);
+    updateStatusDot(false);
+  }
+  state.isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function newFile() {
+  const name = prompt('Fayl nomi (masalan: index.html):');
+  if (!name) return;
+  state.files[name] = '';
+  saveState();
+  renderFiles();
+  openFile(name);
+}
+
+function renderFiles() {
+  const list = document.getElementById('filesList');
+  list.innerHTML = '';
+  Object.keys(state.files).forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'file-item' + (state.activeFile === name ? ' active' : '');
+    item.innerHTML = `<span class="file-icon">${fileIcon(name)}</span><span class="file-name">${name}</span><div class="file-actions"><button class="file-del" onclick="deleteFile('${name}', event)">🗑</button></div>`;
+    item.onclick = (e) => { if (!e.target.closest('.file-actions')) openFile(name); };
+    list.appendChild(item);
+  });
+}
+
+function fileIcon(name) {
+  const ext = name.split('.').pop();
+  return { html:'🌐', css:'🎨', js:'⚡', ts:'💙', py:'🐍', sql:'🗄️', md:'📝', json:'📋', sh:'🔧' }[ext] || '📄';
+}
+
+function openFile(name) {
+  if (state.activeFile) state.files[state.activeFile] = document.getElementById('editor').value;
+  state.activeFile = name;
+  document.getElementById('editor').value = state.files[name] || '';
+  document.getElementById('editorName').textContent = name;
+  renderFiles();
+}
+
+function saveCurrentFile() {
+  if (!state.activeFile) return toast('Fayl tanlanmagan');
+  state.files[state.activeFile] = document.getElementById('editor').value;
+  saveState();
+  toast('✅ Saqlandi', 'success');
+}
+
+function deleteFile(name, e) {
+  e.stopPropagation();
+  if (!confirm(name + ' ni o\'chirasizmi?')) return;
+  delete state.files[name];
+  if (state.activeFile === name) {
+    state.activeFile = null;
+    document.getElementById('editor').value = '';
+    document.getElementById('editorName').textContent = 'Fayl tanlanmagan';
+  }
+  saveState();
+  renderFiles();
+}
+
+function renderSkills() {
+  const grid = document.getElementById('skillsGrid');
+  grid.innerHTML = '';
+  SKILLS.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'skill-card';
+    card.innerHTML = `<div class="skill-icon">${s.icon}</div><div class="skill-name">${s.name}</div><div class="skill-desc">${s.desc}</div>`;
+    card.onclick = () => {
+      switchTab('chat');
+      const input = document.getElementById('chatInput');
+      input.value = s.prompt;
+      input.focus();
+      autoResize(input);
+    };
+    grid.appendChild(card);
+  });
+}
+
+function saveConnector(type) {
+  if (type === 'openrouter') {
+    state.orKeys = [
+      document.getElementById('orKey1').value.trim(),
+      document.getElementById('orKey2').value.trim(),
+      document.getElementById('orKey3').value.trim(),
+      document.getElementById('orKey4').value.trim(),
+    ];
+    state.orModel = document.getElementById('orModel').value;
+  } else if (type === 'groq') {
+    state.groqKey = document.getElementById('groqKey').value.trim();
+  } else if (type === 'github') {
+    state.ghToken = document.getElementById('ghToken').value.trim();
+    state.ghRepo = document.getElementById('ghRepo').value.trim();
+    state.ghBranch = document.getElementById('ghBranch').value.trim() || 'main';
+  }
+  saveState();
+  updateConnectorUI();
+  toast('✅ Saqlandi!', 'success');
+}
+
+function updateConnectorUI() {
+  const orKeys = state.orKeys.filter(k => k.length > 10);
+  const orBadge = document.getElementById('orBadge');
+  orBadge.textContent = orKeys.length > 0 ? `✓ ${orKeys.length} key` : 'Ulanmagan';
+  orBadge.className = 'connector-badge' + (orKeys.length > 0 ? ' connected' : '');
+  const groqBadge = document.getElementById('groqBadge');
+  groqBadge.textContent = state.groqKey ? '✓ Ulangan' : 'Ulanmagan';
+  groqBadge.className = 'connector-badge' + (state.groqKey ? ' connected' : '');
+  const ghBadge = document.getElementById('ghBadge');
+  ghBadge.textContent = state.ghToken ? `✓ ${state.ghRepo || 'ulangan'}` : 'Ulanmagan';
+  ghBadge.className = 'connector-badge' + (state.ghToken ? ' connected' : '');
+  state.orKeys.forEach((k,i) => { const el = document.getElementById('orKey'+(i+1)); if(el&&k) el.value=k; });
+  document.getElementById('orModel').value = state.orModel;
+  if (state.groqKey) document.getElementById('groqKey').value = state.groqKey;
+  if (state.ghToken) document.getElementById('ghToken').value = state.ghToken;
+  if (state.ghRepo) document.getElementById('ghRepo').value = state.ghRepo;
+  if (state.ghBranch) document.getElementById('ghBranch').value = state.ghBranch;
+  const modelLabel = document.getElementById('modelLabel');
+  const activeKeys = state.orKeys.filter(k=>k.length>10);
+  modelLabel.textContent = activeKeys.length > 0 ? '🤖 OR' : state.groqKey ? '⚡ Groq' : '🌐 Free';
+}
+
+function updateStatusDot(ok) {
+  document.getElementById('statusDot').className = 'status-dot' + (ok ? '' : ' red');
+}
+
+function openPushModal() {
+  if (state.activeFile) state.files[state.activeFile] = document.getElementById('editor').value;
+  const fileNames = Object.keys(state.files);
+  document.getElementById('pushFilesList').innerHTML = fileNames.length
+    ? '<strong>Push qilinadigan fayllar:</strong><br>' + fileNames.map(f => `• ${f}`).join('<br>')
+    : '<em>Hech qanday fayl yo\'q</em>';
+  document.getElementById('pushModal').classList.add('open');
+}
+
+function closePushModal() {
+  document.getElementById('pushModal').classList.remove('open');
+}
+
+async function pushToGitHub() {
+  if (!state.ghToken) return toast('❌ GitHub token kiritilmagan', 'error');
+  if (!state.ghRepo) return toast('❌ Repo nomi kiritilmagan', 'error');
+  const commitMsg = document.getElementById('commitMsg').value || 'Update via OmniCode';
+  const files = Object.entries(state.files);
+  if (!files.length) return toast('❌ Push qilinadigan fayl yo\'q', 'error');
+  toast('⏳ Push qilinmoqda...');
+  let pushed = 0;
+  for (const [path, content] of files) {
+    try {
+      let sha = undefined;
+      try {
+        const r = await fetch(`https://api.github.com/repos/${state.ghRepo}/contents/${path}?ref=${state.ghBranch}`, {
+          headers: { 'Authorization': 'token ' + state.ghToken, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (r.ok) { const d = await r.json(); sha = d.sha; }
+      } catch(e) {}
+      const body = { message: commitMsg, content: btoa(unescape(encodeURIComponent(content))), branch: state.ghBranch };
+      if (sha) body.sha = sha;
+      const r = await fetch(`https://api.github.com/repos/${state.ghRepo}/contents/${path}`, {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + state.ghToken, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+        body: JSON.stringify(body)
+      });
+      if (r.ok) pushed++;
+      else { const err = await r.json(); toast('❌ ' + (err.message || 'Xatolik'), 'error'); return; }
+    } catch(e) { toast('❌ ' + e.message, 'error'); return; }
+  }
+  closePushModal();
+  toast(`✅ ${pushed} fayl push qilindi!`, 'success');
+  addMsg('ai', `✅ **GitHub Push muvaffaqiyatli!**\n\n${pushed} ta fayl \`${state.ghRepo}\` repo ga push qilindi.\n\nBranch: \`${state.ghBranch}\`\nCommit: "${commitMsg}"`);
+  switchTab('chat');
+}
+
+loadState();
+</script>
+</body>
+</html>
