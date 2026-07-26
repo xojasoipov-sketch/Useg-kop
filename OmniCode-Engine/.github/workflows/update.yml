@@ -1,0 +1,25 @@
+name: AI Agentni yangilash
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Har kuni soat 00:00 da
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Node.js oʻrnatish
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: AI Agentni yangilash
+      run: |
+        npm install
+        node scripts/update-agents.js
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
