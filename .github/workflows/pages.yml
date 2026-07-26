@@ -7,16 +7,33 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to gh-pages branch
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'omnicode/frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: omnicode/frontend
+        run: npm install
+
+      - name: Build frontend
+        working-directory: omnicode/frontend
+        run: npm run build
+
+      - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./omnicode/frontend
+          publish_dir: ./omnicode/frontend/dist
           publish_branch: gh-pages
