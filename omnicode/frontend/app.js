@@ -1615,6 +1615,29 @@ ${appJs}
     // 5. WRITE_FILE ni parse qilib push qiladi
     const writes = FS.parseWrites(reply);
     if (writes.length) {
+      // Xavfsizlik: app.js yoki index.html uchun hajm tekshiruvi
+      const CRITICAL_FILES = ['app.js', 'index.html'];
+      const safeWrites = [];
+      for (const w of writes) {
+        const isCritical = CRITICAL_FILES.some(f => w.path.endsWith(f));
+        if (isCritical) {
+          // Joriy faylni GitHub dan olib hajmini solishtirish
+          try {
+            const url = `https://raw.githubusercontent.com/${SelfImport.REPO_OWNER}/${SelfImport.REPO_NAME}/${SelfImport.BRANCH}/${w.path}`;
+            const cur = await fetch(url).then(r => r.text());
+            const ratio = w.content.length / cur.length;
+            if (ratio < 0.7) {
+              // Yangi fayl 30% dan kichik — xavfli, rad etamiz
+              AI.appendBubble('ai', `⚠️ **Xavfsizlik filtri:** \`${w.path}\` hajmi ${Math.round(ratio*100)}% ga tushib qoldi (${w.content.length} vs ${cur.length} belgi). Push bekor qilindi — fayl buzilgan bo'lishi mumkin.`, false);
+              toast('⛔ Hajm filtri: ' + w.path + ' push qilinmadi');
+              continue;
+            }
+          } catch(e) { /* fetch xato bo'lsa o'tkazib yubormaymiz */ }
+        }
+        safeWrites.push(w);
+      }
+      writes.length = 0; writes.push(...safeWrites);
+
       writes.forEach(w => FS.write(SelfImport.PROJECT_ID, w.path, w.content));
       ActivityBar.setPhase('pushing');
       AI._showStatus('🚀 O\'zgarishlar GitHub\'ga push qilinmoqda...');
