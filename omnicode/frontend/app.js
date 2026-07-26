@@ -3343,8 +3343,9 @@ const Settings = {
   _renderORKeysUI() {
     const keys = AIRouter.keys();
     const rows = keys.map((k, i) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <div id="or-key-row-${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
         <span style="flex:1;font-size:12px;color:var(--text2);font-family:monospace">sk-or-...${k.slice(-8)}</span>
+        <button onclick="Settings._testORKey(${i})" id="or-test-${i}" style="padding:4px 10px;border-radius:6px;background:rgba(80,160,255,0.15);color:#50a0ff;border:none;font-size:11px;cursor:pointer">Test</button>
         <button onclick="Settings._removeORKey(${i})" style="padding:4px 10px;border-radius:6px;background:rgba(255,80,80,0.15);color:#ff5050;border:none;font-size:11px;cursor:pointer">O'chirish</button>
       </div>`).join('');
     return `
@@ -3356,7 +3357,37 @@ const Settings = {
             style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:12px">
         </div>
         <div style="font-size:11px;color:var(--text3);margin-top:6px">openrouter.ai/keys → "Create Key"</div>
+        ${keys.length > 0 ? '<button onclick="Settings._testAllORKeys()" style="margin-top:12px;width:100%;padding:9px;border-radius:8px;background:rgba(80,160,255,0.15);color:#50a0ff;border:1px solid rgba(80,160,255,0.3);font-size:12px;cursor:pointer">Hammasini tekshirish</button>' : ''}
       </div>`;
+  },
+
+  async _testORKey(index) {
+    const keys = AIRouter.keys();
+    const key = keys[index];
+    const btn = document.getElementById('or-test-' + index);
+    if (btn) { btn.textContent = '...'; btn.disabled = true; }
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model: 'meta-llama/llama-3.1-8b-instruct:free', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 5 }),
+      });
+      const row = document.getElementById('or-key-row-' + index);
+      if (res.ok) {
+        if (btn) { btn.textContent = '✅'; btn.style.color = '#50ff80'; btn.disabled = false; }
+        if (row) row.style.background = 'rgba(80,255,80,0.05)';
+      } else {
+        if (btn) { btn.textContent = '❌ ' + res.status; btn.style.color = '#ff5050'; btn.disabled = false; }
+        if (row) row.style.background = 'rgba(255,80,80,0.05)';
+      }
+    } catch (e) {
+      if (btn) { btn.textContent = '❌ Xato'; btn.style.color = '#ff5050'; btn.disabled = false; }
+    }
+  },
+
+  async _testAllORKeys() {
+    const keys = AIRouter.keys();
+    for (let i = 0; i < keys.length; i++) await this._testORKey(i);
   },
 
   _addORKeyFromInput() {
@@ -3394,8 +3425,9 @@ const Settings = {
   _renderMistralKeysUI() {
     const keys = AIRouter.mistralKeys();
     const rows = keys.map((k, i) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <div id="mistral-key-row-${i}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
         <span style="flex:1;font-size:12px;color:var(--text2);font-family:monospace">...${k.slice(-8)}</span>
+        <button onclick="Settings._testMistralKey(${i})" id="mistral-test-${i}" style="padding:4px 10px;border-radius:6px;background:rgba(80,160,255,0.15);color:#50a0ff;border:none;font-size:11px;cursor:pointer">Test</button>
         <button onclick="Settings._removeMistralKey(${i})" style="padding:4px 10px;border-radius:6px;background:rgba(255,80,80,0.15);color:#ff5050;border:none;font-size:11px;cursor:pointer">O'chirish</button>
       </div>`).join('');
     return `
@@ -3407,7 +3439,38 @@ const Settings = {
             style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:12px">
         </div>
         <div style="font-size:11px;color:var(--text3);margin-top:6px">console.mistral.ai → API Keys</div>
+        ${keys.length > 0 ? '<button onclick="Settings._testAllMistralKeys()" style="margin-top:12px;width:100%;padding:9px;border-radius:8px;background:rgba(80,160,255,0.15);color:#50a0ff;border:1px solid rgba(80,160,255,0.3);font-size:12px;cursor:pointer">Hammasini tekshirish</button>' : ''}
       </div>`;
+  },
+
+  async _testMistralKey(index) {
+    const keys = AIRouter.mistralKeys();
+    const key = keys[index];
+    const btn = document.getElementById('mistral-test-' + index);
+    if (btn) { btn.textContent = '...'; btn.disabled = true; }
+    try {
+      const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model: 'mistral-small-latest', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 5 }),
+      });
+      const row = document.getElementById('mistral-key-row-' + index);
+      if (res.ok) {
+        if (btn) { btn.textContent = '✅'; btn.style.color = '#50ff80'; btn.disabled = false; }
+        if (row) row.style.background = 'rgba(80,255,80,0.05)';
+      } else {
+        const errText = res.status === 401 ? '❌ Noto\'g\'ri' : '❌ ' + res.status;
+        if (btn) { btn.textContent = errText; btn.style.color = '#ff5050'; btn.disabled = false; }
+        if (row) row.style.background = 'rgba(255,80,80,0.05)';
+      }
+    } catch (e) {
+      if (btn) { btn.textContent = '❌ Xato'; btn.style.color = '#ff5050'; btn.disabled = false; }
+    }
+  },
+
+  async _testAllMistralKeys() {
+    const keys = AIRouter.mistralKeys();
+    for (let i = 0; i < keys.length; i++) await this._testMistralKey(i);
   },
 
   _addMistralKeyFromInput() {
