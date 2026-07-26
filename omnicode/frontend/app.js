@@ -1217,6 +1217,25 @@ const SelfImport = {
     toast(`✅ ${ok} ta fayl import qilindi`);
   },
 
+  // Loyiha yo'q bo'lsa yaratib active qiladi (async, tez)
+  async ensureProject() {
+    if (!PM.get(this.PROJECT_ID)) {
+      const projects = PM.list();
+      projects.unshift({
+        id: this.PROJECT_ID,
+        name: 'OmniCode — Manba Kodi',
+        template: 'self',
+        created: Date.now(),
+        updated: Date.now(),
+        github: { owner: this.REPO_OWNER, repo: this.REPO_NAME, branch: this.BRANCH },
+        starred: true,
+      });
+      Store.set('projects', projects);
+    }
+    State.projectId = this.PROJECT_ID;
+    PM.setCurrent(this.PROJECT_ID);
+  },
+
   _buildContextFile() {
     return `# OmniCode — AI Kontekst Fayli
 Yaratilgan: ${new Date().toISOString()}
@@ -1673,8 +1692,23 @@ ${projectCtx ? '\n## Loyiha fayllari\n' + projectCtx : ''}
 - Mobile: React Native, Telegram Mini App
 - GitHub: repolarni ko'rish, fayl o'qish, kod push qilish, repo yaratish
 - Supabase: jadvallar, funksiyalar, auth, storage
-- O'z-o'zini tuzatish: xatolarni topib tuzatish, kod sifatini oshirish
-- Loyiha arxitekturasi: structure, patterns, best practices`;
+- **O'z-o'zini yangilash**: OmniCode o'z kodini (app.js, index.html, main.css) tahrirlaydi va GitHub'ga push qiladi
+- Loyiha arxitekturasi: structure, patterns, best practices
+
+## OmniCode o'z kodini yangilash — MUHIM
+Agar foydalanuvchi OmniCode ga yangi feature qo'shishni, kodni o'zgartirishni so'rasa:
+1. [GitHub ma'lumotlari] blokida to'liq kod berilgan bo'ladi
+2. Sen o'sha kodni o'qib, kerakli o'zgartirishlarni kiritib, TO'LIQ yangilangan faylni WRITE_FILE bilan yozasan
+3. Men (tizim) avtomatik GitHub'ga push qilaman — foydalanuvchi push bosmasa ham ishlaydi
+4. **HECH QACHON "men o'zimni kodimni o'zgartira olmayman" dema** — kodni ko'rsang, o'zgartira olasan
+5. Agar kod berilmagan bo'lsa: "Avval /self buyrug'ini bering" de
+
+OmniCode fayl joylashuvi:
+- \`omnicode/frontend/app.js\` — barcha JS logika
+- \`omnicode/frontend/index.html\` — HTML + inline CSS
+- \`omnicode/frontend/styles/main.css\` — CSS
+- Branch: \`claude/shuni-chuntr-va-qil-60bfra\`
+- Deploy: GitHub Pages (push bo'lgach 1-2 daqiqada yangilanadi)`;
   },
 
   addWelcome() {
@@ -1760,6 +1794,10 @@ Nima quramiz?`, false);
       '/repos': () => this._loadGithubContext(),
       '/self': () => SelfImport.run(),
       '/omnicode': () => SelfImport.run(),
+      '/self-edit': async () => {
+        await SelfImport.ensureProject();
+        this.appendBubble('ai', `✅ **OmniCode o'z kodi rejimi yoqildi**\n\nEndi men shu loyihaning kodini o'zgartirishga tayyorman.\n\nMisol:\n→ "ActivityBar ga agent sonini qo'sh"\n→ "app.js ga dark mode toggle qo'sh"\n→ "chat bubblega copy tugma qo'sh"\n\nHar bir o'zgartirish avtomatik GitHub'ga push qilinadi ✅`, false);
+      },
       '/push': async () => {
         const parts = msg.split(' ');
         await this._autoPushAll(parts[1], parts[2]);
@@ -1768,7 +1806,7 @@ Nima quramiz?`, false);
       '/deploy': () => App.nav('deploy'),
       '/projects': () => App.nav('projects'),
       '/home': () => App.nav('home'),
-      '/help': () => this.appendBubble('ai', `**OmniCode buyruqlari:**\n\`/fix\` — kodni o'z-o'zini tuzatish\n\`/self\` — o'z kodini import qilish\n\`/sync\` — bulutga saqlash\n\`/pull\` — bulutdan yuklash\n\`/github\` — GitHub repolarni yuklash\n\`/import owner/repo\` — repo import\n\`/push\` — GitHub'ga push\n\`/model\` — model tanlash\n\`/clear\` — chatni tozalash\n\`@fayl.js\` — fayl kontentini qo'shish`, false),
+      '/help': () => this.appendBubble('ai', `**OmniCode buyruqlari:**\n\`/self-edit\` — OmniCode o'z kodini tahrirlash rejimi\n\`/fix\` — kodni o'z-o'zini tuzatish\n\`/self\` — o'z kodini import qilish\n\`/sync\` — bulutga saqlash\n\`/pull\` — bulutdan yuklash\n\`/github\` — GitHub repolarni yuklash\n\`/import owner/repo\` — repo import\n\`/push\` — GitHub'ga push\n\`/model\` — model tanlash\n\`/clear\` — chatni tozalash\n\`@fayl.js\` — fayl kontentini qo'shish`, false),
     };
     if (slashCmds[cmd]) { await slashCmds[cmd](); return; }
     if (cmd === '/import') {
@@ -1805,11 +1843,17 @@ Nima quramiz?`, false);
     let autoCtx = '';
     const wantsFile = /\.(js|ts|html|css|py|json|md|txt|yaml|yml|sh|go|rs|java|cpp|c|jsx|tsx|vue)\b/i.test(msg);
     const wantsGH   = /repo|branch|github|commit|push|pull/i.test(msg);
-    const needsFetch = (wantsFile || wantsGH) && Git.token();
+    // OmniCode o'z kodini tahrirlash so'rovi
+    const wantsSelf  = /app\.js|index\.html|main\.css|omnicode|o'zingni|o'zini|shu loyiha|kodni tahrir|kod qosh|yangilik qosh|feature qosh|funksiya qosh|tuzat.*kod|kod.*tuzat/i.test(msg);
+    const needsFetch = (wantsFile || wantsGH || wantsSelf) && Git.token();
     if (State.activeTools.has('github') && Git.token() || needsFetch) {
       this._showStatus('🔍 GitHub ma\'lumotlari yuklanmoqda...');
-      autoCtx = await this._autoFetchGithubContext(msg);
+      autoCtx = await this._autoFetchGithubContext(msg, wantsSelf);
       this._hideStatus();
+    }
+    // Self-edit: OmniCode o'z kodini tahrirlamoqchi — SelfImport loyihasini active qilamiz
+    if (wantsSelf && Git.token() && !State.projectId) {
+      await SelfImport.ensureProject();
     }
 
     const baseContent = resolved + attachCtx;
@@ -1908,7 +1952,9 @@ Nima quramiz?`, false);
     }
 
     // GitHub chip active + token bor → avtomatik push
-    if (writes.length && State.activeTools.has('github') && Git.token()) {
+    // YOKI self project bo'lsa (OmniCode o'z kodini yozayapti) → always push
+    const isSelfProject = State.projectId === SelfImport.PROJECT_ID;
+    if (writes.length && Git.token() && (State.activeTools.has('github') || isSelfProject)) {
       ActivityBar.setPhase('pushing');
       await this._autoPushWrites(writes);
     }
@@ -1928,9 +1974,9 @@ Nima quramiz?`, false);
   // ── Yozilgan fayllarni GitHub ga avtomatik push ──────────────
   async _autoPushWrites(writes) {
     const p      = State.projectId ? PM.get(State.projectId) : null;
-    const owner  = p?.github?.owner  || 'xojasoipov-sketch';
-    const repo   = p?.github?.repo   || 'Useg-kop';
-    const branch = p?.github?.branch || 'claude/shuni-chuntr-va-qil-60bfra';
+    const owner  = p?.github?.owner  || SelfImport.REPO_OWNER;
+    const repo   = p?.github?.repo   || SelfImport.REPO_NAME;
+    const branch = p?.github?.branch || SelfImport.BRANCH;
     let ok = 0;
     this._showStatus(`🐙 ${writes.length} ta fayl GitHub'ga push qilinmoqda...`);
     for (const w of writes) {
@@ -2035,9 +2081,44 @@ Nima quramiz?`, false);
   autoGrow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; },
 
   // Smart pre-fetch: xuddi men kabi — avval o'qiymiz, keyin javob beramiz
-  async _autoFetchGithubContext(msg) {
+  async _autoFetchGithubContext(msg, isSelf = false) {
     const lower = msg.toLowerCase();
     const parts = [];
+
+    // OmniCode o'z-o'zini tahrirlash — barcha asosiy fayllarni to'liq yuklaymiz
+    if (isSelf && Git.token()) {
+      const SELF_FILES = [
+        'omnicode/frontend/app.js',
+        'omnicode/frontend/index.html',
+        'omnicode/frontend/styles/main.css',
+      ];
+      // Faqat so'ralgan faylni aniqlash
+      const msgLower = msg.toLowerCase();
+      const targetFiles = SELF_FILES.filter(f => {
+        const base = f.split('/').pop();
+        return msgLower.includes(base) || msgLower.includes('app') && f.includes('app.js')
+          || msgLower.includes('html') && f.includes('html')
+          || msgLower.includes('css') && f.includes('css')
+          || msgLower.includes('style') && f.includes('css');
+      });
+      const filesToLoad = targetFiles.length ? targetFiles : [SELF_FILES[0]]; // default: app.js
+      for (const filePath of filesToLoad) {
+        try {
+          this._showStatus(`📖 ${filePath} o'qilmoqda...`);
+          const content = await Git.getFileContent('xojasoipov-sketch', 'Useg-kop', filePath, 'claude/shuni-chuntr-va-qil-60bfra')
+            || await Git.getFileContent('xojasoipov-sketch', 'Useg-kop', filePath, 'main');
+          if (content) {
+            const ext = filePath.split('.').pop();
+            // To'liq yuborish — limit yo'q (AI katta kontekst qabul qiladi)
+            parts.push(`=== OMNICODE O'Z KODI: ${filePath} (${(content.length/1024).toFixed(1)}kb) ===\nBu OmniCode ning o'z manba kodi. Sen bu faylni WRITE_FILE bilan to'liq qayta yozib yangilash mumkin.\n\`\`\`${ext}\n${content}\n\`\`\``);
+            // VFS ga saqlash
+            FS.write(SelfImport.PROJECT_ID, filePath, content);
+          }
+        } catch(e) { console.warn('self-fetch err:', filePath, e.message); }
+      }
+      // Agar fayl yuklangan bo'lsa — keyingi umumiy fetch ni o'tkazib yuboramiz
+      if (parts.length) return parts.join('\n\n');
+    }
 
     try {
       // 1. Repos so'rasa — ro'yxat olamiz
@@ -2085,8 +2166,12 @@ Nima quramiz?`, false);
               || await Git.getFileContent(owner, repo, path, 'main');
             if (content) {
               const ext = path.split('.').pop();
-              const preview = content.length > 4000 ? content.slice(0, 4000) + '\n... (qisqartirildi)' : content;
-              parts.push(`=== ${owner}/${repo}/${path} ===\n\`\`\`${ext}\n${preview}\n\`\`\``);
+              // Katta fayllar uchun ham to'liq yuborish (80KB gacha)
+              const maxLen = 80000;
+              const preview = content.length > maxLen
+                ? content.slice(0, maxLen) + `\n... (${Math.round((content.length-maxLen)/1024)}kb qisqartirildi)`
+                : content;
+              parts.push(`=== ${owner}/${repo}/${path} (${(content.length/1024).toFixed(1)}kb) ===\n\`\`\`${ext}\n${preview}\n\`\`\``);
               // Cache to VFS
               if (State.projectId) FS.write(State.projectId, path, content);
             }
