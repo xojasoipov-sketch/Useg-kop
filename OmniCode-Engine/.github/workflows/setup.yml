@@ -1,0 +1,25 @@
+name: Loyihalarni oʻrnatish
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Node.js oʻrnatish
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Loyihalarni oʻrnatish
+      run: |
+        npm install
+        node scripts/setup-projects.js
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
