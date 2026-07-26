@@ -72,6 +72,39 @@
     }
     .btn-primary:hover { opacity: 0.85; }
 
+    /* LINKS SECTION */
+    .links-section {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .links-grid {
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      margin-top: 1.5rem;
+    }
+    .link-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color .2s, transform .15s;
+    }
+    .link-card:hover { border-color: var(--accent); transform: translateX(4px); }
+    .link-icon { font-size: 1.5rem; width: 2.5rem; text-align: center; flex-shrink: 0; }
+    .link-info { text-align: left; flex: 1; }
+    .link-title { font-weight: 700; font-size: .95rem; }
+    .link-url { font-size: .78rem; color: var(--accent); margin-top: .1rem; word-break: break-all; }
+    .link-desc { font-size: .8rem; color: var(--muted); margin-top: .15rem; }
+    .link-arrow { color: var(--muted); font-size: 1.1rem; }
+
     /* HERO */
     .hero {
       text-align: center;
@@ -422,6 +455,41 @@
     </table>
   </div>
 </section>
+
+<!-- LINKS -->
+<div class="links-section" id="links">
+  <div class="section-title">🔗 Foydali Linklar</div>
+  <p class="section-sub" style="text-align:center">Rasmiy sayt, GitHub va Maker School jamoasi</p>
+  <div class="links-grid">
+    <a href="https://omniroute.online/" target="_blank" class="link-card">
+      <div class="link-icon">🌐</div>
+      <div class="link-info">
+        <div class="link-title">OmniRoute — Rasmiy Sayt</div>
+        <div class="link-url">https://omniroute.online/</div>
+        <div class="link-desc">O'rnatish ko'rsatmalari, dokumentatsiya va boshqa resurslar</div>
+      </div>
+      <div class="link-arrow">→</div>
+    </a>
+    <a href="https://github.com/diegosouzapw/OmniRoute" target="_blank" class="link-card">
+      <div class="link-icon">⭐</div>
+      <div class="link-info">
+        <div class="link-title">GitHub — diegosouzapw/OmniRoute</div>
+        <div class="link-url">https://github.com/diegosouzapw/OmniRoute</div>
+        <div class="link-desc">Open-source kod, issues, pull requestlar — star bosing!</div>
+      </div>
+      <div class="link-arrow">→</div>
+    </a>
+    <a href="https://www.skool.com/makerschool/about?ref=0a3be5900d60497cb3542cca1ed3fdcb" target="_blank" class="link-card">
+      <div class="link-icon">🎓</div>
+      <div class="link-info">
+        <div class="link-title">Maker School — Nick Sarae'ning Jamoasi</div>
+        <div class="link-url">https://www.skool.com/makerschool/about</div>
+        <div class="link-desc">AI agent &amp; automation jamoasi. Claude Code, Codex, n8n asosida tizimlar qurib, 90 kunda birinchi mijozni toping. 100% pul qaytarish kafolati!</div>
+      </div>
+      <div class="link-arrow">→</div>
+    </a>
+  </div>
+</div>
 
 <!-- FOOTER -->
 <footer>
