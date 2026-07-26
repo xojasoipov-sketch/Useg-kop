@@ -1,5 +1,5 @@
 'use strict';
-// Premium icons · Key vault · JSON import · multi-key test (UZ)
+// Premium icons · Unlimited key pools · JSON import · test (UZ)
 
 const Ic = {
   _svg(paths, size = 20) {
@@ -45,11 +45,72 @@ function renderIcons(root = document) {
 }
 
 const KeyVault = {
+  POOLS: [
+    { id: 'or_pool', type: 'openrouter', label: 'OpenRouter', hint: 'sk-or-v1-...', jsonKey: 'or_keys' },
+    { id: 'groq_pool', type: 'groq', label: 'Groq', hint: 'gsk_...', jsonKey: 'groq_keys' },
+    { id: 'cerebras_pool', type: 'cerebras', label: 'Cerebras', hint: 'csk_...', jsonKey: 'cerebras_keys' },
+    { id: 'mistral_pool', type: 'mistral', label: 'Mistral', hint: '...', jsonKey: 'mistral_keys' },
+  ],
+
   slots() { return Store.get('keys', {}); },
-  set(partial) {
-    const k = { ...this.slots(), ...partial };
+
+  getPool(poolId) {
+    const k = this.slots();
+    const arr = k[poolId];
+    if (Array.isArray(arr) && arr.length) return arr.filter(Boolean);
+    // legacy single slots
+    if (poolId === 'or_pool') {
+      return [k.or1, k.or2, k.or3, k.or4, k.or5, k.or6, k.or7, k.or8].filter(Boolean);
+    }
+    if (poolId === 'groq_pool' && k.groq) return [k.groq];
+    if (poolId === 'cerebras_pool' && k.cerebras) return [k.cerebras];
+    if (poolId === 'mistral_pool' && k.mistral) return [k.mistral];
+    return [];
+  },
+
+  setPool(poolId, keys) {
+    const clean = (keys || []).map(String).map(s => s.trim()).filter(Boolean);
+    // unique
+    const seen = new Set();
+    const uniq = [];
+    for (const c of clean) {
+      if (seen.has(c)) continue;
+      seen.add(c);
+      uniq.push(c);
+    }
+    const k = { ...this.slots(), [poolId]: uniq };
+    // legacy sync (AIRouter compatibility)
+    if (poolId === 'or_pool') {
+      for (let i = 0; i < 8; i++) {
+        if (uniq[i]) k['or' + (i + 1)] = uniq[i];
+        else delete k['or' + (i + 1)];
+      }
+    }
+    if (poolId === 'groq_pool') {
+      if (uniq[0]) k.groq = uniq[0]; else delete k.groq;
+    }
+    if (poolId === 'cerebras_pool') {
+      if (uniq[0]) k.cerebras = uniq[0]; else delete k.cerebras;
+    }
+    if (poolId === 'mistral_pool') {
+      if (uniq[0]) k.mistral = uniq[0]; else delete k.mistral;
+    }
     Store.set('keys', k);
-    return k;
+    return uniq;
+  },
+
+  addKey(poolId, key) {
+    const v = String(key || '').trim();
+    if (!v) return this.getPool(poolId);
+    const cur = this.getPool(poolId);
+    if (cur.includes(v)) { toast('Allaqachon bor'); return cur; }
+    return this.setPool(poolId, [...cur, v]);
+  },
+
+  removeKey(poolId, index) {
+    const cur = this.getPool(poolId).slice();
+    cur.splice(index, 1);
+    return this.setPool(poolId, cur);
   },
 
   exampleJson() {
@@ -64,11 +125,9 @@ const KeyVault = {
     };
   },
 
-  /** Bir nechta JSON bo'laklarini birlashtirish (chatdan ketma-ket yuborilgan) */
   normalizeRaw(raw) {
     let s = (raw || '').trim();
     if (!s) throw new Error('JSON bo\'sh');
-    // Bir nechta JSON obyekt ketma-ket yozilgan bo'lsa — merge
     if (s.includes('}\n{') || s.includes('}{')) {
       const parts = s.split(/\}\s*\{/).map((p, i, arr) => {
         if (i === 0) return p + '}';
@@ -77,9 +136,7 @@ const KeyVault = {
       });
       const merged = {};
       for (const p of parts) {
-        try {
-          Object.assign(merged, JSON.parse(p));
-        } catch {}
+        try { Object.assign(merged, JSON.parse(p)); } catch {}
       }
       if (Object.keys(merged).length) return merged;
     }
@@ -99,35 +156,29 @@ const KeyVault = {
       throw new Error('JSON obyekt bo\'lishi kerak');
     }
 
-    const k = { ...this.slots() };
     const asArr = (v) => {
       if (!v) return [];
       if (Array.isArray(v)) return v.map(String).map(s => s.trim()).filter(Boolean);
       return [String(v).trim()].filter(Boolean);
     };
 
-    const or = asArr(data.or_keys || data.openrouter_keys || data.openrouter || data.or);
-    or.forEach((key, i) => { if (i < 8) k['or' + (i + 1)] = key; });
-    if (or.length) k.or_pool = or;
+    // merge with existing (append, not replace) — cheksiz
+    const mergePool = (poolId, incoming) => {
+      const cur = this.getPool(poolId);
+      return this.setPool(poolId, [...cur, ...incoming]);
+    };
 
-    const groq = asArr(data.groq_keys || data.groq);
-    if (groq[0]) k.groq = groq[0];
-    if (groq.length) k.groq_pool = groq;
+    mergePool('or_pool', asArr(data.or_keys || data.openrouter_keys || data.openrouter || data.or));
+    mergePool('groq_pool', asArr(data.groq_keys || data.groq));
+    mergePool('cerebras_pool', asArr(data.cerebras_keys || data.cerebras));
+    mergePool('mistral_pool', asArr(data.mistral_keys || data.mistral));
 
-    const cb = asArr(data.cerebras_keys || data.cerebras);
-    if (cb[0]) k.cerebras = cb[0];
-    if (cb.length) k.cerebras_pool = cb;
-
-    const ms = asArr(data.mistral_keys || data.mistral);
-    if (ms[0]) k.mistral = ms[0];
-    if (ms.length) k.mistral_pool = ms;
-
+    const k = { ...this.slots() };
     if (data.github || data.github_token) k.github = String(data.github || data.github_token).trim();
     if (data.supabaseUrl || data.supabase_url) k.supabaseUrl = String(data.supabaseUrl || data.supabase_url).trim();
     if (data.supabaseAnon || data.supabase_anon || data.supabase_key) {
       k.supabaseAnon = String(data.supabaseAnon || data.supabase_anon || data.supabase_key).trim();
     }
-
     Store.set('keys', k);
     Store.set('keys_last_test', null);
     return k;
@@ -135,84 +186,126 @@ const KeyVault = {
 
   exportJson() {
     const k = this.slots();
-    const or = k.or_pool || [k.or1, k.or2, k.or3, k.or4, k.or5, k.or6, k.or7, k.or8].filter(Boolean);
     return {
-      groq_keys: k.groq_pool || (k.groq ? [k.groq] : []),
-      or_keys: or,
-      cerebras_keys: k.cerebras_pool || (k.cerebras ? [k.cerebras] : []),
-      mistral_keys: k.mistral_pool || (k.mistral ? [k.mistral] : []),
+      or_keys: this.getPool('or_pool'),
+      groq_keys: this.getPool('groq_pool'),
+      cerebras_keys: this.getPool('cerebras_pool'),
+      mistral_keys: this.getPool('mistral_pool'),
       github: k.github || '',
       supabaseUrl: k.supabaseUrl || '',
       supabaseAnon: k.supabaseAnon || '',
     };
   },
 
-  listProviders() {
-    const k = this.slots();
-    const rows = [];
-    for (let i = 1; i <= 4; i++) {
-      rows.push({ id: 'or' + i, label: 'OpenRouter #' + i, type: 'openrouter', value: k['or' + i] || '', hint: 'sk-or-v1-...' });
-    }
-    rows.push(
-      { id: 'groq', label: 'Groq', type: 'groq', value: k.groq || '', hint: 'gsk_...' },
-      { id: 'cerebras', label: 'Cerebras', type: 'cerebras', value: k.cerebras || '', hint: 'csk_...' },
-      { id: 'mistral', label: 'Mistral', type: 'mistral', value: k.mistral || '', hint: '...' },
-      { id: 'github', label: 'GitHub PAT', type: 'github', value: k.github || '', hint: 'ghp_...' },
-      { id: 'supabaseUrl', label: 'Supabase URL', type: 'supabase_url', value: k.supabaseUrl || '', hint: 'https://xxx.supabase.co' },
-      { id: 'supabaseAnon', label: 'Supabase anon', type: 'supabase_key', value: k.supabaseAnon || '', hint: 'eyJ... (service_role emas!)' },
-    );
-    return rows;
-  },
-
   open() {
-    const list = this.listProviders();
     const fields = document.getElementById('connector-fields');
     if (!fields) return;
     const last = Store.get('keys_last_test', null);
-    const poolHint = (() => {
-      const k = this.slots();
-      const parts = [];
-      if ((k.or_pool || []).length) parts.push('OR: ' + k.or_pool.length);
-      if ((k.groq_pool || []).length) parts.push('Groq: ' + k.groq_pool.length);
-      if ((k.cerebras_pool || []).length) parts.push('Cerebras: ' + k.cerebras_pool.length);
-      if ((k.mistral_pool || []).length) parts.push('Mistral: ' + k.mistral_pool.length);
-      return parts.length ? parts.join(' · ') : 'Hali JSON yuklanmagan';
-    })();
+    const k = this.slots();
+
+    const poolHtml = this.POOLS.map(p => {
+      const keys = this.getPool(p.id);
+      const rows = keys.map((key, i) => `
+        <div class="key-input-row" data-pool="${p.id}" data-idx="${i}">
+          <input class="sh-input key-input" type="password" value="" data-pool-val="${p.id}-${i}" placeholder="${p.hint}">
+          <button type="button" class="key-test-btn" onclick="KeyVault.testPoolKey('${p.id}',${i},'${p.type}')" title="Test">${Ic.zap(16)}</button>
+          <button type="button" class="key-test-btn" style="color:var(--accent)" onclick="KeyVault.uiRemove('${p.id}',${i})" title="O'chirish">${Ic.x(16)}</button>
+        </div>
+        <div class="key-status" id="kv-st-${p.id}-${i}">Saqlangan · ${this.mask(key)}</div>
+      `).join('');
+
+      return `
+        <div class="kv-pool" data-pool-block="${p.id}">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px">
+            <label class="sh-label" style="padding:0;margin:0">${p.label} <span style="color:var(--text3);font-weight:600">(${keys.length})</span></label>
+            <button type="button" class="chip-mini" style="border:1px solid var(--border)" onclick="KeyVault.uiAdd('${p.id}')">+ Qo'shish</button>
+          </div>
+          ${rows || '<div style="padding:4px 20px 8px;font-size:12px;color:var(--text3)">Hali kalit yo\'q</div>'}
+          <div class="key-input-row" id="kv-add-${p.id}" style="display:none">
+            <input id="kv-new-${p.id}" class="sh-input key-input" type="password" placeholder="${p.hint}">
+            <button type="button" class="key-test-btn" style="color:var(--green)" onclick="KeyVault.uiCommitAdd('${p.id}')" title="Saqlash">${Ic.check(16)}</button>
+          </div>
+        </div>
+      `;
+    }).join('');
 
     fields.innerHTML = `
-      <label class="sh-label">Barcha AI kalitlar — bitta JSON</label>
-      <textarea id="kv-json" class="sh-input" rows="6" style="height:120px;font-family:monospace;font-size:11px" placeholder='{"groq_keys":["gsk_..."],"or_keys":["sk-or-v1-..."],"cerebras_keys":["csk_..."],"mistral_keys":["..."]}'></textarea>
+      <label class="sh-label">Barcha AI kalitlar — bitta JSON (cheksiz)</label>
+      <textarea id="kv-json" class="sh-input" rows="5" style="height:100px;font-family:monospace;font-size:11px" placeholder='{"or_keys":["sk-or-v1-..."],"groq_keys":["gsk_..."]}'></textarea>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 20px 8px">
         <button type="button" class="sh-btn" style="margin:0;padding:12px" onclick="KeyVault.importAndTest()">JSON yukla + test</button>
         <button type="button" class="sh-btn" style="margin:0;background:var(--bg3);color:var(--text);padding:12px" onclick="KeyVault.importFromTextarea()">Faqat yukla</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 20px 12px">
         <button type="button" class="sh-btn" style="margin:0;background:var(--bg3);color:var(--text);padding:10px;font-size:12px" onclick="KeyVault.pasteExample()">Namuna</button>
-        <button type="button" class="sh-btn" style="margin:0;background:var(--bg3);color:var(--text);padding:10px;font-size:12px" onclick="KeyVault.copyExport()">Eksport nusxa</button>
+        <button type="button" class="sh-btn" style="margin:0;background:var(--bg3);color:var(--text);padding:10px;font-size:12px" onclick="KeyVault.copyExport()">Eksport</button>
       </div>
-      <div style="padding:0 20px 12px;font-size:11px;color:var(--text3)">Hovuz: ${poolHint}</div>
       <div id="kv-test-report" style="padding:0 20px 12px;font-size:12px;line-height:1.5">${last ? this.formatReport(last) : ''}</div>
-    ` + list.map(p => `
-      <div class="key-row" data-key-id="${p.id}">
-        <label class="sh-label">${p.label}</label>
-        <div class="key-input-row">
-          <input id="kv-${p.id}" class="sh-input key-input" type="${p.type.startsWith('supabase') ? 'text' : 'password'}"
-            placeholder="${p.hint}" value="">
-          <button type="button" class="key-test-btn" onclick="KeyVault.testOne('${p.id}','${p.type}')" title="Tekshirish">${Ic.zap(16)}</button>
-        </div>
-        <div class="key-status" id="kv-st-${p.id}">${p.value ? 'Saqlangan · ' + this.mask(p.value) : ''}</div>
-      </div>`).join('') +
-      `<button type="button" class="sh-btn" style="margin-top:8px;background:var(--bg3);color:var(--text)" onclick="KeyVault.testAllPools()">Qayta test (ishlaydi / ishlamaydi)</button>`;
+      ${poolHtml}
+      <label class="sh-label">GitHub PAT</label>
+      <div class="key-input-row">
+        <input id="kv-github" class="sh-input key-input" type="password" placeholder="ghp_...">
+        <button type="button" class="key-test-btn" onclick="KeyVault.testSingle('github','github')">${Ic.zap(16)}</button>
+      </div>
+      <div class="key-status" id="kv-st-github">${k.github ? 'Saqlangan · ' + this.mask(k.github) : ''}</div>
+      <label class="sh-label">Supabase URL</label>
+      <div class="key-input-row">
+        <input id="kv-supabaseUrl" class="sh-input key-input" type="text" placeholder="https://xxx.supabase.co">
+      </div>
+      <label class="sh-label">Supabase anon</label>
+      <div class="key-input-row">
+        <input id="kv-supabaseAnon" class="sh-input key-input" type="password" placeholder="eyJ...">
+        <button type="button" class="key-test-btn" onclick="KeyVault.testSingle('supabaseAnon','supabase_key')">${Ic.zap(16)}</button>
+      </div>
+      <div class="key-status" id="kv-st-supabaseAnon"></div>
+      <button type="button" class="sh-btn" style="margin-top:8px;background:var(--bg3);color:var(--text)" onclick="KeyVault.testAllPools()">Barcha kalitlarni test</button>
+    `;
 
-    // qiymatlarni xavfsiz to'ldirish (HTML inject oldini olish)
-    for (const p of list) {
-      const el = document.getElementById('kv-' + p.id);
-      if (el && p.value) el.value = p.value;
+    // fill values safely
+    this.POOLS.forEach(p => {
+      this.getPool(p.id).forEach((key, i) => {
+        const el = fields.querySelector(`[data-pool-val="${p.id}-${i}"]`);
+        if (el) el.value = key;
+      });
+    });
+    if (k.github) {
+      const g = document.getElementById('kv-github');
+      if (g) g.value = k.github;
+    }
+    if (k.supabaseUrl) {
+      const u = document.getElementById('kv-supabaseUrl');
+      if (u) u.value = k.supabaseUrl;
+    }
+    if (k.supabaseAnon) {
+      const a = document.getElementById('kv-supabaseAnon');
+      if (a) a.value = k.supabaseAnon;
     }
 
-    document.getElementById('connector-sheet-title').textContent = 'API kalitlar';
+    document.getElementById('connector-sheet-title').textContent = 'API kalitlar (cheksiz)';
     Settings._conn = 'vault';
     Sheet.open('connector-sheet');
+  },
+
+  uiAdd(poolId) {
+    const row = document.getElementById('kv-add-' + poolId);
+    if (row) row.style.display = 'flex';
+    const inp = document.getElementById('kv-new-' + poolId);
+    if (inp) { inp.value = ''; inp.focus(); }
+  },
+
+  uiCommitAdd(poolId) {
+    const inp = document.getElementById('kv-new-' + poolId);
+    const v = (inp?.value || '').trim();
+    if (!v) { toast('Kalit yozing'); return; }
+    this.addKey(poolId, v);
+    toast('Qo\'shildi');
+    this.open();
+  },
+
+  uiRemove(poolId, index) {
+    this.removeKey(poolId, index);
+    toast('O\'chirildi');
+    this.open();
   },
 
   pasteExample() {
@@ -222,10 +315,10 @@ const KeyVault = {
 
   copyExport() {
     const j = JSON.stringify(this.exportJson(), null, 2);
-    navigator.clipboard.writeText(j).then(() => toast('JSON nusxa olindi')).catch(() => {
+    navigator.clipboard.writeText(j).then(() => toast('JSON nusxa')).catch(() => {
       const el = document.getElementById('kv-json');
       if (el) el.value = j;
-      toast('JSON maydonga yozildi');
+      toast('JSON maydonga');
     });
   },
 
@@ -234,9 +327,9 @@ const KeyVault = {
     const raw = (el?.value || '').trim();
     if (!raw) { toast('JSON joylang'); return; }
     try {
-      const k = this.importJson(raw);
-      const n = (k.or_pool || []).length + (k.groq_pool || []).length + (k.cerebras_pool || []).length + (k.mistral_pool || []).length;
-      toast(n + ' kalit yuklandi');
+      this.importJson(raw);
+      const n = this.POOLS.reduce((s, p) => s + this.getPool(p.id).length, 0);
+      toast(n + ' kalit hovuzda');
       this.open();
       this.refreshStatusUI();
     } catch (e) {
@@ -244,14 +337,13 @@ const KeyVault = {
     }
   },
 
-  /** Asosiy: JSON yukla + darhol test */
   async importAndTest() {
     const el = document.getElementById('kv-json');
     const raw = (el?.value || '').trim();
     if (!raw) { toast('JSON joylang'); return; }
     try {
       this.importJson(raw);
-      toast('Yuklandi — test boshlanmoqda...');
+      toast('Yuklandi — test...');
       this.open();
       await this.testAllPools();
     } catch (e) {
@@ -271,15 +363,22 @@ const KeyVault = {
   },
 
   saveFromForm() {
+    // pool inputs → pools
+    this.POOLS.forEach(p => {
+      const keys = this.getPool(p.id).map((old, i) => {
+        const el = document.querySelector(`[data-pool-val="${p.id}-${i}"]`);
+        return (el?.value || old || '').trim();
+      }).filter(Boolean);
+      this.setPool(p.id, keys);
+    });
     const k = { ...this.slots() };
-    for (const p of this.listProviders()) {
-      const el = document.getElementById('kv-' + p.id);
-      if (!el) continue;
-      const v = el.value.trim();
-      if (v) k[p.id] = v; else if (!k[p.id]) delete k[p.id];
-    }
+    const gh = document.getElementById('kv-github')?.value.trim();
+    const su = document.getElementById('kv-supabaseUrl')?.value.trim();
+    const sa = document.getElementById('kv-supabaseAnon')?.value.trim();
+    if (gh) k.github = gh; else delete k.github;
+    if (su) k.supabaseUrl = su; else delete k.supabaseUrl;
+    if (sa) k.supabaseAnon = sa; else delete k.supabaseAnon;
     Store.set('keys', k);
-    Settings.refresh?.();
     this.refreshStatusUI();
     toast('Kalitlar saqlandi');
     Sheet.close('connector-sheet');
@@ -341,7 +440,7 @@ const KeyVault = {
       return 'URL OK';
     }
     if (type === 'supabase_key') {
-      const url = (this.slots().supabaseUrl || '').replace(/\/$/, '');
+      const url = (this.slots().supabaseUrl || document.getElementById('kv-supabaseUrl')?.value || '').replace(/\/$/, '');
       if (!url) throw new Error('URL yo\'q');
       const res = await fetch(url + '/rest/v1/', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
       if (res.status === 401) throw new Error('401');
@@ -350,93 +449,104 @@ const KeyVault = {
     return 'OK';
   },
 
-  async testOne(id, type) {
+  async testPoolKey(poolId, index, type) {
+    const el = document.querySelector(`[data-pool-val="${poolId}-${index}"]`);
+    const key = (el?.value || this.getPool(poolId)[index] || '').trim();
+    const sid = poolId + '-' + index;
+    if (!key) { this.setStatus(sid, false, 'Bo\'sh'); return; }
+    this.setStatus(sid, null, '...');
+    try {
+      const msg = await this.probe(type, key);
+      this.setStatus(sid, true, msg);
+      // update stored if edited
+      const cur = this.getPool(poolId).slice();
+      cur[index] = key;
+      this.setPool(poolId, cur);
+    } catch (e) {
+      this.setStatus(sid, false, e.message || 'Xato');
+    }
+  },
+
+  async testSingle(id, type) {
     const el = document.getElementById('kv-' + id);
     const key = (el?.value || this.slots()[id] || '').trim();
-    if (!key && type !== 'supabase_url') {
-      this.setStatus(id, false, 'Bo\'sh');
-      return false;
-    }
-    this.setStatus(id, null, 'Tekshirilmoqda...');
+    if (!key) { this.setStatus(id, false, 'Bo\'sh'); return; }
+    this.setStatus(id, null, '...');
     try {
-      const msg = await this.probe(type, key || this.slots()[id]);
+      const msg = await this.probe(type, key);
       this.setStatus(id, true, msg);
-      return true;
+      const k = { ...this.slots(), [id]: key };
+      Store.set('keys', k);
     } catch (e) {
       this.setStatus(id, false, e.message || 'Xato');
-      return false;
     }
   },
 
   async testAllPools() {
     toast('Barcha kalitlar tekshirilmoqda...');
-    const k = this.slots();
+    // save form first
+    this.POOLS.forEach(p => {
+      const keys = this.getPool(p.id).map((old, i) => {
+        const el = document.querySelector(`[data-pool-val="${p.id}-${i}"]`);
+        return (el?.value || old || '').trim();
+      }).filter(Boolean);
+      this.setPool(p.id, keys);
+    });
+    const gh = document.getElementById('kv-github')?.value.trim();
+    const su = document.getElementById('kv-supabaseUrl')?.value.trim();
+    const sa = document.getElementById('kv-supabaseAnon')?.value.trim();
+    if (gh || su || sa) {
+      const k = { ...this.slots() };
+      if (gh) k.github = gh;
+      if (su) k.supabaseUrl = su;
+      if (sa) k.supabaseAnon = sa;
+      Store.set('keys', k);
+    }
+
     const working = [];
     const failed = [];
     const jobs = [];
 
-    const orList = k.or_pool || [k.or1, k.or2, k.or3, k.or4].filter(Boolean);
-    orList.forEach((key, i) => jobs.push({ type: 'openrouter', label: 'OpenRouter#' + (i + 1), key, slot: i < 4 ? 'or' + (i + 1) : null }));
-
-    const groqList = k.groq_pool || (k.groq ? [k.groq] : []);
-    groqList.forEach((key, i) => jobs.push({ type: 'groq', label: 'Groq#' + (i + 1), key, slot: i === 0 ? 'groq' : null }));
-
-    const cbList = k.cerebras_pool || (k.cerebras ? [k.cerebras] : []);
-    cbList.forEach((key, i) => jobs.push({ type: 'cerebras', label: 'Cerebras#' + (i + 1), key, slot: i === 0 ? 'cerebras' : null }));
-
-    const msList = k.mistral_pool || (k.mistral ? [k.mistral] : []);
-    msList.forEach((key, i) => jobs.push({ type: 'mistral', label: 'Mistral#' + (i + 1), key, slot: i === 0 ? 'mistral' : null }));
-
-    if (k.github) jobs.push({ type: 'github', label: 'GitHub', key: k.github, slot: 'github' });
-    if (k.supabaseUrl) jobs.push({ type: 'supabase_url', label: 'SB URL', key: k.supabaseUrl, slot: 'supabaseUrl' });
-    if (k.supabaseAnon) jobs.push({ type: 'supabase_key', label: 'SB anon', key: k.supabaseAnon, slot: 'supabaseAnon' });
-
-    for (const p of this.listProviders()) {
-      const el = document.getElementById('kv-' + p.id);
-      const v = el?.value?.trim();
-      if (v && !jobs.some(j => j.key === v)) {
-        jobs.push({ type: p.type, label: p.label, key: v, slot: p.id });
-      }
-    }
+    this.POOLS.forEach(p => {
+      this.getPool(p.id).forEach((key, i) => {
+        jobs.push({ type: p.type, label: p.label + '#' + (i + 1), key, poolId: p.id, index: i });
+      });
+    });
+    const k = this.slots();
+    if (k.github) jobs.push({ type: 'github', label: 'GitHub', key: k.github, id: 'github' });
+    if (k.supabaseUrl) jobs.push({ type: 'supabase_url', label: 'SB URL', key: k.supabaseUrl });
+    if (k.supabaseAnon) jobs.push({ type: 'supabase_key', label: 'SB anon', key: k.supabaseAnon, id: 'supabaseAnon' });
 
     for (const j of jobs) {
       try {
         const msg = await this.probe(j.type, j.key);
         working.push({ label: j.label, type: j.type, key: j.key, mask: this.mask(j.key), msg });
-        if (j.slot) this.setStatus(j.slot, true, msg);
+        if (j.poolId != null) this.setStatus(j.poolId + '-' + j.index, true, msg);
+        if (j.id) this.setStatus(j.id, true, msg);
       } catch (e) {
         failed.push({ label: j.label, type: j.type, key: j.key, mask: this.mask(j.key), error: e.message || 'xato' });
-        if (j.slot) this.setStatus(j.slot, false, e.message || 'xato');
+        if (j.poolId != null) this.setStatus(j.poolId + '-' + j.index, false, e.message || 'xato');
+        if (j.id) this.setStatus(j.id, false, e.message || 'xato');
       }
     }
 
-    const next = { ...k };
-    const okOr = working.filter(w => w.type === 'openrouter').map(w => w.key);
-    const okG = working.filter(w => w.type === 'groq').map(w => w.key);
-    const okC = working.filter(w => w.type === 'cerebras').map(w => w.key);
-    const okM = working.filter(w => w.type === 'mistral').map(w => w.key);
+    // keep only working keys in pools (optional — user may want to keep failed too)
+    // We keep all, but mark — only rotate working for AI
+    const next = { ...this.slots() };
+    this.POOLS.forEach(p => {
+      const okKeys = working.filter(w => w.type === p.type).map(w => w.key);
+      if (okKeys.length) this.setPool(p.id, okKeys);
+      // if none ok, leave as-is so user can fix
+    });
 
-    if (okOr.length) {
-      next.or_pool = okOr;
-      okOr.slice(0, 4).forEach((key, i) => { next['or' + (i + 1)] = key; });
-      for (let i = okOr.length; i < 4; i++) delete next['or' + (i + 1)];
-    }
-    if (okG.length) { next.groq_pool = okG; next.groq = okG[0]; }
-    if (okC.length) { next.cerebras_pool = okC; next.cerebras = okC[0]; }
-    if (okM.length) { next.mistral_pool = okM; next.mistral = okM[0]; }
-
-    Store.set('keys', next);
     const report = {
       at: Date.now(),
       working: working.map(w => ({ label: w.label, type: w.type, mask: w.mask, msg: w.msg })),
       failed: failed.map(f => ({ label: f.label, type: f.type, mask: f.mask, error: f.error })),
     };
     Store.set('keys_last_test', report);
-    Store.set('keys_failed', failed.map(f => ({ type: f.type, mask: f.mask, error: f.error })));
-
     const box = document.getElementById('kv-test-report');
     if (box) box.innerHTML = this.formatReport(report);
-
     toast('Ishlaydi: ' + working.length + ' · Ishlamaydi: ' + failed.length);
     this.refreshStatusUI();
     return report;
@@ -445,18 +555,16 @@ const KeyVault = {
   async testAll() { return this.testAllPools(); },
 
   refreshStatusUI() {
-    const k = this.slots();
     const last = Store.get('keys_last_test', null);
     const or = document.getElementById('or-status');
     const gh = document.getElementById('gh-status');
     const sb = document.getElementById('sb-status');
-    const n =
-      [k.or1, k.or2, k.or3, k.or4, k.groq, k.cerebras, k.mistral].filter(Boolean).length +
-      ((k.or_pool || []).length > 4 ? (k.or_pool.length - 4) : 0);
+    const n = this.POOLS.reduce((s, p) => s + this.getPool(p.id).length, 0);
     if (or) {
       or.textContent = n ? n + ' kalit' : 'Yo\'q';
       or.className = n ? 's-connected' : 's-val';
     }
+    const k = this.slots();
     if (gh) {
       const u = Store.get('gh_user', null);
       gh.textContent = k.github ? (u?.login ? '@' + u.login : 'Token bor') : 'Yo\'q';
@@ -468,16 +576,14 @@ const KeyVault = {
       sb.className = ok ? 's-connected' : 's-val';
     }
     const pct = document.getElementById('usage-pct');
-    if (pct && last) pct.textContent = (last.working?.length || 0) + '/' + ((last.working?.length || 0) + (last.failed?.length || 0));
+    if (pct) pct.textContent = n ? String(n) : '—';
   },
 };
 
 (function patchKeyRotation() {
   if (typeof AIRouter === 'undefined') return;
   AIRouter.openRouterKeys = function () {
-    const k = Store.get('keys', {});
-    if (k.or_pool?.length) return k.or_pool.filter(Boolean);
-    return [k.or1, k.or2, k.or3, k.or4].filter(Boolean);
+    return KeyVault.getPool('or_pool');
   };
 })();
 
@@ -539,4 +645,4 @@ const KeyVault = {
 if (typeof KeysPanel !== 'undefined') KeysPanel.open = () => KeyVault.open();
 document.addEventListener('DOMContentLoaded', () => renderIcons());
 setTimeout(() => renderIcons(), 50);
-console.log('✓ premium.js');
+console.log('✓ premium.js — unlimited keys');
