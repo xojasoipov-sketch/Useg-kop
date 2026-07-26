@@ -1,5 +1,6 @@
 // OmniCode - SMM AI Panel uchun asosiy JS logika
 // Yangi tab va panel qo'shish
+// XATIRALAR FUNKSIYASI QOSHDIM
 
 // Asosiy holatni yangilash
 const initialState = {
@@ -14,8 +15,10 @@ const initialState = {
     strategyGenerated: false,
     currentStep: 0,
     viralPosts: [],
-    aiGeneratedPosts: []
-  }
+    aiGeneratedPosts: [],
+    memories: [] // XATIRALAR UCHUN MAYDON
+  },
+  memories: [] // Global xatiralar uchun asosiy holat
 };
 
 // Yangi reducer qo'shish
@@ -46,6 +49,20 @@ const smmAIReducer = (state = initialState.smmAI, action) => {
   }
 };
 
+// XATIRALAR REDUCERI
+const memoriesReducer = (state = initialState.memories, action) => {
+  switch (action.type) {
+    case 'ADD_MEMORY':
+      return [...state, action.payload];
+    case 'DELETE_MEMORY':
+      return state.filter(memory => memory.id !== action.payload);
+    case 'CLEAR_MEMORIES':
+      return [];
+    default:
+      return state;
+  }
+};
+
 // Asosiy reducerga yangi reducerni qo'shish
 const rootReducer = (state = initialState, action) => {
   if (action.type.startsWith('SMM_AI_')) {
@@ -54,7 +71,143 @@ const rootReducer = (state = initialState, action) => {
       smmAI: smmAIReducer(state.smmAI, action)
     };
   }
+
+  if (action.type.startsWith('MEMORY_')) {
+    return {
+      ...state,
+      memories: memoriesReducer(state.memories, action)
+    };
+  }
+
   return state;
+};
+
+// Yangi komponent: XATIRALAR PANELI
+const MemoriesPanel = ({ state, dispatch }) => {
+  const [memoryText, setMemoryText] = React.useState('');
+  const [editingId, setEditingId] = React.useState(null);
+  const [editText, setEditText] = React.useState('');
+
+  // Xotirani saqlash
+  const handleAddMemory = () => {
+    if (memoryText.trim()) {
+      const newMemory = {
+        id: Date.now(),
+        text: memoryText,
+        date: new Date().toISOString(),
+        createdAt: new Date().toLocaleString()
+      };
+      dispatch({ type: 'ADD_MEMORY', payload: newMemory });
+      setMemoryText('');
+      alert('Xotira saqlandi!');
+    }
+  };
+
+  // Xotirani o'chirish
+  const handleDeleteMemory = (id) => {
+    if (confirm('Xotirani o\'chirmoqchimisiz?')) {
+      dispatch({ type: 'DELETE_MEMORY', payload: id });
+    }
+  };
+
+  // Xotirani tahrirlashni boshlash
+  const startEditing = (memory) => {
+    setEditingId(memory.id);
+    setEditText(memory.text);
+  };
+
+  // Xotirani yangilash
+  const handleUpdateMemory = (id) => {
+    if (editText.trim()) {
+      dispatch({
+        type: 'ADD_MEMORY',
+        payload: {
+          ...state.memories.find(m => m.id === id),
+          text: editText
+        }
+      });
+      setEditingId(null);
+      setEditText('');
+    }
+  };
+
+  // Barcha xotiralarni tozalash
+  const handleClearAll = () => {
+    if (confirm('Barcha xotiralarni o\'chirmoqchimisiz?')) {
+      dispatch({ type: 'CLEAR_MEMORIES' });
+    }
+  };
+
+  return React.createElement('div', { className: 'memories-panel' },
+    React.createElement('h2', null, '📝 Xotiralar'),
+    React.createElement('p', { className: 'memories-description' },
+      'Sizning muhim yozishmalar va xotiralaringizni saqlang'
+    ),
+
+    // Xotirani qo'shish formasi
+    React.createElement('div', { className: 'memory-form' },
+      React.createElement('textarea', {
+        value: memoryText,
+        onChange: (e) => setMemoryText(e.target.value),
+        placeholder: 'Yangi xotirani kiriting...',
+        className: 'textarea-field'
+      }),
+      React.createElement('button', {
+        onClick: handleAddMemory,
+        className: 'btn-primary'
+      }, 'Xotirani Saqlash')
+    ),
+
+    // Xotiralar ro'yxati
+    React.createElement('div', { className: 'memories-list' },
+      React.createElement('h3', null, 'Sizning Xotiralar:'),
+      state.memories.length === 0 ? React.createElement('p', { className: 'empty-message' }, 'Xotiralar mavjud emas') : state.memories.map(memory => React.createElement('div', {
+        key: memory.id,
+        className: `memory-item ${editingId === memory.id ? 'editing' : ''}`
+      },
+        editingId === memory.id ? React.createElement(React.Fragment, null,
+          React.createElement('textarea', {
+            value: editText,
+            onChange: (e) => setEditText(e.target.value),
+            className: 'edit-textarea'
+          }),
+          React.createElement('div', { className: 'edit-actions' },
+            React.createElement('button', {
+              onClick: () => handleUpdateMemory(memory.id),
+              className: 'btn-success'
+            }, 'Saqlash'),
+            React.createElement('button', {
+              onClick: () => setEditingId(null),
+              className: 'btn-secondary'
+            }, 'Bekor qilish')
+          )
+        ) : React.createElement(React.Fragment, null,
+          React.createElement('p', { className: 'memory-text' }, memory.text),
+          React.createElement('div', { className: 'memory-meta' },
+            React.createElement('small', null, `Yaratilgan: ${memory.createdAt}`)
+          ),
+          React.createElement('div', { className: 'memory-actions' },
+            React.createElement('button', {
+              onClick: () => startEditing(memory),
+              className: 'btn-info'
+            }, 'Tahrirlash'),
+            React.createElement('button', {
+              onClick: () => handleDeleteMemory(memory.id),
+              className: 'btn-danger'
+            }, 'O\'chirish')
+          )
+        )
+      ))
+    ),
+
+    // Tozalash knopkasi
+    state.memories.length > 0 && React.createElement('div', { className: 'clear-section' },
+      React.createElement('button', {
+        onClick: handleClearAll,
+        className: 'btn-danger'
+      }, 'Barcha Xotiralarni O\'chirish')
+    )
+  );
 };
 
 // Yangi komponent: SMM AI Panel
@@ -274,6 +427,11 @@ const tabs = [
     id: 'smm-ai',
     label: '🤖 SMM AI',
     content: SMMAIPanel
+  },
+  {
+    id: 'memories',
+    label: '📝 Xotiralar',
+    content: MemoriesPanel
   }
 ];
 
