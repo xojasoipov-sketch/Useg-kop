@@ -1519,75 +1519,91 @@ AI javobida quyidagi taglar → app.js execute qiladi:
 // ══════════════════════════════════════════════════════════════
 const SelfImprove = {
 
-  // OmniCode o'z kodini o'qib, yaxshilab, o'zi push qiladi
+  // EDIT formatini parse qiladi: <EDIT path="..."><OLD>...</OLD><NEW>...</NEW></EDIT>
+  parseEdits(text) {
+    const edits = [];
+    const re = /<EDIT\s+path="([^"]+)">\s*<OLD>([\s\S]*?)<\/OLD>\s*<NEW>([\s\S]*?)<\/NEW>\s*<\/EDIT>/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      edits.push({ path: m[1], old: m[2], new: m[3] });
+    }
+    return edits;
+  },
+
+  // Faylga EDIT ni qo'llaydi — old ni new bilan almashtiradi
+  applyEdits(source, edits) {
+    let result = source;
+    const log = [];
+    for (const e of edits) {
+      if (result.includes(e.old)) {
+        result = result.replace(e.old, e.new);
+        log.push('✅ ' + e.path + ': ' + e.old.trim().slice(0, 60).replace(/\n/g, '↵') + '...');
+      } else {
+        log.push('⚠️ Topilmadi: ' + e.old.trim().slice(0, 60).replace(/\n/g, '↵') + '...');
+      }
+    }
+    return { result, log };
+  },
+
+  // OmniCode o'z kodini o'qib, EDIT format bilan o'zgartiradi
   async run(userTask = '') {
     if (!Git.token()) {
       App.nav('ai');
-      AI.appendBubble('ai', `❌ **GitHub token kerak**\n\nSozlamalar → Kod → GitHub tokenini qo'shing. Token bilan OmniCode o'z kodini o'zgartirib, avtomatik deploy qila oladi.`, false);
+      AI.appendBubble('ai', '❌ **GitHub token kerak**\n\nSozlamalar → Kod → GitHub tokenini qo\'shing.', false);
       return;
     }
 
     App.nav('ai');
     await SelfImport.ensureProject();
 
-    // 1. O'z kodini GitHub dan yuklab oladi
-    AI.appendBubble('ai', `🔄 **O'z kodini o'qiyapman...**\n\nomnicode/frontend/app.js GitHub'dan yuklanmoqda...`, false);
+    AI.appendBubble('ai', '🔄 **O\'z kodini o\'qiyapman...**', false);
 
+    // 1. Joriy fayllarni GitHub dan oladi
     let appJs = '', indexHtml = '';
     try {
-      appJs = await Git.getFileContent(
-        SelfImport.REPO_OWNER, SelfImport.REPO_NAME,
-        'omnicode/frontend/app.js', SelfImport.BRANCH
-      );
-      indexHtml = await Git.getFileContent(
-        SelfImport.REPO_OWNER, SelfImport.REPO_NAME,
-        'omnicode/frontend/index.html', SelfImport.BRANCH
-      );
+      appJs = await Git.getFileContent(SelfImport.REPO_OWNER, SelfImport.REPO_NAME, 'omnicode/frontend/app.js', SelfImport.BRANCH);
+      indexHtml = await Git.getFileContent(SelfImport.REPO_OWNER, SelfImport.REPO_NAME, 'omnicode/frontend/index.html', SelfImport.BRANCH);
     } catch(e) {
-      AI.appendBubble('ai', `❌ Kod o'qishda xato: ${e.message}`, false);
+      AI.appendBubble('ai', '❌ Kod o\'qishda xato: ' + e.message, false);
       return;
     }
+    if (!appJs) { AI.appendBubble('ai', '❌ app.js yuklanmadi.', false); return; }
 
-    if (!appJs) {
-      AI.appendBubble('ai', `❌ app.js yuklanmadi. GitHub token to'g'ri ekanini tekshiring.`, false);
-      return;
-    }
+    AI.appendBubble('ai', '✅ Kod o\'qildi (' + (appJs.length/1024).toFixed(0) + 'KB). AI tahlil qilyapti...', false);
 
-    // VFS ga saqlash
-    FS.write(SelfImport.PROJECT_ID, 'omnicode/frontend/app.js', appJs);
-    if (indexHtml) FS.write(SelfImport.PROJECT_ID, 'omnicode/frontend/index.html', indexHtml);
+    // 2. AI ga yuboradi — EDIT format bilan
+    const task = userTask || 'xatolarni tuzat, foydalanuvchi tajribasini yaxshila';
+    const sysPrompt = `Sen OmniCode — o'z kodini real-time tahrir qiluvchi AI.
+Kodni o'qib, faqat o'zgartirilishi kerak bo'lgan qismlarni EDIT format bilan qaytarasan.
+HECH QACHON butun faylni qaytarma — faqat aniq o'zgarishlar.
+O'zbek tilida qisqacha tushuntir.
 
-    AI.appendBubble('ai', `✅ Kod o'qildi (${(appJs.length/1024).toFixed(0)}KB). AI tahlil qilyapti...`, false);
-
-    // 2. AI ga topshiriq beradi
-    const task = userTask || 'xatolarni tuzat, tezlikni yaxshila, foydalanuvchi tajribasini yaxshila';
-    const prompt = `Sen OmniCode AI coding assistant'ning o'zi. Quyida o'z manba koding berilgan.
-
-VAZIFA: ${task}
+EDIT FORMAT (bir yoki bir nechta blok):
+<EDIT path="omnicode/frontend/app.js">
+<OLD>
+[o'zgartiriladigan mavjud kod — so'zma-so'z, hech o'zgartirmasdan]
+</OLD>
+<NEW>
+[yangi kod]
+</NEW>
+</EDIT>
 
 QOIDALAR:
-1. Kodni sinchiklab o'qi
-2. Muammolarni aniqlash: xatolar, cheklovlar, yaxshilash mumkin bo'lgan joylar
-3. Yaxshilashlarni qil
-4. TO'LIQ yangilangan faylni WRITE_FILE bilan yoz — faqat o'zgargan qism emas, butun fayl
-5. Nima o'zgartirganingni qisqacha tushuntir
+- OLD ichida kamida 3 qator bo'lsin — noyob kontekst uchun
+- OLD ni fayldan so'zma-so'z ko'chir, hech o'zgartirma
+- Bir EDIT bloki bir mantiqiy o'zgarish uchun
+- Ko'p EDIT blok yozsa bo'ladi`;
 
-WRITE_FILE format:
-\`\`\`write_file:omnicode/frontend/app.js
-[to'liq yangilangan kod bu yerda]
-\`\`\`
-
-MUHIM: Men (tizim) avtomatik GitHub'ga push qilib, deploy qilaman. Sen faqat to'liq kodni yoz.
+    const userPrompt = `VAZIFA: ${task}
 
 === app.js (${(appJs.length/1024).toFixed(0)}KB) ===
-\`\`\`javascript
-${appJs}
-\`\`\``;
+${appJs.slice(0, 60000)}
 
-    // 3. AI ga yuboradi
+${indexHtml ? '=== index.html ===\n' + indexHtml.slice(0, 8000) : ''}`;
+
     const messages = [
-      { role: 'system', content: `Sen OmniCode — o'z-o'zini yaxshilovchi AI. O'z kodingni o'qib, yaxshilab, WRITE_FILE format bilan qaytarassan. Faqat o'zbek tilida javob ber.` },
-      { role: 'user', content: prompt }
+      { role: 'system', content: sysPrompt },
+      { role: 'user', content: userPrompt }
     ];
 
     AI.showTyping();
@@ -1599,67 +1615,73 @@ ${appJs}
     try {
       reply = await AIRouter.call(messages);
     } catch(e) {
-      AI.hideTyping();
-      AI.busy = false;
-      ActivityBar.error();
-      AI.appendBubble('ai', `❌ AI xatosi: ${e.message}\n\n/setup buyrug'i bilan AI kalitini qo'shing.`, false);
+      AI.hideTyping(); AI.busy = false; ActivityBar.error();
+      AI.appendBubble('ai', '❌ AI xatosi: ' + e.message, false);
       return;
     }
 
     AI.hideTyping();
     ActivityBar.setPhase('writing');
 
-    // 4. Javobni ko'rsatadi
+    // 3. Javobni ko'rsatadi
     const div = AI.appendBubble('ai', reply, false);
 
-    // 5. WRITE_FILE ni parse qilib push qiladi
-    const writes = FS.parseWrites(reply);
-    if (writes.length) {
-      // Xavfsizlik: app.js yoki index.html uchun hajm tekshiruvi
-      const CRITICAL_FILES = ['app.js', 'index.html'];
-      const safeWrites = [];
-      for (const w of writes) {
-        const isCritical = CRITICAL_FILES.some(f => w.path.endsWith(f));
-        if (isCritical) {
-          // Joriy faylni GitHub dan olib hajmini solishtirish
-          try {
-            const url = `https://raw.githubusercontent.com/${SelfImport.REPO_OWNER}/${SelfImport.REPO_NAME}/${SelfImport.BRANCH}/${w.path}`;
-            const cur = await fetch(url).then(r => r.text());
-            const ratio = w.content.length / cur.length;
-            if (ratio < 0.7) {
-              // Yangi fayl 30% dan kichik — xavfli, rad etamiz
-              AI.appendBubble('ai', `⚠️ **Xavfsizlik filtri:** \`${w.path}\` hajmi ${Math.round(ratio*100)}% ga tushib qoldi (${w.content.length} vs ${cur.length} belgi). Push bekor qilindi — fayl buzilgan bo'lishi mumkin.`, false);
-              toast('⛔ Hajm filtri: ' + w.path + ' push qilinmadi');
-              continue;
-            }
-          } catch(e) { /* fetch xato bo'lsa o'tkazib yubormaymiz */ }
-        }
-        safeWrites.push(w);
-      }
-      writes.length = 0; writes.push(...safeWrites);
-
-      writes.forEach(w => FS.write(SelfImport.PROJECT_ID, w.path, w.content));
-      ActivityBar.setPhase('pushing');
-      AI._showStatus('🚀 O\'zgarishlar GitHub\'ga push qilinmoqda...');
-      let pushed = 0;
-      for (const w of writes) {
-        try {
-          await Git.pushFile(SelfImport.REPO_OWNER, SelfImport.REPO_NAME, w.path, w.content, SelfImport.BRANCH, `self-improve: ${task.slice(0,60)}`);
-          pushed++;
-        } catch(e) { console.warn('push fail:', w.path, e.message); }
-      }
-      AI._hideStatus();
-      if (pushed > 0) {
-        AI.appendBubble('ai', `✅ **${pushed} ta fayl GitHub'ga push qilindi!**\n\nGitHub Actions avtomatik deploy qilmoqda...\n🔗 [GitHub Pages'da ko'rish](https://xojasoipov-sketch.github.io/Useg-kop/)`, false);
-        toast(`✅ Self-improve: ${pushed} ta fayl yangilandi`);
-      } else {
-        AI.appendBubble('ai', `⚠️ Push qilishda xato. GitHub token'ni tekshiring.`, false);
-      }
-    } else {
-      AI.appendBubble('ai', `ℹ️ AI hech qanday o'zgartirish qilmadi. Aniqroq vazifa bering.`, false);
+    // 4. EDIT larni parse qilib joriy faylga qo'llaydi
+    const edits = this.parseEdits(reply);
+    if (!edits.length) {
+      AI.appendBubble('ai', 'ℹ️ AI hech qanday o\'zgartirish tavsiya qilmadi.', false);
+      AI.busy = false; ActivityBar.done();
+      return;
     }
 
-    if (div) AI._addBubbleActions(div, reply, writes);
+    // app.js edits
+    const appEdits = edits.filter(e => e.path.endsWith('app.js'));
+    const htmlEdits = edits.filter(e => e.path.endsWith('index.html'));
+
+    const filesToPush = [];
+
+    if (appEdits.length) {
+      const { result, log } = this.applyEdits(appJs, appEdits);
+      AI.appendBubble('ai', '**app.js o\'zgarishlar:**\n' + log.join('\n'), false);
+      // Syntax tekshiruvi
+      try { new Function(result); } catch(err) {
+        AI.appendBubble('ai', '❌ **Syntax xato** — push bekor qilindi: ' + err.message, false);
+        AI.busy = false; ActivityBar.done(); return;
+      }
+      filesToPush.push({ path: 'omnicode/frontend/app.js', content: result });
+    }
+
+    if (htmlEdits.length) {
+      const { result, log } = this.applyEdits(indexHtml, htmlEdits);
+      AI.appendBubble('ai', '**index.html o\'zgarishlar:**\n' + log.join('\n'), false);
+      filesToPush.push({ path: 'omnicode/frontend/index.html', content: result });
+    }
+
+    if (!filesToPush.length) {
+      AI.appendBubble('ai', '⚠️ Hech bir o\'zgartirish qo\'llanmadi — OLD matn faylda topilmadi.', false);
+      AI.busy = false; ActivityBar.done(); return;
+    }
+
+    // 5. Push qiladi
+    ActivityBar.setPhase('pushing');
+    AI._showStatus('🚀 O\'zgarishlar GitHub\'ga push qilinmoqda...');
+    let pushed = 0;
+    for (const w of filesToPush) {
+      try {
+        await Git.pushFile(SelfImport.REPO_OWNER, SelfImport.REPO_NAME, w.path, w.content, SelfImport.BRANCH, 'self-improve: ' + task.slice(0, 60));
+        pushed++;
+        FS.write(SelfImport.PROJECT_ID, w.path, w.content);
+      } catch(e) { console.warn('push fail:', w.path, e.message); }
+    }
+    AI._hideStatus();
+    if (pushed > 0) {
+      AI.appendBubble('ai', '✅ **' + pushed + ' ta fayl GitHub\'ga push qilindi!**\n\nGitHub Actions avtomatik deploy qilmoqda...\n🔗 [GitHub Pages\'da ko\'rish](https://xojasoipov-sketch.github.io/Useg-kop/)', false);
+      toast('✅ Self-improve: ' + pushed + ' ta fayl yangilandi');
+    } else {
+      AI.appendBubble('ai', '⚠️ Push qilishda xato. GitHub token\'ni tekshiring.', false);
+    }
+
+    if (div) AI._addBubbleActions(div, reply, []);
     AI.busy = false;
     ActivityBar.done();
     Analytics.track(Math.floor(reply.length / 4));
