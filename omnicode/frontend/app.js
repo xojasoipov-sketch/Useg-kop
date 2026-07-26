@@ -843,6 +843,53 @@ const AIRouter = {
     return (await res.json()).choices[0].message.content;
   },
 
+  async githubModels(messages, modelId = 'gpt-4o-mini') {
+    // GitHub token bilan bepul — foydalanuvchi allaqachon ulagan
+    const key = Store.get('keys', {}).github;
+    if (!key) throw new Error('GitHub token yo\'q');
+    const trimmed = this._trimMessages(messages, 16000);
+    const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: modelId, messages: trimmed, max_tokens: 4096 }),
+    });
+    if (!res.ok) throw new Error(`GitHubModels ${res.status}`);
+    return (await res.json()).choices[0].message.content;
+  },
+
+  async cerebras(messages) {
+    const key = Store.get('keys', {}).cerebras;
+    if (!key) throw new Error('Cerebras kaliti yo\'q');
+    const trimmed = this._trimMessages(messages, 16000);
+    const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'llama-3.3-70b', messages: trimmed, max_tokens: 8192 }),
+    });
+    if (!res.ok) throw new Error(`Cerebras ${res.status}`);
+    return (await res.json()).choices[0].message.content;
+  },
+
+  async huggingface(messages) {
+    const key = Store.get('keys', {}).hf || '';
+    const trimmed = this._trimMessages(messages, 8000);
+    const last = trimmed.filter(m => m.role !== 'system').map(m => `${m.role}: ${m.content}`).join('\n');
+    const sys = trimmed.find(m => m.role === 'system')?.content || '';
+    const prompt = (sys ? sys.slice(0, 500) + '\n\n' : '') + last + '\nassistant:';
+    const headers = { 'Content-Type': 'application/json' };
+    if (key) headers['Authorization'] = `Bearer ${key}`;
+    const res = await fetch('https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(key ? { 'Authorization': `Bearer ${key}` } : {}) },
+      body: JSON.stringify({ model: 'Qwen/Qwen2.5-72B-Instruct', messages: trimmed.filter(m => m.role !== 'system'), max_tokens: 2048 }),
+    });
+    if (!res.ok) throw new Error(`HuggingFace ${res.status}`);
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content || data?.[0]?.generated_text;
+    if (!content) throw new Error('HuggingFace empty');
+    return content;
+  },
+
   _flattenMessages(messages) {
     return messages.map(m => {
       if (Array.isArray(m.content)) {
@@ -937,13 +984,17 @@ const AIRouter = {
     else if (m.provider === 'groq') chain.push(['Groq', () => this.groq(messages)]);
     else chain.push(['OpenRouter', () => this.openrouter(messages, m.id)]);
 
-    // Fallback zanjiri — bepul provayderlar
+    // Fallback zanjiri — bepul provayderlar (GitHub token bor bo'lsa eng birinchi)
     chain.push(
+      ['GitHub-GPT4o', () => this.githubModels(messages, 'gpt-4o-mini')],
+      ['GitHub-Llama', () => this.githubModels(messages, 'Meta-Llama-3.1-70B-Instruct')],
       ['OpenRouter-fb', () => this.openrouter(messages, MODELS[0].id)],
       ['Groq', () => this.groq(messages)],
+      ['Cerebras', () => this.cerebras(messages)],
       ['Anthropic', () => this.anthropic(messages)],
       ['Gemini', () => this.gemini(messages)],
       ['Together', () => this.together(messages)],
+      ['HuggingFace', () => this.huggingface(messages)],
       ['Pollinations', () => this.pollinations(messages)],
       ['Pollinations-txt', () => this.pollinationsText(messages)],
     );
@@ -1046,6 +1097,8 @@ const StreamAI = {
       streamChain.push(['Groq', () => this.groq(messages, onChunk)]);
 
     // Fallback stream providers
+    if (Store.get('keys', {}).github)
+      streamChain.push(['GitHub-stream', () => { throw new Error('no-stream'); }]); // non-stream fallback
     if (AIRouter.keys().length)
       streamChain.push(['OpenRouter-fb', () => this.openrouter(messages, MODELS[0].id, onChunk)]);
     if (Store.get('keys', {}).groq)
@@ -1695,11 +1748,16 @@ const Home = {
       ghChip.innerHTML = keys.github ? '🐙 GitHub <span style="color:var(--green);font-size:10px">●</span>' : '🐙 GitHub';
     }
     if (aiStatus && aiName) {
-      const hasKey = keys.or1 || keys.groq || keys.anthropic || keys.gemini || keys.deepseek || keys.mistral || keys.together;
+      const hasKey = keys.or1 || keys.groq || keys.anthropic || keys.gemini || keys.deepseek || keys.mistral || keys.together || keys.cerebras;
+      const hasGitHub = !!keys.github;
       if (hasKey) {
-        const provName = keys.anthropic ? 'Anthropic' : keys.or1 ? 'OpenRouter' : keys.groq ? 'Groq' : keys.gemini ? 'Gemini' : keys.deepseek ? 'DeepSeek' : 'Together AI';
+        const provName = keys.anthropic ? 'Anthropic' : keys.or1 ? 'OpenRouter' : keys.groq ? 'Groq' : keys.cerebras ? 'Cerebras' : keys.gemini ? 'Gemini' : keys.deepseek ? 'DeepSeek' : 'Together AI';
         aiName.textContent = provName + ' AI';
         aiStatus.textContent = 'Ulangan · Stream ' + (StreamAI.enabled() ? '🟢' : '⭕');
+        aiStatus.style.color = 'var(--green)';
+      } else if (hasGitHub) {
+        aiName.textContent = 'GitHub Models AI';
+        aiStatus.textContent = 'GitHub token orqali bepul ✅';
         aiStatus.style.color = 'var(--green)';
       } else {
         aiName.textContent = 'AI Provayder';
@@ -1867,14 +1925,27 @@ Nima quramiz?`, false);
 
   _showSetupGuide() {
     const keys = Store.get('keys', {});
-    const hasAny = keys.groq || keys.or1 || keys.anthropic || keys.gemini;
+    const hasAny = keys.groq || keys.or1 || keys.anthropic || keys.gemini || keys.cerebras;
+    const ghConnected = !!keys.github;
     const el = this.appendBubble('ai', '', false);
     el.innerHTML = `
       <strong>AI Kalit Sozlash</strong>
-      <p style="color:var(--text3);font-size:13px;margin:6px 0 12px">Bepul kalit oling — 1 daqiqa:</p>
+      ${ghConnected ? '<p style="color:#3fb950;font-size:13px;margin:4px 0 8px">✅ GitHub ulangan → GitHub Models bepul ishlaydi!</p>' : ''}
+      <p style="color:var(--text3);font-size:13px;margin:4px 0 12px">Qo\'shimcha kalit qo\'shing (tezroq ishlaydi):</p>
       <div style="display:flex;flex-direction:column;gap:8px">
         <div style="background:var(--bg2);border-radius:10px;padding:10px 12px">
-          <div style="font-size:13px;font-weight:600;margin-bottom:6px">⚡ Groq (tavsiya — bepul, eng tez)</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">🧠 Cerebras (ENG TEZ — 2000 tok/s)</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px">inference.cerebras.ai → "Get API Key" (1M tok/kun bepul)</div>
+          <div style="display:flex;gap:6px">
+            <input id="quick-cerebras-key" placeholder="csk_..."
+              style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:12px"
+              value="${keys.cerebras||''}">
+            <button onclick="AI._saveQuickKey('cerebras','quick-cerebras-key')"
+              style="padding:7px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-size:12px;cursor:pointer">Saqlash</button>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border-radius:10px;padding:10px 12px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">⚡ Groq (bepul, tez)</div>
           <div style="font-size:12px;color:var(--text3);margin-bottom:8px">console.groq.com/keys → "Create API Key"</div>
           <div style="display:flex;gap:6px">
             <input id="quick-groq-key" placeholder="gsk_..."
@@ -1884,7 +1955,7 @@ Nima quramiz?`, false);
               style="padding:7px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-size:12px;cursor:pointer">Saqlash</button>
           </div>
         </div>
-        ${hasAny ? `<div style="color:#3fb950;font-size:12px;text-align:center">✅ ${[keys.groq&&'Groq',keys.or1&&'OpenRouter',keys.anthropic&&'Anthropic',keys.gemini&&'Gemini'].filter(Boolean).join(', ')} ulangan</div>` : ''}
+        ${hasAny ? `<div style="color:#3fb950;font-size:12px;text-align:center">✅ ${[keys.cerebras&&'Cerebras',keys.groq&&'Groq',keys.or1&&'OpenRouter',keys.anthropic&&'Anthropic',keys.gemini&&'Gemini'].filter(Boolean).join(', ')} ulangan</div>` : ''}
         <button onclick="App.nav('settings')"
           style="padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer">
           Barcha kalitlar → Sozlamalar
@@ -2936,6 +3007,11 @@ const PROVIDER_CONFIGS = {
     fields: [{ id: 'groq', label: 'API Kalit (gsk_...)' }],
     hint: 'console.groq.com — eng tez inference + streaming',
   },
+  cerebras: {
+    title: 'Cerebras (Eng Tez!)',
+    fields: [{ id: 'cerebras', label: 'API Kalit (csk-...)' }],
+    hint: 'inference.cerebras.ai — 1M token/kun bepul, 2000 token/s',
+  },
   anthropic: {
     title: 'Anthropic / Claude',
     fields: [{ id: 'anthropic', label: 'API Kalit (sk-ant-...)' }],
@@ -2983,6 +3059,7 @@ const Settings = {
       'anthropic-status': !!keys.anthropic, 'gemini-status': !!keys.gemini,
       'deepseek-status': !!keys.deepseek, 'mistral-status': !!keys.mistral,
       'together-status': !!keys.together, 'hf-status': !!keys.hf, 'nvidia-status': !!keys.nvidia,
+      'cerebras-status': !!keys.cerebras,
     };
     for (const [id, connected] of Object.entries(statuses)) {
       const el = document.getElementById(id);
