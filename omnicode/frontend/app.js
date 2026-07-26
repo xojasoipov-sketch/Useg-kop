@@ -1480,6 +1480,136 @@ AI javobida quyidagi taglar → app.js execute qiladi:
 };
 
 // ══════════════════════════════════════════════════════════════
+//  SELF IMPROVE — OmniCode o'zini-o'zi avtonom yaxshilaydi
+// ══════════════════════════════════════════════════════════════
+const SelfImprove = {
+
+  // OmniCode o'z kodini o'qib, yaxshilab, o'zi push qiladi
+  async run(userTask = '') {
+    if (!Git.token()) {
+      App.nav('ai');
+      AI.appendBubble('ai', `❌ **GitHub token kerak**\n\nSozlamalar → Kod → GitHub tokenini qo'shing. Token bilan OmniCode o'z kodini o'zgartirib, avtomatik deploy qila oladi.`, false);
+      return;
+    }
+
+    App.nav('ai');
+    await SelfImport.ensureProject();
+
+    // 1. O'z kodini GitHub dan yuklab oladi
+    AI.appendBubble('ai', `🔄 **O'z kodini o'qiyapman...**\n\nomnicode/frontend/app.js GitHub'dan yuklanmoqda...`, false);
+
+    let appJs = '', indexHtml = '';
+    try {
+      appJs = await Git.getFileContent(
+        SelfImport.REPO_OWNER, SelfImport.REPO_NAME,
+        'omnicode/frontend/app.js', SelfImport.BRANCH
+      );
+      indexHtml = await Git.getFileContent(
+        SelfImport.REPO_OWNER, SelfImport.REPO_NAME,
+        'omnicode/frontend/index.html', SelfImport.BRANCH
+      );
+    } catch(e) {
+      AI.appendBubble('ai', `❌ Kod o'qishda xato: ${e.message}`, false);
+      return;
+    }
+
+    if (!appJs) {
+      AI.appendBubble('ai', `❌ app.js yuklanmadi. GitHub token to'g'ri ekanini tekshiring.`, false);
+      return;
+    }
+
+    // VFS ga saqlash
+    FS.write(SelfImport.PROJECT_ID, 'omnicode/frontend/app.js', appJs);
+    if (indexHtml) FS.write(SelfImport.PROJECT_ID, 'omnicode/frontend/index.html', indexHtml);
+
+    AI.appendBubble('ai', `✅ Kod o'qildi (${(appJs.length/1024).toFixed(0)}KB). AI tahlil qilyapti...`, false);
+
+    // 2. AI ga topshiriq beradi
+    const task = userTask || 'xatolarni tuzat, tezlikni yaxshila, foydalanuvchi tajribasini yaxshila';
+    const prompt = `Sen OmniCode AI coding assistant'ning o'zi. Quyida o'z manba koding berilgan.
+
+VAZIFA: ${task}
+
+QOIDALAR:
+1. Kodni sinchiklab o'qi
+2. Muammolarni aniqlash: xatolar, cheklovlar, yaxshilash mumkin bo'lgan joylar
+3. Yaxshilashlarni qil
+4. TO'LIQ yangilangan faylni WRITE_FILE bilan yoz — faqat o'zgargan qism emas, butun fayl
+5. Nima o'zgartirganingni qisqacha tushuntir
+
+WRITE_FILE format:
+\`\`\`write_file:omnicode/frontend/app.js
+[to'liq yangilangan kod bu yerda]
+\`\`\`
+
+MUHIM: Men (tizim) avtomatik GitHub'ga push qilib, deploy qilaman. Sen faqat to'liq kodni yoz.
+
+=== app.js (${(appJs.length/1024).toFixed(0)}KB) ===
+\`\`\`javascript
+${appJs}
+\`\`\``;
+
+    // 3. AI ga yuboradi
+    const messages = [
+      { role: 'system', content: `Sen OmniCode — o'z-o'zini yaxshilovchi AI. O'z kodingni o'qib, yaxshilab, WRITE_FILE format bilan qaytarassan. Faqat o'zbek tilida javob ber.` },
+      { role: 'user', content: prompt }
+    ];
+
+    AI.showTyping();
+    AI.busy = true;
+    AI._busySince = Date.now();
+    ActivityBar.setPhase('thinking');
+
+    let reply;
+    try {
+      reply = await AIRouter.call(messages);
+    } catch(e) {
+      AI.hideTyping();
+      AI.busy = false;
+      ActivityBar.error();
+      AI.appendBubble('ai', `❌ AI xatosi: ${e.message}\n\n/setup buyrug'i bilan AI kalitini qo'shing.`, false);
+      return;
+    }
+
+    AI.hideTyping();
+    ActivityBar.setPhase('writing');
+
+    // 4. Javobni ko'rsatadi
+    const div = AI.appendBubble('ai', reply, false);
+
+    // 5. WRITE_FILE ni parse qilib push qiladi
+    const writes = FS.parseWrites(reply);
+    if (writes.length) {
+      writes.forEach(w => FS.write(SelfImport.PROJECT_ID, w.path, w.content));
+      ActivityBar.setPhase('pushing');
+      AI._showStatus('🚀 O\'zgarishlar GitHub\'ga push qilinmoqda...');
+      let pushed = 0;
+      for (const w of writes) {
+        try {
+          await Git.pushFile(SelfImport.REPO_OWNER, SelfImport.REPO_NAME, w.path, w.content, SelfImport.BRANCH, `self-improve: ${task.slice(0,60)}`);
+          pushed++;
+        } catch(e) { console.warn('push fail:', w.path, e.message); }
+      }
+      AI._hideStatus();
+      if (pushed > 0) {
+        AI.appendBubble('ai', `✅ **${pushed} ta fayl GitHub'ga push qilindi!**\n\nGitHub Actions avtomatik deploy qilmoqda...\n🔗 [GitHub Pages'da ko'rish](https://xojasoipov-sketch.github.io/Useg-kop/)`, false);
+        toast(`✅ Self-improve: ${pushed} ta fayl yangilandi`);
+      } else {
+        AI.appendBubble('ai', `⚠️ Push qilishda xato. GitHub token'ni tekshiring.`, false);
+      }
+    } else {
+      AI.appendBubble('ai', `ℹ️ AI hech qanday o'zgartirish qilmadi. Aniqroq vazifa bering.`, false);
+    }
+
+    if (div) AI._addBubbleActions(div, reply, writes);
+    AI.busy = false;
+    ActivityBar.done();
+    Analytics.track(Math.floor(reply.length / 4));
+    State.chatHistory.push({ role: 'assistant', content: reply });
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
 const SelfHeal = {
   async analyze() {
     let projectId = State.projectId;
@@ -2094,6 +2224,9 @@ Nima quramiz?`, false);
       '/repos': () => this._loadGithubContext(),
       '/self': () => SelfImport.run(),
       '/omnicode': () => SelfImport.run(),
+      '/improve': () => SelfImprove.run(msg.slice('/improve'.length).trim()),
+      '/yaxshila': () => SelfImprove.run(msg.slice('/yaxshila'.length).trim()),
+      '/upgrade': () => SelfImprove.run(msg.slice('/upgrade'.length).trim()),
       '/self-edit': async () => {
         await SelfImport.ensureProject();
         this.appendBubble('ai', `✅ **OmniCode o'z kodi rejimi yoqildi**\n\nEndi men shu loyihaning kodini o'zgartirishga tayyorman.\n\nMisol:\n→ "ActivityBar ga agent sonini qo'sh"\n→ "app.js ga dark mode toggle qo'sh"\n→ "chat bubblega copy tugma qo'sh"\n\nHar bir o'zgartirish avtomatik GitHub'ga push qilinadi ✅`, false);
@@ -2108,9 +2241,16 @@ Nima quramiz?`, false);
       '/home': () => App.nav('home'),
       '/setup': () => this._showSetupGuide(),
       '/keys': () => this._showSetupGuide(),
-      '/help': () => this.appendBubble('ai', `**OmniCode buyruqlari:**\n\`/setup\` — AI kalit sozlash yo'riqnomasi\n\`/self-edit\` — OmniCode o'z kodini tahrirlash rejimi\n\`/fix\` — kodni o'z-o'zini tuzatish\n\`/self\` — o'z kodini import qilish\n\`/sync\` — bulutga saqlash\n\`/github\` — GitHub repolarni yuklash\n\`/import owner/repo\` — repo import\n\`/push\` — GitHub'ga push\n\`/model\` — model tanlash\n\`/clear\` — chatni tozalash`, false),
+      '/help': () => this.appendBubble('ai', `**OmniCode buyruqlari:**\n\`/improve [vazifa]\` — O'zini-o'zi yaxshilaydi va deploy qiladi 🤖\n\`/fix\` — kodni o'z-o'zini tuzatish\n\`/setup\` — AI kalit sozlash\n\`/self-edit\` — o'z kodi rejimi\n\`/self\` — o'z kodini import\n\`/sync\` — bulutga saqlash\n\`/github\` — GitHub repolar\n\`/import owner/repo\` — repo import\n\`/push\` — GitHub'ga push\n\`/model\` — model tanlash\n\`/clear\` — chatni tozalash`, false),
     };
     if (slashCmds[cmd]) { await slashCmds[cmd](); return; }
+
+    // Natural language self-improve detection (buyruq emas, oddiy so'z)
+    const selfImproveRequest = /o'zingni\s*(yaxshila|tuzat|yangilash|upgrade|improve|fix)|o'z.*kodingni.*(tuzat|yaxshila)|o'zing.*(tuzatsin|yaxshilash|qilsin)|o'zingga.*(buyur|ayt)/i.test(msg);
+    if (selfImproveRequest && Git.token()) {
+      await SelfImprove.run(msg);
+      return;
+    }
     if (cmd === '/import') {
       const repoFull = msg.split(' ')[1];
       if (!repoFull?.includes('/')) { toast('Format: /import owner/repo'); return; }
@@ -2145,8 +2285,8 @@ Nima quramiz?`, false);
     let autoCtx = '';
     const wantsFile = /\.(js|ts|html|css|py|json|md|txt|yaml|yml|sh|go|rs|java|cpp|c|jsx|tsx|vue)\b/i.test(msg);
     const wantsGH   = /repo|branch|github|commit|push|pull/i.test(msg);
-    // OmniCode o'z kodini tahrirlash so'rovi
-    const wantsSelf  = /app\.js|index\.html|main\.css|omnicode|o'zingni|o'zini|shu loyiha|kodni tahrir|kod qosh|yangilik qosh|feature qosh|funksiya qosh|tuzat.*kod|kod.*tuzat/i.test(msg);
+    // OmniCode o'z kodini tahrirlash so'rovi — Uzbek so'zlari keng qamrovli
+    const wantsSelf  = /app\.js|index\.html|main\.css|omnicode|o'zingni|o'zini|o'zini.*(tuzat|yaxshila|yangilash|o'zgartir|qo'sh)|shu loyiha|kodni tahrir|kod qosh|yangilik qosh|feature qosh|funksiya qosh|tuzat.*kod|kod.*tuzat|o'zingni.*kod|kodingni|o'z.*kod|manba.*kod|o'zingga.*buyur|buyur.*o'zing/i.test(msg);
     const needsFetch = (wantsFile || wantsGH || wantsSelf) && Git.token();
     if (State.activeTools.has('github') && Git.token() || needsFetch) {
       this._showStatus('🔍 GitHub ma\'lumotlari yuklanmoqda...');
