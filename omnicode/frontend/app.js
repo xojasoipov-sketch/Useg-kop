@@ -857,16 +857,37 @@ const AIRouter = {
     return (await res.json()).choices[0].message.content;
   },
 
+  mistralKeys() {
+    const k = Store.get('keys', {});
+    const legacy = k.mistral ? [k.mistral] : [];
+    const arr = Store.get('mistral_keys', []).filter(Boolean);
+    return [...new Set([...arr, ...legacy])];
+  },
+  addMistralKey(key) {
+    if (!key || key.length < 10) return false;
+    const arr = Store.get('mistral_keys', []);
+    if (arr.includes(key)) return false;
+    arr.push(key); Store.set('mistral_keys', arr); return true;
+  },
+  removeMistralKey(index) {
+    const arr = Store.get('mistral_keys', []); arr.splice(index, 1); Store.set('mistral_keys', arr);
+  },
+
   async mistral(messages) {
-    const key = Store.get('keys', {}).mistral;
-    if (!key) throw new Error('Mistral kaliti yo\'q');
-    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'mistral-small-latest', messages, max_tokens: 8192 }),
-    });
-    if (!res.ok) throw new Error(`Mistral ${res.status}`);
-    return (await res.json()).choices[0].message.content;
+    const keys = this.mistralKeys();
+    if (!keys.length) throw new Error('Mistral kaliti yo\'q');
+    let lastErr;
+    for (const key of keys) {
+      const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: 'mistral-small-latest', messages, max_tokens: 8192 }),
+      });
+      if (res.status === 429 || res.status === 402) { lastErr = new Error(`Mistral ${res.status}`); continue; }
+      if (!res.ok) throw new Error(`Mistral ${res.status}`);
+      return (await res.json()).choices[0].message.content;
+    }
+    throw lastErr || new Error('Mistral: barcha kalitlar tugadi');
   },
 
   async together(messages) {
@@ -3271,11 +3292,14 @@ const Settings = {
     const keys = Store.get('keys', {});
     const orKeys = AIRouter.keys();
     const orCount = document.getElementById('or-key-count');
-    if (orCount) orCount.textContent = orKeys.length > 0 ? `(${orKeys.length} ta kalit)` : '';
+    if (orCount) orCount.textContent = orKeys.length > 0 ? '(' + orKeys.length + ' ta kalit)' : '';
+    const mistralKeys = AIRouter.mistralKeys();
+    const mistralCount = document.getElementById('mistral-key-count');
+    if (mistralCount) mistralCount.textContent = mistralKeys.length > 0 ? '(' + mistralKeys.length + ' ta kalit)' : '';
     const statuses = {
       'or-status': orKeys.length > 0, 'gh-status': !!keys.github, 'groq-status': !!keys.groq,
       'anthropic-status': !!keys.anthropic, 'gemini-status': !!keys.gemini,
-      'deepseek-status': !!keys.deepseek, 'mistral-status': !!keys.mistral,
+      'deepseek-status': !!keys.deepseek, 'mistral-status': mistralKeys.length > 0,
       'together-status': !!keys.together, 'hf-status': !!keys.hf, 'nvidia-status': !!keys.nvidia,
       'cerebras-status': !!keys.cerebras,
     };
@@ -3357,6 +3381,56 @@ const Settings = {
     this.refresh();
   },
 
+  openMistralKeys() {
+    const el = document.getElementById('connector-sheet-title');
+    if (el) el.textContent = 'Mistral AI Kalitlari';
+    const fields = document.getElementById('connector-fields');
+    if (fields) fields.innerHTML = this._renderMistralKeysUI();
+    const saveBtn = document.getElementById('connector-save-btn');
+    if (saveBtn) { saveBtn.textContent = 'Qo\'shish'; saveBtn.onclick = () => Settings._addMistralKeyFromInput(); }
+    Sheet.open('connector-sheet');
+  },
+
+  _renderMistralKeysUI() {
+    const keys = AIRouter.mistralKeys();
+    const rows = keys.map((k, i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="flex:1;font-size:12px;color:var(--text2);font-family:monospace">...${k.slice(-8)}</span>
+        <button onclick="Settings._removeMistralKey(${i})" style="padding:4px 10px;border-radius:6px;background:rgba(255,80,80,0.15);color:#ff5050;border:none;font-size:11px;cursor:pointer">O'chirish</button>
+      </div>`).join('');
+    return `
+      <div style="padding:0 20px 12px">
+        <p style="font-size:12px;color:var(--text3);margin:0 0 12px">Bir nechta Mistral kaliti qo'shing.<br>Biri 429 bo'lsa avtomatik keyingisiga o'tadi.</p>
+        ${rows || '<p style="font-size:12px;color:var(--text3)">Hali kalit yo\'q</p>'}
+        <div style="margin-top:12px;display:flex;gap:6px">
+          <input id="mistral-new-key" placeholder="Mistral API kaliti..."
+            style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:12px">
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">console.mistral.ai → API Keys</div>
+      </div>`;
+  },
+
+  _addMistralKeyFromInput() {
+    const inp = document.getElementById('mistral-new-key');
+    const val = inp?.value?.trim();
+    if (!val) { toast('Kalit bo\'sh'); return; }
+    const added = AIRouter.addMistralKey(val);
+    if (!added) { toast('Bu kalit allaqachon qo\'shilgan'); return; }
+    toast('✅ Mistral kalit qo\'shildi (jami: ' + AIRouter.mistralKeys().length + ' ta)');
+    if (inp) inp.value = '';
+    const fields = document.getElementById('connector-fields');
+    if (fields) fields.innerHTML = this._renderMistralKeysUI();
+    this.refresh();
+  },
+
+  _removeMistralKey(index) {
+    AIRouter.removeMistralKey(index);
+    toast('Kalit o\'chirildi');
+    const fields = document.getElementById('connector-fields');
+    if (fields) fields.innerHTML = this._renderMistralKeysUI();
+    this.refresh();
+  },
+
   openConnector(name) {
     this._conn = name;
     const cfg = PROVIDER_CONFIGS[name];
@@ -3414,10 +3488,23 @@ const Settings = {
   },
 
   importKeys() {
-    const json = prompt('Kalitlar JSON ({"or1":"...","groq":"...",...}):');
+    const json = prompt('Kalitlar JSON ({"or1":"...","groq":"...","mistral_keys":[...],...}):');
     if (!json) return;
     try {
       const parsed = JSON.parse(json);
+      // Handle array fields separately
+      if (Array.isArray(parsed.or_keys)) {
+        const existing = Store.get('or_keys', []);
+        const merged = [...new Set([...existing, ...parsed.or_keys.filter(Boolean)])];
+        Store.set('or_keys', merged);
+        delete parsed.or_keys;
+      }
+      if (Array.isArray(parsed.mistral_keys)) {
+        const existing = Store.get('mistral_keys', []);
+        const merged = [...new Set([...existing, ...parsed.mistral_keys.filter(Boolean)])];
+        Store.set('mistral_keys', merged);
+        delete parsed.mistral_keys;
+      }
       const keys = Store.get('keys', {});
       Object.assign(keys, parsed);
       Store.set('keys', keys);

@@ -611,9 +611,9 @@
             <span id="deepseek-status" class="s-val">Sozlanmagan</span>
             <span class="s-chevron">›</span>
           </div>
-          <div class="s-row" onclick="Settings.openConnector('mistral')">
+          <div class="s-row" onclick="Settings.openMistralKeys()">
             <div class="s-ico green"><svg width="14" height="14"><use href="#ic-waves"/></svg></div>
-            <span class="s-label">Mistral AI</span>
+            <span class="s-label">Mistral AI <span id="mistral-key-count" style="font-size:10px;color:var(--text3)"></span></span>
             <span id="mistral-status" class="s-val">Sozlanmagan</span>
             <span class="s-chevron">›</span>
           </div>
@@ -1043,6 +1043,6 @@
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
-<script src="app.js?v=20250726-5&bust=fix"></script>
+<script src="app.js?v=20250726-6&bust=mistral-multi"></script>
 </body>
 </html>
