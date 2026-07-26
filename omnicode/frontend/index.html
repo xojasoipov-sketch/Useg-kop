@@ -43,7 +43,7 @@
 <div id="home" class="screen active">
   <div class="scroll-area">
     <div class="home-top">
-      <div class="home-greeting"><h2 id="greeting-text">Xayrli kun</h2><p>Premium AI Coding + TG SMM Agency</p></div>
+      <div class="home-greeting"><h2 id="greeting-text">Xayrli kun</h2><p>Coding Brain · SMM Agency · Cloud</p></div>
       <button class="notif-btn" onclick="KeyVault.open()" data-ic="key" data-ic-size="18"></button>
     </div>
     <div class="stats-row">
@@ -78,7 +78,7 @@
   <div class="chat-header">
     <div class="chat-header-left">
       <span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span>
-      <span class="chat-title">SadiPrime</span><span class="sp-badge">AI</span>
+      <span class="chat-title">Coding Brain</span><span class="sp-badge">Engineer</span>
       <span class="active-proj-chip" id="active-project-label" style="display:none"></span>
     </div>
     <span class="chat-edit" onclick="AI.clear()" data-ic="edit" data-ic-size="18"></span>
@@ -102,7 +102,7 @@
   </div>
   <div class="chat-bottom">
     <div class="chat-input-wrap">
-      <textarea id="chat-input" class="chat-input" placeholder="Kod · @fayl · /parallel · /preview" rows="1" onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
+      <textarea id="chat-input" class="chat-input" placeholder="Senior engineer: bug, feature, deploy..." rows="1" onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
       <button class="input-btn send" onclick="AI.send()" data-ic="send" data-ic-size="18"></button>
     </div>
   </div>
@@ -136,23 +136,22 @@
   <div class="chat-header">
     <div class="chat-header-left">
       <span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span>
-      <span class="chat-title">TG SMM AI</span>
-      <span class="sp-badge">Agency</span>
+      <span class="chat-title">TG SMM AI</span><span class="sp-badge">Agency</span>
     </div>
     <span class="chat-edit" onclick="SMMAI.clear()" data-ic="edit" data-ic-size="18"></span>
   </div>
   <div class="chat-actions">
     <span class="chip-mini" onclick="document.getElementById('smm-input').value='Instagram Reel yoz: ';document.getElementById('smm-input').focus()">Reel</span>
     <span class="chip-mini" onclick="document.getElementById('smm-input').value='Post yoz: ';document.getElementById('smm-input').focus()">Post</span>
-    <span class="chip-mini" onclick="document.getElementById('smm-input').value='10 ta Stories ketma-ketligi: ';document.getElementById('smm-input').focus()">Stories</span>
-    <span class="chip-mini" onclick="document.getElementById('smm-input').value='90 kunlik marketing strategy: ';document.getElementById('smm-input').focus()">Strategy</span>
-    <span class="chip-mini" onclick="document.getElementById('smm-input').value='Meta Ads creative: ';document.getElementById('smm-input').focus()">Ads</span>
+    <span class="chip-mini" onclick="document.getElementById('smm-input').value='10 ta Stories: ';document.getElementById('smm-input').focus()">Stories</span>
+    <span class="chip-mini" onclick="document.getElementById('smm-input').value='90 kunlik strategy: ';document.getElementById('smm-input').focus()">Strategy</span>
+    <span class="chip-mini" onclick="document.getElementById('smm-input').value='Meta Ads: ';document.getElementById('smm-input').focus()">Ads</span>
     <span class="chip-mini" onclick="document.getElementById('smm-input').value='Brand audit: ';document.getElementById('smm-input').focus()">Brand</span>
   </div>
   <div id="smm-messages" class="chat-messages"></div>
   <div class="chat-bottom">
     <div class="chat-input-wrap">
-      <textarea id="smm-input" class="chat-input" placeholder="Brend, mahsulot, maqsad yoki: Reel / Post / Strategy..." rows="1" onkeydown="SMMAI.onKey(event)"></textarea>
+      <textarea id="smm-input" class="chat-input" placeholder="Brend / mahsulot / Reel / Strategy..." rows="1" onkeydown="SMMAI.onKey(event)"></textarea>
       <button class="input-btn send" onclick="SMMAI.send()" data-ic="send" data-ic-size="18"></button>
     </div>
   </div>
@@ -193,7 +192,7 @@
 <div id="agents" class="screen">
   <div class="chat-header"><span class="chat-title">AI Agentlar</span><span class="chat-edit" onclick="Agents.runMaster()" data-ic="send" data-ic-size="18"></span></div>
   <div class="scroll-area"><div class="agents-page">
-    <div class="master-card" onclick="SadiPrime.open()"><div class="master-left"><h3>SadiPrime Master</h3><p>Orchestrator · parallel · cloud</p><span class="master-badge">Master</span></div><div class="orb master-orb"></div></div>
+    <div class="master-card" onclick="SadiPrime.open()"><div class="master-left"><h3>Coding Brain</h3><p>Intent → Plan → Agents → Review → Deploy</p><span class="master-badge">Master</span></div><div class="orb master-orb"></div></div>
     <div class="agents-grid">
       <div class="agent-card" onclick="Agents.run('planner')"><div class="ac-top"><div class="ac-icon orange" data-ic="spark"></div><div class="ac-sdot green"></div></div><div class="ac-name">Planner</div><div class="ac-desc">Reja</div></div>
       <div class="agent-card" onclick="Agents.run('coder')"><div class="ac-top"><div class="ac-icon green" data-ic="code"></div><div class="ac-sdot green"></div></div><div class="ac-name">Coder</div><div class="ac-desc">Kod</div></div>
@@ -266,6 +265,7 @@
 <script src="supabase.js"></script>
 <script src="product.js"></script>
 <script src="smm-brain.js"></script>
+<script src="coding-brain.js"></script>
 <script>
 setTimeout(async function(){
   if(typeof renderIcons==='function')renderIcons();
