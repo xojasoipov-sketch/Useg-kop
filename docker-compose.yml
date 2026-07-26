@@ -1,0 +1,37 @@
+version: '3.9'
+
+services:
+  omniroute:
+    image: ghcr.io/diegosouzapw/omniroute:latest
+    container_name: omniroute
+    ports:
+      - "3000:3000"
+    environment:
+      # ── BEPUL PROVAYDERLAR (key shart emas yoki bepul tier) ──
+      POLLINATIONS_ENABLED: "true"          # key yo'q!
+
+      # ── BEPUL TIER (key olish kerak) ──
+      GROQ_API_KEY: "${GROQ_API_KEY}"
+      CEREBRAS_API_KEY: "${CEREBRAS_API_KEY}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY}"
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY}"
+      NVIDIA_API_KEY: "${NVIDIA_API_KEY}"
+      TOGETHER_API_KEY: "${TOGETHER_API_KEY}"
+      HUGGINGFACE_API_KEY: "${HUGGINGFACE_API_KEY}"
+      MISTRAL_API_KEY: "${MISTRAL_API_KEY}"
+      COHERE_API_KEY: "${COHERE_API_KEY}"
+      PERPLEXITY_API_KEY: "${PERPLEXITY_API_KEY}"
+
+      # ── ROUTING SOZLAMALARI ──
+      DEFAULT_ROUTING: "free-first"         # bepuldan boshlaydi
+      FALLBACK_ENABLED: "true"             # limit tugasa keyingisiga o'tadi
+      FREE_FIRST: "true"
+      TOKEN_COMPRESSION: "rtk+caveman"     # 15-95% tejash
+      LOG_LEVEL: "info"
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
