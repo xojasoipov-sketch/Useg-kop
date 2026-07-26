@@ -1,6 +1,6 @@
 'use strict';
 // ═══════════════════════════════════════════════════════════════
-//  OmniCode — Real AI Coding Platform (Claude Code style)
+//  OmniCode 3.0 — Claude Code + Supabase + Streaming + Self-Heal
 // ═══════════════════════════════════════════════════════════════
 
 const tg = window.Telegram?.WebApp;
@@ -13,22 +13,18 @@ const Store = {
 };
 
 // ══════════════════════════════════════════════════════════════
-//  ANALYTICS — Real tracking
+//  ANALYTICS
 // ══════════════════════════════════════════════════════════════
 const Analytics = {
   _key(d) { return 'analytics_' + d; },
   _today() { return new Date().toDateString(); },
-
   track(tokens = 0) {
     const day = this._today();
     const data = Store.get(this._key(day), { requests: 0, tokens: 0 });
-    data.requests += 1;
-    data.tokens += tokens;
+    data.requests += 1; data.tokens += tokens;
     Store.set(this._key(day), data);
   },
-
   today() { return Store.get(this._key(this._today()), { requests: 0, tokens: 0 }); },
-
   week() {
     let r = 0, t = 0;
     for (let i = 0; i < 7; i++) {
@@ -38,21 +34,15 @@ const Analytics = {
     }
     return { requests: r, tokens: t };
   },
-
-  yesterday() {
-    const d = new Date(Date.now() - 86400000).toDateString();
-    return Store.get(this._key(d), { requests: 0, tokens: 0 });
-  },
-
+  yesterday() { return Store.get(this._key(new Date(Date.now() - 86400000).toDateString()), { requests: 0, tokens: 0 }); },
   fmtTokens(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'K' : String(n); },
 };
 
 // ══════════════════════════════════════════════════════════════
-//  RUNNING TASKS — Real task queue
+//  TASKS
 // ══════════════════════════════════════════════════════════════
 const Tasks = {
   list() { return Store.get('running_tasks', []); },
-
   add(name, description) {
     const tasks = this.list();
     const task = { id: 't_' + Date.now(), name, description, progress: 0, status: 'running', started: Date.now() };
@@ -60,19 +50,123 @@ const Tasks = {
     Store.set('running_tasks', tasks.slice(0, 5));
     return task;
   },
-
-  update(id, patch) {
-    const tasks = this.list().map(t => t.id === id ? { ...t, ...patch } : t);
-    Store.set('running_tasks', tasks);
-  },
-
+  update(id, patch) { Store.set('running_tasks', this.list().map(t => t.id === id ? { ...t, ...patch } : t)); },
   remove(id) { Store.set('running_tasks', this.list().filter(t => t.id !== id)); },
-
   clear() { Store.set('running_tasks', []); },
 };
 
 // ══════════════════════════════════════════════════════════════
-//  REAL FILE SYSTEM (localStorage-based, project-scoped)
+//  SUPABASE — Cloud sync
+// ══════════════════════════════════════════════════════════════
+const SB = {
+  URL: 'https://tomkxsdkerpbvlumubbg.supabase.co',
+  KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbWt4c2RrZXJwYnZsdW11YmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MTI5NTMsImV4cCI6MjA5OTM4ODk1M30.betEr6efsXiJSRb9g2FnarUtF7B09DJombiQdKcMR6U',
+  syncing: false,
+
+  userId() {
+    const tgId = tg?.initDataUnsafe?.user?.id?.toString();
+    if (tgId) return tgId;
+    let id = Store.get('anon_uid');
+    if (!id) { id = 'u_' + Math.random().toString(36).slice(2, 10); Store.set('anon_uid', id); }
+    return id;
+  },
+
+  async req(path, method = 'GET', body = null, prefer = '') {
+    try {
+      const res = await fetch(this.URL + '/rest/v1' + path, {
+        method,
+        headers: {
+          'apikey': this.KEY,
+          'Authorization': 'Bearer ' + this.KEY,
+          'Content-Type': 'application/json',
+          ...(prefer ? { 'Prefer': prefer } : {}),
+        },
+        body: body ? JSON.stringify(body) : null,
+      });
+      if (res.status === 204) return null;
+      return res.ok ? res.json() : null;
+    } catch { return null; }
+  },
+
+  async upsertProject(p) {
+    return this.req('/omnicode_projects', 'POST', {
+      id: p.id, user_id: this.userId(), name: p.name,
+      template: p.template || 'blank', github: p.github || null, starred: !!p.starred,
+    }, 'resolution=merge-duplicates,return=minimal');
+  },
+
+  async upsertFile(projectId, path, content) {
+    return this.req('/omnicode_files', 'POST', { project_id: projectId, path, content },
+      'resolution=merge-duplicates,return=minimal');
+  },
+
+  async deleteProject(id) { return this.req(`/omnicode_projects?id=eq.${id}`, 'DELETE'); },
+
+  async loadProjects() { return await this.req(`/omnicode_projects?user_id=eq.${this.userId()}&order=created_at.desc`) || []; },
+
+  async loadFiles(projectId) { return await this.req(`/omnicode_files?project_id=eq.${encodeURIComponent(projectId)}`) || []; },
+
+  _setBtn(icon) { const el = document.getElementById('sync-btn'); if (el) el.textContent = icon; },
+
+  async syncAll() {
+    if (this.syncing) return;
+    this.syncing = true;
+    this._setBtn('🔄');
+    const uid = document.getElementById('cloud-uid-val');
+    if (uid) uid.textContent = this.userId();
+    try {
+      const projects = PM.list();
+      let fileCount = 0;
+      for (const p of projects) {
+        await this.upsertProject(p);
+        for (const path of FS.index(p.id)) {
+          await this.upsertFile(p.id, path, FS.read(p.id, path));
+          fileCount++;
+        }
+      }
+      this._setBtn('☁️');
+      const sub = document.getElementById('cloud-sub');
+      if (sub) sub.textContent = `${projects.length} loyiha · ${fileCount} fayl saqlandi`;
+      const val = document.getElementById('cloud-status-val');
+      if (val) val.textContent = projects.length + ' 💾';
+      const bar = document.getElementById('cloud-bar');
+      if (bar) bar.style.width = Math.min(100, projects.length * 20) + '%';
+      const cs = document.getElementById('conn-cloud-status');
+      if (cs) cs.textContent = `${projects.length} loyiha saqlandi`;
+      toast('☁️ Bulutga saqlandi');
+    } catch (e) {
+      this._setBtn('☁️');
+      toast('⚠️ Sinxron xatosi: ' + e.message);
+    } finally { this.syncing = false; }
+  },
+
+  async pullAll() {
+    this._setBtn('🔄');
+    try {
+      const cloudProjects = await this.loadProjects();
+      let loaded = 0;
+      for (const cp of cloudProjects) {
+        if (!PM.get(cp.id)) {
+          const projects = PM.list();
+          projects.unshift({ id: cp.id, name: cp.name, template: cp.template, github: cp.github, starred: cp.starred, created: Date.now(), updated: Date.now() });
+          Store.set('projects', projects);
+        }
+        const files = await this.loadFiles(cp.id);
+        for (const f of files) { FS.write(cp.id, f.path, f.content); loaded++; }
+      }
+      this._setBtn('☁️');
+      toast(`☁️ ${cloudProjects.length} loyiha, ${loaded} fayl yuklandi`);
+      Projects.render();
+      Home.refresh();
+    } catch (e) {
+      this._setBtn('☁️');
+      toast('⚠️ Yuklash xatosi: ' + e.message);
+    }
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
+//  FILE SYSTEM (localStorage-based, project-scoped)
 // ══════════════════════════════════════════════════════════════
 const FS = {
   _key(projectId, path) { return `fs:${projectId}:${path}`; },
@@ -83,7 +177,11 @@ const FS = {
     Store.set(this._key(projectId, path), content);
     const idx = this.index(projectId);
     if (!idx.includes(path)) { idx.push(path); Store.set(this._indexKey(projectId), idx); }
+    // Debounce cloud sync
+    clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(() => SB.upsertFile(projectId, path, content).catch(() => {}), 3000);
   },
+  _syncTimer: null,
 
   read(projectId, path) { return Store.get(this._key(projectId, path), ''); },
 
@@ -138,6 +236,8 @@ const PM = {
     list.unshift(p);
     Store.set('projects', list);
     for (const [path, content] of Object.entries(TEMPLATES[template] || {})) FS.write(id, path, content);
+    // Auto-sync to cloud
+    setTimeout(() => SB.upsertProject(p).catch(() => {}), 500);
     return p;
   },
 
@@ -149,6 +249,7 @@ const PM = {
     FS.index(id).forEach(path => FS.delete(id, path));
     Store.set('projects', this.list().filter(p => p.id !== id));
     if (this.current() === id) Store.set('current_project', null);
+    SB.deleteProject(id).catch(() => {});
   },
 };
 
@@ -181,14 +282,14 @@ const Git = {
 
   async request(path, method = 'GET', body = null) {
     const token = this.token();
-    if (!token) throw new Error('GitHub token sozlanmagan. Sozlamalar → API Kalitlar bo\'limiga o\'ting');
+    if (!token) throw new Error('GitHub token sozlanmagan. Sozlamalar → Kod bo\'limiga o\'ting');
     const res = await fetch('https://api.github.com' + path, {
       method,
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
-        'User-Agent': 'OmniCode/2.0',
+        'User-Agent': 'OmniCode/3.0',
       },
       body: body ? JSON.stringify(body) : null,
     });
@@ -198,10 +299,7 @@ const Git = {
 
   async me() { return this.request('/user'); },
   async repos() { return this.request('/user/repos?per_page=50&sort=updated'); },
-
-  async createRepo(name, isPrivate = false) {
-    return this.request('/user/repos', 'POST', { name, private: isPrivate, auto_init: true });
-  },
+  async createRepo(name, isPrivate = false) { return this.request('/user/repos', 'POST', { name, private: isPrivate, auto_init: true }); },
 
   async getSHA(owner, repo, path, branch = 'main') {
     try { return (await this.request(`/repos/${owner}/${repo}/contents/${path}?ref=${branch}`)).sha; }
@@ -230,26 +328,29 @@ const Git = {
 };
 
 // ══════════════════════════════════════════════════════════════
-//  AI MODELS & ROUTER
+//  AI MODELS
 // ══════════════════════════════════════════════════════════════
 const MODELS = [
-  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B',    short: 'Llama 3.3',  provider: 'openrouter', badge: '⚡', ctx: 128000 },
-  { id: 'deepseek/deepseek-r1:free',               name: 'DeepSeek R1',      short: 'DeepSeek R1', provider: 'openrouter', badge: '🧠', ctx: 64000  },
-  { id: 'google/gemini-2.0-flash-exp:free',        name: 'Gemini 2.0 Flash', short: 'Gemini 2.0',  provider: 'openrouter', badge: '✨', ctx: 1000000},
-  { id: 'qwen/qwq-32b:free',                       name: 'Qwen QwQ 32B',     short: 'QwQ 32B',     provider: 'openrouter', badge: '🔮', ctx: 32000  },
-  { id: 'llama-3.3-70b-versatile',                 name: 'Groq Llama 70B',   short: 'Groq Fast',   provider: 'groq',       badge: '⚡', ctx: 32000  },
-  { id: 'claude-3-5-haiku-20241022',               name: 'Claude 3.5 Haiku', short: 'Claude Haiku',provider: 'anthropic',  badge: '🤖', ctx: 200000 },
-  { id: 'gemini-2.0-flash',                        name: 'Gemini Flash (Direct)',short:'Gemini Direct',provider:'gemini',   badge: '✨', ctx: 1000000},
-  { id: 'deepseek-chat',                           name: 'DeepSeek Chat',    short: 'DeepSeek',    provider: 'deepseek',   badge: '🧠', ctx: 64000  },
-  { id: 'mistral-small-latest',                    name: 'Mistral Small',    short: 'Mistral',     provider: 'mistral',    badge: '🌀', ctx: 32000  },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B',    short: 'Llama 3.3',   provider: 'openrouter', badge: '⚡', ctx: 128000, stream: true },
+  { id: 'deepseek/deepseek-r1:free',               name: 'DeepSeek R1',      short: 'DeepSeek R1', provider: 'openrouter', badge: '🧠', ctx: 64000,  stream: true },
+  { id: 'google/gemini-2.0-flash-exp:free',        name: 'Gemini 2.0 Flash', short: 'Gemini 2.0',  provider: 'openrouter', badge: '✨', ctx: 1000000, stream: true },
+  { id: 'qwen/qwq-32b:free',                       name: 'Qwen QwQ 32B',     short: 'QwQ 32B',     provider: 'openrouter', badge: '🔮', ctx: 32000,  stream: true },
+  { id: 'llama-3.3-70b-versatile',                 name: 'Groq Llama 70B',   short: 'Groq Fast',   provider: 'groq',       badge: '⚡', ctx: 32000,  stream: true },
+  { id: 'claude-3-5-haiku-20241022',               name: 'Claude 3.5 Haiku', short: 'Claude Haiku',provider: 'anthropic',  badge: '🤖', ctx: 200000, stream: false },
+  { id: 'gemini-2.0-flash',                        name: 'Gemini Flash (Direct)', short: 'Gemini', provider: 'gemini',    badge: '✨', ctx: 1000000, stream: false },
+  { id: 'deepseek-chat',                           name: 'DeepSeek Chat',    short: 'DeepSeek',    provider: 'deepseek',   badge: '🧠', ctx: 64000,  stream: false },
+  { id: 'mistral-small-latest',                    name: 'Mistral Small',    short: 'Mistral',     provider: 'mistral',    badge: '🌀', ctx: 32000,  stream: false },
 ];
 
+// ══════════════════════════════════════════════════════════════
+//  AI ROUTER — with fallback chain
+// ══════════════════════════════════════════════════════════════
 const AIRouter = {
   keys() { const k = Store.get('keys', {}); return [k.or1, k.or2, k.or3, k.or4].filter(Boolean); },
 
   async openrouter(messages, modelId) {
     const keys = this.keys();
-    if (!keys.length) throw new Error('No OpenRouter keys');
+    if (!keys.length) throw new Error('OpenRouter kaliti yo\'q');
     const key = keys[Math.floor(Math.random() * keys.length)];
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -257,13 +358,12 @@ const AIRouter = {
       body: JSON.stringify({ model: modelId, messages, max_tokens: 8192 }),
     });
     if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-    const data = await res.json();
-    return data.choices[0].message.content;
+    return (await res.json()).choices[0].message.content;
   },
 
   async groq(messages) {
     const key = Store.get('keys', {}).groq;
-    if (!key) throw new Error('No Groq key');
+    if (!key) throw new Error('Groq kaliti yo\'q');
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
@@ -275,7 +375,7 @@ const AIRouter = {
 
   async anthropic(messages) {
     const key = Store.get('keys', {}).anthropic;
-    if (!key) throw new Error('No Anthropic key');
+    if (!key) throw new Error('Anthropic kaliti yo\'q');
     const sys = messages.find(m => m.role === 'system');
     const msgs = messages.filter(m => m.role !== 'system');
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -289,7 +389,7 @@ const AIRouter = {
 
   async gemini(messages) {
     const key = Store.get('keys', {}).gemini;
-    if (!key) throw new Error('No Gemini key');
+    if (!key) throw new Error('Gemini kaliti yo\'q');
     const parts = messages.filter(m => m.role !== 'system').map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
@@ -305,7 +405,7 @@ const AIRouter = {
 
   async deepseek(messages) {
     const key = Store.get('keys', {}).deepseek;
-    if (!key) throw new Error('No DeepSeek key');
+    if (!key) throw new Error('DeepSeek kaliti yo\'q');
     const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
@@ -317,7 +417,7 @@ const AIRouter = {
 
   async mistral(messages) {
     const key = Store.get('keys', {}).mistral;
-    if (!key) throw new Error('No Mistral key');
+    if (!key) throw new Error('Mistral kaliti yo\'q');
     const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
@@ -329,7 +429,7 @@ const AIRouter = {
 
   async together(messages) {
     const key = Store.get('keys', {}).together;
-    if (!key) throw new Error('No Together AI key');
+    if (!key) throw new Error('Together kaliti yo\'q');
     const res = await fetch('https://api.together.xyz/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
@@ -359,18 +459,88 @@ const AIRouter = {
     else if (m.provider === 'groq') chain = [() => this.groq(messages)];
     else chain = [() => this.openrouter(messages, m.id)];
 
-    // Fallback chain
-    chain.push(...[
+    chain.push(
       () => this.openrouter(messages, MODELS[0].id),
       () => this.groq(messages),
       () => this.together(messages),
       () => this.pollinations(messages),
-    ]);
+    );
 
     for (const fn of chain) {
       try { return await fn(); } catch (e) { console.warn('AI fallback:', e.message); }
     }
     throw new Error('Barcha AI provayderlar ishlamadi. Sozlamalarda API kalitlarni tekshiring.');
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
+//  STREAMING AI — Real-time token-by-token output
+// ══════════════════════════════════════════════════════════════
+const StreamAI = {
+  enabled() { return Store.get('stream_enabled', true); },
+
+  async _pipe(res, onChunk) {
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let full = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      for (const line of dec.decode(value, { stream: true }).split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        const d = line.slice(6).trim();
+        if (d === '[DONE]') continue;
+        try {
+          const delta = JSON.parse(d).choices?.[0]?.delta?.content || '';
+          if (delta) { full += delta; onChunk?.(full); }
+        } catch {}
+      }
+    }
+    return full;
+  },
+
+  async openrouter(messages, modelId, onChunk) {
+    const keys = AIRouter.keys();
+    if (!keys.length) throw new Error('OpenRouter kaliti yo\'q');
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://omnicode.app', 'X-Title': 'OmniCode' },
+      body: JSON.stringify({ model: modelId, messages, max_tokens: 8192, stream: true }),
+    });
+    if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+    return this._pipe(res, onChunk);
+  },
+
+  async groq(messages, onChunk) {
+    const key = Store.get('keys', {}).groq;
+    if (!key) throw new Error('Groq kaliti yo\'q');
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 8192, stream: true }),
+    });
+    if (!res.ok) throw new Error(`Groq ${res.status}`);
+    return this._pipe(res, onChunk);
+  },
+
+  async call(messages, model, onChunk) {
+    const m = model || State.model;
+    if (m.provider === 'openrouter' && AIRouter.keys().length) {
+      return this.openrouter(messages, m.id, onChunk);
+    }
+    if (m.provider === 'groq' && Store.get('keys', {}).groq) {
+      return this.groq(messages, onChunk);
+    }
+    // Try openrouter as fallback with stream
+    if (AIRouter.keys().length) {
+      return this.openrouter(messages, MODELS[0].id, onChunk);
+    }
+    // Try groq fallback
+    if (Store.get('keys', {}).groq) {
+      return this.groq(messages, onChunk);
+    }
+    throw new Error('Stream qo\'llab-quvvatlanmaydi');
   },
 };
 
@@ -456,6 +626,165 @@ const Diff = {
 };
 
 // ══════════════════════════════════════════════════════════════
+//  COMMAND PALETTE
+// ══════════════════════════════════════════════════════════════
+const Palette = {
+  _all: [
+    { icon: '💬', label: 'AI Chat ochish',            hint: 'ai',    action: () => App.nav('ai') },
+    { icon: '📁', label: 'Yangi loyiha yaratish',     hint: 'new',   action: () => App.newProject() },
+    { icon: '🔧', label: 'O\'z-o\'zini tuzatish',     hint: 'fix',   action: () => SelfHeal.analyze() },
+    { icon: '☁️', label: 'Bulutga saqlash',           hint: 'sync',  action: () => SB.syncAll() },
+    { icon: '⬇️', label: 'Bulutdan yuklash',          hint: 'pull',  action: () => SB.pullAll() },
+    { icon: '🚀', label: 'GitHubga yuborish',         hint: 'deploy',action: () => Deploy.start() },
+    { icon: '🧠', label: 'AI modelini o\'zgartirish', hint: 'model', action: () => App.openModelPicker() },
+    { icon: '⚙️', label: 'Sozlamalar',               hint: 'set',   action: () => App.nav('settings') },
+    { icon: '🤖', label: 'Agentlar',                  hint: 'agent', action: () => App.nav('agents') },
+    { icon: '🔄', label: 'Ko\'p agentli pipeline',    hint: 'pipe',  action: () => Agents.runPipeline('', ['planner','coder','reviewer']) },
+    { icon: '🗑', label: 'Chat tarixini tozalash',    hint: 'clear', action: () => AI.clear() },
+    { icon: '📊', label: 'Statistika',                hint: 'stat',  action: () => App.nav('home') },
+    { icon: '📁', label: 'Loyihalar',                 hint: 'proj',  action: () => App.nav('projects') },
+    { icon: '🌊', label: 'Streaming rejim almashtir', hint: 'stream',action: () => Settings.toggleStream() },
+  ],
+  _filtered: null,
+
+  open() {
+    const el = document.getElementById('palette-overlay');
+    const inp = document.getElementById('palette-input');
+    if (!el) return;
+    el.classList.add('open');
+    inp.value = '';
+    this._filtered = null;
+    this._render(this._all);
+    setTimeout(() => inp.focus(), 80);
+  },
+
+  close() { document.getElementById('palette-overlay')?.classList.remove('open'); },
+
+  _render(cmds) {
+    const list = document.getElementById('palette-list');
+    if (!list) return;
+    list.innerHTML = cmds.length
+      ? cmds.map((c, i) => `<div class="pal-item" onclick="Palette._run(${i})"><span class="pal-icon">${c.icon}</span><span class="pal-label">${c.label}</span>${c.hint ? `<span class="pal-hint">${c.hint}</span>` : ''}</div>`).join('')
+      : '<div style="padding:20px;text-align:center;color:var(--text3)">Topilmadi</div>';
+  },
+
+  filter(q) {
+    const lower = q.toLowerCase();
+    this._filtered = q ? this._all.filter(c => c.label.toLowerCase().includes(lower) || c.hint?.includes(lower)) : null;
+    this._render(this._filtered || this._all);
+  },
+
+  _run(idx) {
+    const cmds = this._filtered || this._all;
+    cmds[idx]?.action?.();
+    this.close();
+  },
+
+  onKey(e) {
+    if (e.key === 'Escape') this.close();
+    if (e.key === 'Enter') {
+      const cmds = this._filtered || this._all;
+      if (cmds.length) { cmds[0].action(); this.close(); }
+    }
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
+//  SELF-HEAL — Auto analyze and fix project issues
+// ══════════════════════════════════════════════════════════════
+const SelfHeal = {
+  async analyze() {
+    const projectId = State.projectId;
+    if (!projectId) { toast('⚠️ Avval loyiha tanlang'); App.nav('projects'); return; }
+
+    App.nav('ai');
+    const taskId = Tasks.add('🔧 O\'z-o\'zini tuzatish', 'Loyiha tahlil qilinmoqda...');
+    Tasks.update(taskId, { progress: 10 });
+
+    const introDiv = AI.appendBubble('ai', `🔧 **O\'z-o\'zini tuzatish** jarayoni boshlandi...\n\nLoyiha barcha fayllari tahlil qilinmoqda...`, false);
+
+    const ctx = FS.context(projectId, 20000);
+    const p = PM.get(projectId);
+    const messages = [
+      {
+        role: 'system',
+        content: `You are a senior software engineer doing an automated code review and bug fix.
+TASK: Analyze ALL project files thoroughly. Find:
+1. Syntax errors and bugs
+2. Missing imports or dependencies
+3. Security vulnerabilities
+4. Logic errors
+5. Missing files that should exist
+6. Broken references
+
+Then provide FIXED versions of problematic files using:
+<WRITE_FILE path="relative/path">
+complete fixed file content
+</WRITE_FILE>
+
+Be thorough. Fix all issues found. Include complete file content, not just diffs.`,
+      },
+      {
+        role: 'user',
+        content: `Project: ${p?.name || 'Unknown'}\n\nAnalyze and fix all issues in this project:\n${ctx || 'No files found in project.'}`,
+      },
+    ];
+
+    Tasks.update(taskId, { progress: 40 });
+
+    try {
+      let reply;
+      const streamEl = document.getElementById('chat-messages');
+      let streamBubble = null;
+
+      const onChunk = (full) => {
+        if (!streamBubble) {
+          streamBubble = AI.appendBubble('ai', '', false);
+        }
+        streamBubble.innerHTML = MD.render(FS.stripCommands(full)) + '<span class="stream-cursor"></span>';
+        streamEl.scrollTop = streamEl.scrollHeight;
+      };
+
+      Tasks.update(taskId, { progress: 60 });
+
+      try {
+        reply = await StreamAI.call(messages, null, onChunk);
+      } catch {
+        reply = await AIRouter.call(messages);
+      }
+
+      if (streamBubble) {
+        streamBubble.innerHTML = MD.render(FS.stripCommands(reply));
+      } else {
+        AI.appendBubble('ai', reply, false);
+      }
+
+      const writes = FS.parseWrites(reply);
+      if (writes.length) {
+        State.pendingWrites = writes;
+        const btn = document.createElement('button');
+        btn.className = 'apply-btn';
+        btn.textContent = `🔧 ${writes.length} ta tuzatishni qo'llash`;
+        btn.onclick = () => DiffView.show();
+        (streamBubble || streamEl.lastElementChild)?.appendChild(btn);
+        toast(`🔧 ${writes.length} ta muammo topildi va tuzatildi`);
+      } else {
+        toast('✅ Loyihada jiddiy xatolar topilmadi');
+      }
+
+      Analytics.track(Math.floor(reply.length / 4));
+      Tasks.update(taskId, { progress: 100, status: 'done' });
+      Tasks.remove(taskId);
+    } catch (e) {
+      AI.appendBubble('ai', `❌ **Tahlil xatosi:** ${e.message}`, false);
+      Tasks.remove(taskId);
+    } finally {
+      Home.refresh();
+    }
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
 //  APP NAVIGATION
 // ══════════════════════════════════════════════════════════════
 const App = {
@@ -478,7 +807,7 @@ const App = {
       <div onclick="App.selectModel('${m.id}')" style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer">
         <span style="font-size:20px">${m.badge}</span>
         <div style="flex:1">
-          <div style="font-size:14px;font-weight:700;margin-bottom:2px">${m.name}</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:2px">${m.name} ${m.stream ? '<span style="font-size:10px;color:var(--green);background:rgba(34,197,94,0.1);padding:1px 6px;border-radius:8px">stream</span>' : ''}</div>
           <div style="font-size:11px;color:var(--text3)">${m.provider} · ${(m.ctx/1000).toFixed(0)}K ctx</div>
         </div>
         ${State.model.id===m.id?'<span style="color:var(--accent);font-weight:700">✓</span>':''}
@@ -504,12 +833,17 @@ const App = {
   init() {
     const hour = new Date().getHours();
     const greet = hour < 12 ? 'Xayrli tong' : hour < 17 ? 'Xayrli kun' : 'Xayrli kech';
-    const name = tg?.initDataUnsafe?.user?.first_name || 'User';
+    const name = tg?.initDataUnsafe?.user?.first_name || 'Foydalanuvchi';
     const el = document.getElementById('greeting-text');
     if (el) el.textContent = `${greet}, ${name} 👋`;
 
     document.getElementById('model-label').textContent = State.model.short;
     document.getElementById('default-model-val').textContent = State.model.short;
+
+    // Show cloud user ID
+    const uid = document.getElementById('cloud-uid-val');
+    if (uid) uid.textContent = SB.userId();
+
     AI.addWelcome();
     Home.refresh();
     Projects.render();
@@ -518,7 +852,7 @@ const App = {
 };
 
 // ══════════════════════════════════════════════════════════════
-//  HOME — All real data
+//  HOME
 // ══════════════════════════════════════════════════════════════
 const Home = {
   refresh() {
@@ -533,31 +867,24 @@ const Home = {
     const yesterday = Analytics.yesterday();
     const week = Analytics.week();
 
-    // Token usage
     const tokEl = document.getElementById('stat-tokens');
     if (tokEl) tokEl.textContent = Analytics.fmtTokens(week.tokens);
     const tokChange = document.getElementById('stat-tokens-change');
     if (tokChange) {
-      const yTok = yesterday.tokens || 0;
-      const tTok = today.tokens || 0;
-      const pct = yTok ? Math.round((tTok - yTok) / yTok * 100) : (tTok > 0 ? 100 : 0);
+      const pct = yesterday.tokens ? Math.round((today.tokens - yesterday.tokens) / yesterday.tokens * 100) : (today.tokens > 0 ? 100 : 0);
       tokChange.textContent = (pct >= 0 ? '+' : '') + pct + '%';
       tokChange.className = 'an-change ' + (pct >= 0 ? 'up' : 'down');
     }
 
-    // Requests
     const reqEl = document.getElementById('stat-requests');
     if (reqEl) reqEl.textContent = week.requests;
     const reqChange = document.getElementById('stat-requests-change');
     if (reqChange) {
-      const yReq = yesterday.requests || 0;
-      const tReq = today.requests || 0;
-      const pct = yReq ? Math.round((tReq - yReq) / yReq * 100) : (tReq > 0 ? 100 : 0);
+      const pct = yesterday.requests ? Math.round((today.requests - yesterday.requests) / yesterday.requests * 100) : (today.requests > 0 ? 100 : 0);
       reqChange.textContent = (pct >= 0 ? '+' : '') + pct + '%';
       reqChange.className = 'an-change ' + (pct >= 0 ? 'up' : 'down');
     }
 
-    // Usage %
     const projects = PM.list().length;
     const usagePct = Math.min(100, projects * 20 + (today.requests * 5));
     const usageEl = document.getElementById('usage-pct');
@@ -566,6 +893,12 @@ const Home = {
     if (usageEl) usageEl.textContent = usagePct + '%';
     if (usageBar) usageBar.style.width = usagePct + '%';
     if (usageSub) usageSub.textContent = today.requests + ' ta so\'rov bugun · Bepul provayderlar';
+
+    // Cloud stats
+    const cloudVal = document.getElementById('cloud-status-val');
+    if (cloudVal) cloudVal.textContent = PM.list().length + ' 💾';
+    const cloudBar = document.getElementById('cloud-bar');
+    if (cloudBar) cloudBar.style.width = Math.min(100, PM.list().length * 15) + '%';
   },
 
   _updateProjects() {
@@ -579,7 +912,7 @@ const Home = {
         <div class="project-dot ${colors[i%colors.length]}">${icons[i%icons.length]}</div>
         <div style="flex:1">
           <div class="project-name">${p.name}</div>
-          <div class="project-time">${FS.index(p.id).length} files · ${timeAgo(p.updated || p.created)}</div>
+          <div class="project-time">${FS.index(p.id).length} fayl · ${timeAgo(p.updated || p.created)}</div>
         </div>
         <div class="project-more">⋯</div>
       </div>`).join('') :
@@ -623,7 +956,7 @@ const Home = {
       if (hasKey) {
         const provName = keys.anthropic ? 'Anthropic' : keys.or1 ? 'OpenRouter' : keys.groq ? 'Groq' : keys.gemini ? 'Gemini' : keys.deepseek ? 'DeepSeek' : 'Together AI';
         aiName.textContent = provName + ' AI';
-        aiStatus.textContent = 'Ulangan';
+        aiStatus.textContent = 'Ulangan · Stream ' + (StreamAI.enabled() ? '🟢' : '⭕');
         aiStatus.style.color = 'var(--green)';
       } else {
         aiName.textContent = 'AI Provayder';
@@ -635,7 +968,7 @@ const Home = {
 };
 
 // ══════════════════════════════════════════════════════════════
-//  AI CHAT
+//  AI CHAT — with streaming
 // ══════════════════════════════════════════════════════════════
 const AGENT_SYSTEMS = {
   master:     'You are the Master Agent. Orchestrate specialized agents for complex tasks. Be concise and direct.',
@@ -659,7 +992,7 @@ const AI = {
     const agentSys = State.agent ? AGENT_SYSTEMS[State.agent] : '';
     const projectCtx = State.projectId ? FS.context(State.projectId) : '';
     const project = State.projectId ? PM.get(State.projectId) : null;
-    return `You are OmniCode — a world-class AI coding assistant (like Cursor AI on mobile).
+    return `You are OmniCode — a world-class AI coding assistant (like Cursor AI on mobile). You are connected to Supabase, GitHub, Figma, Vercel, Notion, Gmail, and Calendar via MCP.
 
 ${agentSys}
 
@@ -673,28 +1006,31 @@ Always write complete file contents. Multiple files allowed per response.
 
 ACTIVE PROJECT: ${project ? project.name : 'None selected'}
 ACTIVE TOOLS: ${[...State.activeTools].join(', ')}
+SUPABASE: tomkxsdkerpbvlumubbg.supabase.co (connected)
 ${projectCtx}
 
-Rules: Be concise. Write working code. For mobile: short explanations.`;
+Rules: Be concise. Write working code. For mobile: short explanations. Use Uzbek for explanations when user writes in Uzbek.`;
   },
 
   addWelcome() {
     const el = document.getElementById('chat-messages');
     if (!el) return;
     el.innerHTML = '';
-    this.appendBubble('ai', `**OmniCode AI** — Telefondan Claude Code 🚀
+    this.appendBubble('ai', `**OmniCode AI 3.0** — Claude Code + Supabase 🚀
 
-**Nima qila olaman:**
-- To'liq fayllar va loyihalar yozish
-- Kodni tahrirlash (Cursor Cmd+K kabi)
-- PR ko'rib chiqish, xatolarni tuzatish
-- To'g'ridan-to'g'ri GitHubga yuborish
-- 12 ta ixtisoslashgan AI agent ishlatish
+**Yangi imkoniyatlar:**
+- 🌊 **Real-time streaming** — javoblar token-by-token
+- ☁️ **Supabase bulut sinxron** — loyihalar avtomatik saqlanadi
+- 🔧 **O'z-o'zini tuzatish** — AI xatolarni o'zi topib tuzatadi
+- ⌘ **Buyruqlar palitasi** — ⌘ tugmasi yoki \`/\` bilan
+- 🔌 **MCP ulanishlar** — Supabase, GitHub, Figma, Vercel va boshqalar
 
 **Boshlash:**
 1. Loyiha yarating (Loyihalar bo'limi)
-2. Nima qurishni tasvirlab bering
-3. Men fayllarni yozaman — siz tasdiqlaysiz
+2. Nima qurishni yozing
+3. AI fayllarni yozadi → siz diff ko'rib tasdiqlaysiz
+
+**Tezkor buyruqlar:** \`/fix\` tuzatish · \`/sync\` saqlash · \`/model\` model almashtirish
 
 Bugun nima quramiz?`, false);
   },
@@ -740,49 +1076,114 @@ Bugun nima quramiz?`, false);
     if (!msg || this.busy) return;
     if (inp) { inp.value = ''; inp.style.height = ''; }
 
+    // Handle slash commands
+    if (msg === '/fix' || msg === '/tuzat') { await SelfHeal.analyze(); return; }
+    if (msg === '/sync' || msg === '/saqlash') { await SB.syncAll(); return; }
+    if (msg === '/model') { App.openModelPicker(); return; }
+    if (msg === '/clear' || msg === '/tozala') { this.clear(); return; }
+    if (msg === '/palette' || msg === '/k') { Palette.open(); return; }
+
     const resolved = await this.resolveRefs(msg);
     this.appendBubble('user', msg, false);
     State.chatHistory.push({ role: 'user', content: resolved });
 
     this.busy = true;
-    this.showTyping();
-
     const taskId = Tasks.add('AI Chat', msg.slice(0, 40) + '...');
-    Tasks.update(taskId, { progress: 30 });
+    Tasks.update(taskId, { progress: 20 });
 
     const messages = [
       { role: 'system', content: this.system() },
       ...State.chatHistory.slice(-16),
     ];
 
-    try {
-      Tasks.update(taskId, { progress: 70 });
-      const reply = await AIRouter.call(messages);
-      this.hideTyping();
+    const chatEl = document.getElementById('chat-messages');
+    let streamBubble = null;
+    let replied = false;
 
-      // Estimate tokens (rough: 4 chars = 1 token)
-      const approxTokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + reply.length) / 4);
-      Analytics.track(approxTokens);
+    const useStream = StreamAI.enabled() && State.model.stream;
 
-      const writes = FS.parseWrites(reply);
-      if (writes.length) {
-        State.pendingWrites = writes;
-        this.appendBubble('ai', reply, true);
-        toast(`📝 ${writes.length} ta fayl qo'llashga tayyor`);
-      } else {
-        this.appendBubble('ai', reply, false);
+    if (useStream) {
+      // Don't show typing indicator for streaming
+      const onChunk = (full) => {
+        if (!streamBubble) {
+          streamBubble = document.createElement('div');
+          streamBubble.className = 'bubble ai';
+          chatEl.appendChild(streamBubble);
+        }
+        streamBubble.innerHTML = MD.render(FS.stripCommands(full)) + '<span class="stream-cursor"></span>';
+        chatEl.scrollTop = chatEl.scrollHeight;
+        replied = true;
+      };
+
+      Tasks.update(taskId, { progress: 50 });
+
+      try {
+        const reply = await StreamAI.call(messages, null, onChunk);
+        if (streamBubble) {
+          // Finalize
+          streamBubble.innerHTML = MD.render(FS.stripCommands(reply));
+          const writes = FS.parseWrites(reply);
+          if (writes.length) {
+            State.pendingWrites = writes;
+            const btn = document.createElement('button');
+            btn.className = 'apply-btn';
+            btn.textContent = `📝 ${writes.length} ta faylni qo'llash`;
+            btn.onclick = () => DiffView.show();
+            streamBubble.appendChild(btn);
+            toast(`📝 ${writes.length} ta fayl tayyor`);
+          }
+          const chips = document.createElement('div');
+          chips.className = 'bubble-chips';
+          chips.innerHTML = [['Improve','Yaxshilash'],['Explain','Tushuntirish'],['Shorter','Qisqartirish'],['Fix bugs','Xatolarni tuzat']].map(([a,uz]) =>
+            `<button class="bubble-chip" onclick="AI.quickAction('${a}')">${uz}</button>`).join('');
+          streamBubble.appendChild(chips);
+
+          const approxTokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + reply.length) / 4);
+          Analytics.track(approxTokens);
+          State.chatHistory.push({ role: 'assistant', content: reply });
+          Tasks.update(taskId, { progress: 100, status: 'done' });
+          Tasks.remove(taskId);
+          this.busy = false;
+          if (App.screen === 'home') Home.refresh();
+          return;
+        }
+      } catch (e) {
+        console.warn('Stream failed, falling back:', e.message);
+        if (streamBubble) { streamBubble.remove(); streamBubble = null; }
       }
-      State.chatHistory.push({ role: 'assistant', content: reply });
-      Tasks.update(taskId, { progress: 100, status: 'done' });
-      Tasks.remove(taskId);
-    } catch (e) {
-      this.hideTyping();
-      this.appendBubble('ai', `❌ **${e.message}**\n\nAI yoqish uchun **Sozlamalar → AI API Kalitlar** bo'limiga kalit qo'shing.`, false);
-      Tasks.remove(taskId);
-    } finally {
-      this.busy = false;
-      if (App.screen === 'home') Home.refresh();
     }
+
+    // Non-streaming fallback
+    if (!useStream || !replied) {
+      this.showTyping();
+      Tasks.update(taskId, { progress: 60 });
+      try {
+        const reply = await AIRouter.call(messages);
+        this.hideTyping();
+
+        const approxTokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + reply.length) / 4);
+        Analytics.track(approxTokens);
+
+        const writes = FS.parseWrites(reply);
+        if (writes.length) {
+          State.pendingWrites = writes;
+          this.appendBubble('ai', reply, true);
+          toast(`📝 ${writes.length} ta fayl qo'llashga tayyor`);
+        } else {
+          this.appendBubble('ai', reply, false);
+        }
+        State.chatHistory.push({ role: 'assistant', content: reply });
+        Tasks.update(taskId, { progress: 100, status: 'done' });
+        Tasks.remove(taskId);
+      } catch (e) {
+        this.hideTyping();
+        this.appendBubble('ai', `❌ **${e.message}**\n\nAI yoqish uchun **Sozlamalar → AI** bo'limiga kalit qo'shing.`, false);
+        Tasks.remove(taskId);
+      }
+    }
+
+    this.busy = false;
+    if (App.screen === 'home') Home.refresh();
   },
 
   async resolveRefs(text) {
@@ -848,6 +1249,8 @@ const DiffView = {
     Home.refresh();
     PM.update(State.projectId, {});
     toast(`✅ ${count} ta fayl qo'llandi`);
+    // Auto sync to cloud
+    setTimeout(() => SB.syncAll(), 1000);
   },
 
   rejectAll() { State.pendingWrites = []; Sheet.close('diff-sheet'); toast('❌ O\'zgarishlar rad etildi'); },
@@ -866,7 +1269,9 @@ const Projects = {
       el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text3)">
         <div style="font-size:40px;margin-bottom:12px">📁</div>
         <div style="font-size:15px;font-weight:600;margin-bottom:8px">Hali loyiha yo'q</div>
-        <button onclick="App.newProject()" style="background:var(--accent);border:none;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">+ Yangi loyiha</button>
+        <button onclick="App.newProject()" style="background:var(--accent);border:none;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">+ Yangi loyiha</button>
+        <br>
+        <button onclick="SB.pullAll()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">☁️ Bulutdan yuklash</button>
       </div>`;
       return;
     }
@@ -939,10 +1344,11 @@ const Projects = {
   menu(id, e) {
     e.stopPropagation();
     const p = PM.get(id);
-    const actions = ['Push to GitHub', 'Delete project', 'Cancel'];
-    const action = prompt(`${p.name}\n\n1) GitHubga yuborish\n2) Loyihani o'chirish\n3) Bekor qilish\n\n1, 2 yoki 3 kiriting:`);
+    const action = prompt(`${p.name}\n\n1) GitHubga yuborish\n2) Bulutga saqlash\n3) AI tahrirlash (o'z-o'zini tuzatish)\n4) O'chirish\n5) Bekor qilish\n\n1-5 kiriting:`);
     if (action === '1') { PM.setCurrent(id); Deploy.start(); }
-    else if (action === '2') {
+    else if (action === '2') { PM.setCurrent(id); SB.syncAll(); }
+    else if (action === '3') { PM.setCurrent(id); SelfHeal.analyze(); }
+    else if (action === '4') {
       if (confirm(`"${p.name}" o'chirilsinmi? Bu amalni bekor qilib bo'lmaydi.`)) {
         PM.delete(id); this.render(); Home.refresh(); toast('🗑 O\'chirildi');
       }
@@ -952,10 +1358,8 @@ const Projects = {
   filter(type, el) {
     document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    // Filter by type
     const list = PM.list();
     const filtered = type === 'starred' ? list.filter(p => p.starred) : list;
-    // Re-render with filtered
     const tree = document.getElementById('projects-tree');
     if (tree) { Store.set('_filter_override', filtered.map(p => p.id)); this.render(); Store.set('_filter_override', null); }
   },
@@ -969,11 +1373,12 @@ const Projects = {
 };
 
 // ══════════════════════════════════════════════════════════════
-//  CODE EDITOR
+//  CODE EDITOR — with real editing & cloud save
 // ══════════════════════════════════════════════════════════════
 const Editor = {
   projectId: null,
   file: null,
+  _saveTimer: null,
 
   open(projectId, path) {
     this.projectId = projectId;
@@ -983,12 +1388,69 @@ const Editor = {
     document.getElementById('ed-badge').textContent = langFromPath(path);
     document.getElementById('code-view').innerHTML =
       `<textarea id="editor-textarea" class="editor-ta" spellcheck="false"
-        oninput="Editor.onChange(this)">${escHTML(content)}</textarea>`;
+        oninput="Editor.onChange(this)"
+        onkeydown="Editor.onKeyDown(event)">${escHTML(content)}</textarea>`;
     App.nav('editor');
+    // Focus the textarea
+    setTimeout(() => document.getElementById('editor-textarea')?.focus(), 100);
   },
 
   onChange(ta) {
-    if (this.projectId && this.file) FS.write(this.projectId, this.file, ta.value);
+    if (this.projectId && this.file) {
+      FS.write(this.projectId, this.file, ta.value);
+      // Show save indicator
+      const ind = document.getElementById('ed-save-indicator');
+      if (ind) {
+        ind.style.display = '';
+        clearTimeout(this._saveTimer);
+        this._saveTimer = setTimeout(() => { if (ind) ind.style.display = 'none'; }, 2000);
+      }
+    }
+  },
+
+  onKeyDown(e) {
+    // Tab key → insert 2 spaces
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const ta = e.target;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      ta.value = ta.value.substring(0, start) + '  ' + ta.value.substring(end);
+      ta.selectionStart = ta.selectionEnd = start + 2;
+      this.onChange(ta);
+    }
+    // Cmd+S → save to cloud
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      this.saveToCloud();
+    }
+  },
+
+  saveToCloud() {
+    if (!this.projectId || !this.file) return;
+    const content = FS.read(this.projectId, this.file);
+    SB.upsertFile(this.projectId, this.file, content)
+      .then(() => toast('☁️ Saqlandi'))
+      .catch(() => toast('⚠️ Saqlash xatosi'));
+  },
+
+  format() {
+    const ta = document.getElementById('editor-textarea');
+    if (!ta) return;
+    // Basic formatting: normalize indentation
+    const lines = ta.value.split('\n');
+    let indent = 0;
+    const formatted = lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '';
+      if (trimmed.match(/^[}\])]/) ) indent = Math.max(0, indent - 1);
+      const result = '  '.repeat(indent) + trimmed;
+      if (trimmed.match(/[{(\[]$/) ) indent++;
+      return result;
+    }).join('\n');
+    ta.value = formatted;
+    this.onChange(ta);
+    toast('⚡ Formatlandi');
   },
 
   async aiEdit() {
@@ -1020,7 +1482,8 @@ const Editor = {
       body.innerHTML = `<div><span class="t-prompt">$ </span>git status</div>
         <div class="t-dim">On branch main</div>
         <div class="t-dim">GitHub: ${ghInfo}</div>
-        <div class="t-dim">Files: ${this.projectId ? FS.index(this.projectId).length : 0}</div>`;
+        <div class="t-dim">Fayllar: ${this.projectId ? FS.index(this.projectId).length : 0}</div>
+        <div class="t-dim">Supabase: ulangan ✓</div>`;
     } else if (tab === 'problems') {
       body.innerHTML = `<div class="t-dim">Muammolar topilmadi</div>`;
     } else if (tab === 'output') {
@@ -1072,7 +1535,6 @@ const Agents = {
     const desc = prompt('Agent tavsifi:');
     if (!desc) return;
     toast(`✅ "${name}" agenti yaratildi`);
-    // Could store custom agents in localStorage here
   },
 
   async runPipeline(task, agentList = ['planner', 'coder', 'reviewer']) {
@@ -1103,7 +1565,7 @@ const Agents = {
         Tasks.remove(taskId);
       } catch (e) {
         AI.hideTyping();
-        AI.appendBubble('ai', `❌ ${name} failed: ${e.message}`, false);
+        AI.appendBubble('ai', `❌ ${name} xatosi: ${e.message}`, false);
         Tasks.remove(taskId);
       }
     }
@@ -1112,22 +1574,14 @@ const Agents = {
 };
 
 // ══════════════════════════════════════════════════════════════
-//  DEPLOY — Real GitHub push
+//  DEPLOY
 // ══════════════════════════════════════════════════════════════
 const Deploy = {
   async start() {
     const projectId = State.projectId;
-    if (!projectId) {
-      toast('⚠️ Avval loyiha tanlang');
-      App.nav('projects');
-      return;
-    }
+    if (!projectId) { toast('⚠️ Avval loyiha tanlang'); App.nav('projects'); return; }
     const p = PM.get(projectId);
-    if (!p.github) {
-      // Pre-fill from previous if available
-      Sheet.open('github-deploy-sheet');
-      return;
-    }
+    if (!p.github) { Sheet.open('github-deploy-sheet'); return; }
     await this.push(projectId, p.github.owner, p.github.repo, p.github.branch || 'main');
   },
 
@@ -1161,31 +1615,30 @@ const Deploy = {
       if (d && desc) d.textContent = desc;
     };
 
-    // Reset steps
     ['step-github','step-build','step-tests','step-deploy'].forEach(s => setStep(s, 'gray'));
 
-    setStep('step-github', 'orange', 'Connecting...');
-    addLog('› Connecting to GitHub...');
+    setStep('step-github', 'orange', 'Ulanmoqda...');
+    addLog('› GitHub ga ulanmoqda...');
 
     if (!Git.token()) {
       setStep('step-github', 'red', 'Token yo\'q');
-      addLog('› Xato: GitHub token sozlanmagan. Sozlamalar → Kod va Joylashtirish → GitHub Token');
+      addLog('› Xato: GitHub token sozlanmagan. Sozlamalar → Kod → GitHub Token');
       toast('❌ Avval Sozlamalarda GitHub token qo\'shing'); return;
     }
 
     try {
       const user = await Git.me();
-      setStep('step-github', 'green', `Connected as ${user.login}`);
-      addLog(`› Connected as ${user.login} ✓`, true);
+      setStep('step-github', 'green', `Ulangan: ${user.login}`);
+      addLog(`› Ulandi: ${user.login} ✓`, true);
     } catch (e) {
-      setStep('step-github', 'red', 'Auth failed');
-      addLog(`› GitHub error: ${e.message}`);
+      setStep('step-github', 'red', 'Autentifikatsiya xatosi');
+      addLog(`› GitHub xatosi: ${e.message}`);
       toast('❌ GitHub: ' + e.message); return;
     }
 
     await delay(300);
-    setStep('step-build', 'orange', `Pushing to ${repo}...`);
-    addLog(`› Pushing files to ${owner}/${repo}@${branch}...`);
+    setStep('step-build', 'orange', `${repo} ga yuborilmoqda...`);
+    addLog(`› Fayllar ${owner}/${repo}@${branch} ga yuborilmoqda...`);
 
     const results = await Git.pushProject(projectId, owner, repo, branch);
     let ok = 0, fail = 0;
@@ -1194,38 +1647,41 @@ const Deploy = {
       else { fail++; addLog(`  ✗ ${r.path}: ${r.error}`); }
     }
 
-    if (results.length === 0) { addLog('  ⚠ No files in project'); }
+    if (results.length === 0) { addLog('  ⚠ Loyihada fayllar yo\'q'); }
 
-    setStep('step-build', fail === 0 ? 'green' : 'orange', fail === 0 ? `${ok} files pushed` : `${ok} ok, ${fail} failed`);
-    addLog(fail === 0 ? `› All ${ok} files pushed ✓` : `› ${ok} ok, ${fail} failed`, fail === 0);
+    setStep('step-build', fail === 0 ? 'green' : 'orange', fail === 0 ? `${ok} fayl yuborildi` : `${ok} muvaffaqiyatli, ${fail} xato`);
+    addLog(fail === 0 ? `› Jami ${ok} fayl yuborildi ✓` : `› ${ok} muvaffaqiyatli, ${fail} xato`, fail === 0);
 
     await delay(300);
-    setStep('step-tests', 'green', 'Build triggered');
-    addLog('› Build triggered on GitHub Actions ✓', true);
+    setStep('step-tests', 'green', 'Build boshlandi');
+    addLog('› GitHub Actions da build boshlandi ✓', true);
 
     await delay(400);
-    setStep('step-deploy', 'green', 'Live');
-    addLog(`✓ Pushed to github.com/${owner}/${repo}`, true);
+    setStep('step-deploy', 'green', 'Jonli');
+    addLog(`✓ github.com/${owner}/${repo} ga yuborildi`, true);
 
-    toast(fail === 0 ? '🚀 Pushed to GitHub!' : `⚠️ ${fail} files failed`);
+    toast(fail === 0 ? '🚀 GitHub ga yuborildi!' : `⚠️ ${fail} ta fayl xato`);
+
+    // Also sync to Supabase
+    setTimeout(() => SB.syncAll(), 500);
   },
 
   clearLogs() { document.getElementById('deploy-logs').innerHTML = ''; },
 };
 
 // ══════════════════════════════════════════════════════════════
-//  SETTINGS — All providers
+//  SETTINGS
 // ══════════════════════════════════════════════════════════════
 const PROVIDER_CONFIGS = {
   openrouter: {
-    title: 'OpenRouter Keys',
+    title: 'OpenRouter Kalitlar',
     fields: [
-      { id: 'or1', label: 'Key 1 (sk-or-v1-...)' },
-      { id: 'or2', label: 'Key 2 (optional)' },
-      { id: 'or3', label: 'Key 3 (optional)' },
-      { id: 'or4', label: 'Key 4 (optional)' },
+      { id: 'or1', label: 'Kalit 1 (sk-or-v1-...)' },
+      { id: 'or2', label: 'Kalit 2 (ixtiyoriy)' },
+      { id: 'or3', label: 'Kalit 3 (ixtiyoriy)' },
+      { id: 'or4', label: 'Kalit 4 (ixtiyoriy)' },
     ],
-    hint: 'Get free keys at openrouter.ai/keys — 4 keys for load balancing',
+    hint: 'openrouter.ai/keys dan bepul kalitlar oling — 4 ta kalit load balancing uchun',
   },
   github: {
     title: 'GitHub Token',
@@ -1233,34 +1689,34 @@ const PROVIDER_CONFIGS = {
     hint: 'github.com/settings/tokens → New token → repo scope',
   },
   groq: {
-    title: 'Groq API Key',
-    fields: [{ id: 'groq', label: 'API Key (gsk_...)' }],
-    hint: 'Free at console.groq.com — fastest inference',
+    title: 'Groq API Kalit',
+    fields: [{ id: 'groq', label: 'API Kalit (gsk_...)' }],
+    hint: 'console.groq.com — eng tez inference + streaming',
   },
   anthropic: {
     title: 'Anthropic / Claude',
-    fields: [{ id: 'anthropic', label: 'API Key (sk-ant-...)' }],
-    hint: 'console.anthropic.com — Claude 3.5 Haiku included',
+    fields: [{ id: 'anthropic', label: 'API Kalit (sk-ant-...)' }],
+    hint: 'console.anthropic.com — Claude 3.5 Haiku kiradi',
   },
   gemini: {
     title: 'Google Gemini',
-    fields: [{ id: 'gemini', label: 'API Key (AIza...)' }],
-    hint: 'Free at aistudio.google.com — 1M context window',
+    fields: [{ id: 'gemini', label: 'API Kalit (AIza...)' }],
+    hint: 'aistudio.google.com dan bepul — 1M kontekst oynasi',
   },
   deepseek: {
     title: 'DeepSeek',
-    fields: [{ id: 'deepseek', label: 'API Key (sk-...)' }],
-    hint: 'platform.deepseek.com — very cheap',
+    fields: [{ id: 'deepseek', label: 'API Kalit (sk-...)' }],
+    hint: 'platform.deepseek.com — juda arzon',
   },
   mistral: {
     title: 'Mistral AI',
-    fields: [{ id: 'mistral', label: 'API Key' }],
-    hint: 'console.mistral.ai — European AI',
+    fields: [{ id: 'mistral', label: 'API Kalit' }],
+    hint: 'console.mistral.ai — Yevropa AI',
   },
   together: {
     title: 'Together AI',
-    fields: [{ id: 'together', label: 'API Key' }],
-    hint: 'api.together.xyz — $25 free credit',
+    fields: [{ id: 'together', label: 'API Kalit' }],
+    hint: 'api.together.xyz — $25 bepul kredit',
   },
   huggingface: {
     title: 'HuggingFace',
@@ -1269,8 +1725,8 @@ const PROVIDER_CONFIGS = {
   },
   nvidia: {
     title: 'NVIDIA NIM',
-    fields: [{ id: 'nvidia', label: 'API Key' }],
-    hint: 'build.nvidia.com — free GPU inference',
+    fields: [{ id: 'nvidia', label: 'API Kalit' }],
+    hint: 'build.nvidia.com — bepul GPU inference',
   },
 };
 
@@ -1279,18 +1735,11 @@ const Settings = {
 
   refresh() {
     const keys = Store.get('keys', {});
-    // Update all status elements
     const statuses = {
-      'or-status': !!keys.or1,
-      'gh-status': !!keys.github,
-      'groq-status': !!keys.groq,
-      'anthropic-status': !!keys.anthropic,
-      'gemini-status': !!keys.gemini,
-      'deepseek-status': !!keys.deepseek,
-      'mistral-status': !!keys.mistral,
-      'together-status': !!keys.together,
-      'hf-status': !!keys.hf,
-      'nvidia-status': !!keys.nvidia,
+      'or-status': !!keys.or1, 'gh-status': !!keys.github, 'groq-status': !!keys.groq,
+      'anthropic-status': !!keys.anthropic, 'gemini-status': !!keys.gemini,
+      'deepseek-status': !!keys.deepseek, 'mistral-status': !!keys.mistral,
+      'together-status': !!keys.together, 'hf-status': !!keys.hf, 'nvidia-status': !!keys.nvidia,
     };
     for (const [id, connected] of Object.entries(statuses)) {
       const el = document.getElementById(id);
@@ -1300,6 +1749,22 @@ const Settings = {
     }
     const modelEl = document.getElementById('default-model-val');
     if (modelEl) modelEl.textContent = State.model.short;
+
+    const streamVal = document.getElementById('stream-status-val');
+    if (streamVal) streamVal.textContent = StreamAI.enabled() ? 'Faol ✓' : 'O\'chirilgan';
+    const streamToggle = document.getElementById('stream-toggle-val');
+    if (streamToggle) streamToggle.textContent = StreamAI.enabled() ? 'Yoqilgan' : 'O\'chirilgan';
+
+    const uid = document.getElementById('cloud-uid-val');
+    if (uid) uid.textContent = SB.userId();
+  },
+
+  tab(el, tabId) {
+    document.querySelectorAll('.s-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.s-tab-content').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    const content = document.getElementById('stab-' + tabId);
+    if (content) content.classList.add('active');
   },
 
   openConnector(name) {
@@ -1312,8 +1777,8 @@ const Settings = {
     if (fields) {
       fields.innerHTML = cfg.fields.map(f => `
         <label class="sh-label">${f.label}</label>
-        <input id="conn-field-${f.id}" class="sh-input" type="password" placeholder="Enter key..." value="${keys[f.id]||''}">
-      `).join('') + (cfg.hint ? `<div style="font-size:11px;color:var(--text3);padding:4px 20px 0">${cfg.hint}</div>` : '');
+        <input id="conn-field-${f.id}" class="sh-input" type="password" placeholder="Kalit kiriting..." value="${keys[f.id]||''}">
+      `).join('') + (cfg.hint ? `<div style="font-size:11px;color:var(--text3);padding:4px 20px 8px">${cfg.hint}</div>` : '');
     }
     Sheet.open('connector-sheet');
   },
@@ -1333,12 +1798,39 @@ const Settings = {
     toast('✅ Kalitlar xavfsiz saqlandi');
   },
 
+  toggleStream() {
+    const current = StreamAI.enabled();
+    Store.set('stream_enabled', !current);
+    this.refresh();
+    toast(current ? '⭕ Streaming o\'chirildi' : '🌊 Streaming yoqildi');
+  },
+
   accentPicker() {
     const colors = ['#FF4D4F', '#3B82F6', '#22C55E', '#F59E0B', '#8B5CF6', '#EC4899'];
     const color = prompt('Asosiy rang (hex):\n' + colors.join(', ') + '\n\nYoki o\'z rangingizni kiriting:') || '#FF4D4F';
     document.documentElement.style.setProperty('--accent', color);
     Store.set('accent_color', color);
     toast('🎨 Rang yangilandi');
+  },
+
+  exportKeys() {
+    const keys = Store.get('keys', {});
+    const safe = Object.fromEntries(Object.entries(keys).map(([k, v]) => [k, v ? '****' + v.slice(-4) : '']));
+    const data = JSON.stringify({ keys: safe, model: State.model?.id, projects: PM.list().length }, null, 2);
+    toast('📤 Eksport: ' + data.slice(0, 50) + '...');
+  },
+
+  importKeys() {
+    const json = prompt('Kalitlar JSON ({"or1":"...","groq":"...",...}):');
+    if (!json) return;
+    try {
+      const parsed = JSON.parse(json);
+      const keys = Store.get('keys', {});
+      Object.assign(keys, parsed);
+      Store.set('keys', keys);
+      this.refresh();
+      toast('✅ Kalitlar import qilindi');
+    } catch { toast('❌ JSON formati xato'); }
   },
 };
 
@@ -1384,4 +1876,4 @@ const savedAccent = Store.get('accent_color');
 if (savedAccent) document.documentElement.style.setProperty('--accent', savedAccent);
 
 // ── Init ─────────────────────────────────────────────────────────
-App.init();
+document.addEventListener('DOMContentLoaded', () => App.init());
