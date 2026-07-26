@@ -32,38 +32,64 @@ const app = new Hono<{ Bindings: Env }>();
 // ── Middleware ─────────────────────────────────────────────────
 app.use('*', logger());
 app.use('*', cors({
-  origin: ['https://omnicode.app', 'https://t.me'],
+  origin: ['https://omnicode.app', 'https://t.me', 'http://localhost:5173', 'http://localhost:3000'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Telegram-Init-Data'],
 }));
 
-// ── Health ─────────────────────────────────────────────────────
+// ── Health ───────────────────────────────────────────────────
 app.get('/health', (c) => c.json({
   status: 'ok',
   version: '1.0.0',
   timestamp: new Date().toISOString(),
 }));
 
-// ── Public routes ──────────────────────────────────────────────
+// Base64URL helpers (JWT standard)
+function b64url(data: string | ArrayBuffer): string {
+  const bytes = typeof data === 'string'
+    ? new TextEncoder().encode(data)
+    : new Uint8Array(data);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// ── Public routes ────────────────────────────────────────────
 app.post('/auth/telegram', async (c) => {
   const { initData } = await c.req.json();
-  // Validate Telegram WebApp initData
-  // In production: verify HMAC signature
-  const user = JSON.parse(decodeURIComponent(initData).split('user=')[1]?.split('&')[0] || '{}');
-  if (!user.id) return c.json({ error: 'Invalid' }, 401);
+  if (!initData || typeof initData !== 'string') {
+    return c.json({ error: 'initData required' }, 400);
+  }
 
-  const token = await generateJWT({ userId: user.id, username: user.username }, c.env.JWT_SECRET);
+  // Parse Telegram WebApp initData safely via URLSearchParams
+  const params = new URLSearchParams(initData);
+  const userRaw = params.get('user');
+  if (!userRaw) return c.json({ error: 'Invalid initData: no user' }, 401);
+
+  let user: { id?: number; username?: string };
+  try {
+    user = JSON.parse(userRaw);
+  } catch {
+    return c.json({ error: 'Invalid user JSON' }, 401);
+  }
+  if (!user.id) return c.json({ error: 'Invalid user id' }, 401);
+
+  // TODO: productionda HMAC signature tekshirish (auth middleware dagi verifyTelegramData)
+  const token = await generateJWT(
+    { userId: String(user.id), username: user.username || '' },
+    c.env.JWT_SECRET
+  );
   return c.json({ token, user });
 });
 
-// ── Protected routes ───────────────────────────────────────────
+// ── Protected routes ─────────────────────────────────────────
 app.use('/api/*', authMiddleware);
 app.route('/api/ai', aiRouter);
 app.route('/api/projects', projectsRouter);
 app.route('/api/github', githubRouter);
 app.route('/api/deploy', deployRouter);
 
-// ── 404 ────────────────────────────────────────────────────────
+// ── 404 ────────────────────────────────────────────────────
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 app.onError((err, c) => {
   console.error(err);
@@ -71,12 +97,25 @@ app.onError((err, c) => {
 });
 
 async function generateJWT(payload: object, secret: string): Promise<string> {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const body = btoa(JSON.stringify({ ...payload, iat: Date.now(), exp: Date.now() + 86400000 * 7 }));
-  const sig = await crypto.subtle.sign('HMAC', await crypto.subtle.importKey('raw',
-    new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']),
-    new TextEncoder().encode(`${header}.${body}`));
-  return `${header}.${body}.${btoa(String.fromCharCode(...new Uint8Array(sig)))}`;
+  const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = b64url(JSON.stringify({
+    ...payload,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 86400 * 7, // 7 days in seconds
+  }));
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    new TextEncoder().encode(`${header}.${body}`)
+  );
+  return `${header}.${body}.${b64url(sig)}`;
 }
 
 export default app;
