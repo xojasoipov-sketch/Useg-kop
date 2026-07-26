@@ -18,7 +18,7 @@ const App = () => {
         onClick: () => dispatch({ type: 'SET_ACTIVE_TAB', payload: tab.id })
       }, tab.label))
     ),
-    state.activeTab === 'smm-ai' ? React.createElement(SMMAIPanel, { state, dispatch }) : 
+    state.activeTab === 'smm-ai' ? React.createElement(SMMAIPanel, { state, dispatch }) :
     state.activeTab === 'memories' ? React.createElement(MemoriesPanel, { state, dispatch }) : null
   );
 };
