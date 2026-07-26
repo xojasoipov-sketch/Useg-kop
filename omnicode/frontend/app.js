@@ -763,10 +763,12 @@ const AIRouter = {
   async groq(messages) {
     const key = Store.get('keys', {}).groq;
     if (!key) throw new Error('Groq kaliti yo\'q');
+    // Groq: 6000 token limit — katta kontekstni trimlaymiz
+    const trimmed = this._trimMessages(messages, 20000);
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: this._flattenMessages(messages), max_tokens: 8192 }),
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: trimmed, max_tokens: 8192 }),
     });
     if (!res.ok) throw new Error(`Groq ${res.status}`);
     return (await res.json()).choices[0].message.content;
@@ -839,7 +841,6 @@ const AIRouter = {
   },
 
   _flattenMessages(messages) {
-    // Array content bo'lsa (vision) — Pollinations uchun text ga aylantir
     return messages.map(m => {
       if (Array.isArray(m.content)) {
         const text = m.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
@@ -849,10 +850,39 @@ const AIRouter = {
     });
   },
 
-  async pollinations(messages) {
+  // Katta kontekstni qisqartirish — fallback provayderlar uchun
+  _trimMessages(messages, maxChars = 12000) {
     const flat = this._flattenMessages(messages);
-    // Try multiple models — Pollinations key talab qilmaydi
-    const models = ['openai', 'openai-large', 'mistral', 'claude-hybridspace'];
+    const sys = flat.find(m => m.role === 'system');
+    const rest = flat.filter(m => m.role !== 'system');
+    const sysLen = sys?.content?.length || 0;
+    const budget = maxChars - Math.min(sysLen, 3000);
+
+    // Oxirgi xabarlardan boshlab sig'diramiz
+    const trimmed = [];
+    let used = 0;
+    for (let i = rest.length - 1; i >= 0; i--) {
+      const msg = rest[i];
+      const len = (msg.content || '').length;
+      if (used + len > budget) {
+        // Bu xabar juda katta — qisqartiramiz
+        const allowed = budget - used;
+        if (allowed > 200) {
+          trimmed.unshift({ ...msg, content: msg.content.slice(-allowed) + '\n...[qisqartirildi]' });
+          used = budget;
+        }
+        break;
+      }
+      trimmed.unshift(msg);
+      used += len;
+    }
+    const sysMsg = sys ? { ...sys, content: (sys.content || '').slice(0, 3000) } : null;
+    return sysMsg ? [sysMsg, ...trimmed] : trimmed;
+  },
+
+  async pollinations(messages) {
+    const flat = this._trimMessages(messages, 14000);
+    const models = ['openai', 'openai-large', 'mistral'];
     let lastErr;
     for (const mdl of models) {
       try {
@@ -872,14 +902,16 @@ const AIRouter = {
   },
 
   async pollinationsText(messages) {
-    // GET endpoint — hech qanday key yo'q, eng ishonchli
-    const flat = this._flattenMessages(messages);
-    const last = flat[flat.length - 1]?.content || '';
-    const sys = flat.find(m => m.role === 'system')?.content || '';
-    const prompt = encodeURIComponent((sys ? sys + '\n\n' : '') + last);
+    // GET endpoint — URL uzunligi 4000 belgidan oshmasin
+    const flat = this._trimMessages(messages, 3000);
+    const last = flat.filter(m => m.role !== 'system').map(m => m.content).join('\n').slice(-1500);
+    const sys = flat.find(m => m.role === 'system')?.content?.slice(0, 800) || '';
+    const prompt = encodeURIComponent((sys ? sys.slice(0,400) + '\n\n' : '') + last);
     const res = await fetch(`https://text.pollinations.ai/${prompt}?model=openai&seed=42`);
     if (!res.ok) throw new Error(`Pollinations text ${res.status}`);
-    return await res.text();
+    const text = await res.text();
+    if (!text || text.length < 2) throw new Error('Pollinations text empty');
+    return text;
   },
 
   // Har bir provider uchun timeout wrapper — 30 soniya kutamiz
@@ -908,13 +940,20 @@ const AIRouter = {
       () => this.pollinationsText(messages),
     );
 
+    const errs = [];
     for (const fn of chain) {
       try { return await this._withTimeout(fn(), 30000); }
-      catch (e) { console.warn('AI fallback:', e.message); }
+      catch (e) { errs.push(e.message); console.warn('AI fallback:', e.message); }
     }
-    // Oxirgi urinish — Pollinations GET (eng oddiy, har doim ishlaydi)
-    try { return await this._withTimeout(this.pollinationsText(messages), 20000); } catch (_) {}
-    throw new Error('Barcha AI provayderlar javob bermadi. Internetni tekshiring.');
+    try { return await this._withTimeout(this.pollinationsText(messages), 20000); } catch (e) { errs.push(e.message); }
+
+    // Xatolarni aniq ko'rsatamiz — "internet" emas, asl sabab
+    const hasKeyErr = errs.some(e => /kalit|key|401|403/i.test(e));
+    const hasNetErr = errs.some(e => /fetch|network|CORS|failed/i.test(e));
+    if (hasKeyErr && !hasNetErr) {
+      throw new Error('AI kalit topilmadi. Sozlamalar → AI kalitlari → Groq (bepul) qo\'shing');
+    }
+    throw new Error(`AI javob bermadi (${errs.slice(-2).join(' | ')}). Sozlamalar → Groq kalit qo'shing`);
   },
 };
 
@@ -1725,7 +1764,9 @@ OmniCode fayl joylashuvi:
     if (!el) return;
     el.innerHTML = '';
     const ghOk = Git.token();
-    this.appendBubble('ai', `# OmniCode AI — Tayyor 🚀
+    const keys = Store.get('keys', {});
+    const hasAiKey = keys.groq || keys.or1 || keys.anthropic || keys.gemini;
+    this.appendBubble('ai', `# OmniCode AI — Tayyor
 
 Salom! Men sizning shaxsiy AI dasturlash agentingizman.
 
@@ -1733,15 +1774,12 @@ Salom! Men sizning shaxsiy AI dasturlash agentingizman.
 → Kod yozaman, tuzataman, tushuntiraman
 → GitHub repolaringizni ko'raman, fayllarni o'qiyman, push qilaman
 → Loyiha yarataman — birinchi commitgacha
-→ Xatolarni o'zim topib tuzataman
 
-**Boshlash:**
-${ghOk
-  ? '✅ GitHub ulangan — 🐙 chipni bosib repolarni yuklang'
-  : '1. Sozlamalar → Kod → GitHub token qo\'shing\n2. 🐙 GitHub chipni bosing'}
+${!hasAiKey ? '**AI kalit kerak:**\n`/setup` buyrug\'ini yozing yoki Sozlamalar → AI Kalitlari\n\n' : ''}${ghOk
+  ? '✅ GitHub ulangan'
+  : '**GitHub:** Sozlamalar → Kod → GitHub token qo\'shing'}
 
-**Tezkor buyruqlar:**
-\`/fix\` xatolarni tuzat · \`/github\` repolarni yukla · \`/self\` OmniCode kodini import qil
+\`/setup\` kalit sozlash · \`/fix\` tuzatish · \`/self\` o'z kodi
 
 Nima quramiz?`, false);
   },
@@ -1769,6 +1807,44 @@ Nima quramiz?`, false);
     el.appendChild(div); el.scrollTop = el.scrollHeight;
   },
   hideTyping() { document.getElementById('typing-ind')?.remove(); },
+
+  _showSetupGuide() {
+    const keys = Store.get('keys', {});
+    const hasAny = keys.groq || keys.or1 || keys.anthropic || keys.gemini;
+    const el = this.appendBubble('ai', '', false);
+    el.innerHTML = `
+      <strong>AI Kalit Sozlash</strong>
+      <p style="color:var(--text3);font-size:13px;margin:6px 0 12px">Bepul kalit oling — 1 daqiqa:</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="background:var(--bg2);border-radius:10px;padding:10px 12px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">⚡ Groq (tavsiya — bepul, eng tez)</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px">console.groq.com/keys → "Create API Key"</div>
+          <div style="display:flex;gap:6px">
+            <input id="quick-groq-key" placeholder="gsk_..."
+              style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:12px"
+              value="${keys.groq||''}">
+            <button onclick="AI._saveQuickKey('groq','quick-groq-key')"
+              style="padding:7px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-size:12px;cursor:pointer">Saqlash</button>
+          </div>
+        </div>
+        ${hasAny ? `<div style="color:#3fb950;font-size:12px;text-align:center">✅ ${[keys.groq&&'Groq',keys.or1&&'OpenRouter',keys.anthropic&&'Anthropic',keys.gemini&&'Gemini'].filter(Boolean).join(', ')} ulangan</div>` : ''}
+        <button onclick="App.nav('settings')"
+          style="padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer">
+          Barcha kalitlar → Sozlamalar
+        </button>
+      </div>`;
+    document.getElementById('chat-messages').scrollTop = 9999;
+  },
+
+  _saveQuickKey(provider, inputId) {
+    const val = document.getElementById(inputId)?.value?.trim();
+    if (!val) { toast('Kalit bo\'sh'); return; }
+    const keys = Store.get('keys', {});
+    keys[provider] = val;
+    Store.set('keys', keys);
+    toast(`✅ ${provider} kaliti saqlandi`);
+    this.appendBubble('ai', `✅ **${provider} kaliti saqlandi!** Endi so'rovingizni yuboring.`, false);
+  },
 
   cancel() {
     this.hideTyping();
@@ -1827,7 +1903,9 @@ Nima quramiz?`, false);
       '/deploy': () => App.nav('deploy'),
       '/projects': () => App.nav('projects'),
       '/home': () => App.nav('home'),
-      '/help': () => this.appendBubble('ai', `**OmniCode buyruqlari:**\n\`/self-edit\` — OmniCode o'z kodini tahrirlash rejimi\n\`/fix\` — kodni o'z-o'zini tuzatish\n\`/self\` — o'z kodini import qilish\n\`/sync\` — bulutga saqlash\n\`/pull\` — bulutdan yuklash\n\`/github\` — GitHub repolarni yuklash\n\`/import owner/repo\` — repo import\n\`/push\` — GitHub'ga push\n\`/model\` — model tanlash\n\`/clear\` — chatni tozalash\n\`@fayl.js\` — fayl kontentini qo'shish`, false),
+      '/setup': () => this._showSetupGuide(),
+      '/keys': () => this._showSetupGuide(),
+      '/help': () => this.appendBubble('ai', `**OmniCode buyruqlari:**\n\`/setup\` — AI kalit sozlash yo'riqnomasi\n\`/self-edit\` — OmniCode o'z kodini tahrirlash rejimi\n\`/fix\` — kodni o'z-o'zini tuzatish\n\`/self\` — o'z kodini import qilish\n\`/sync\` — bulutga saqlash\n\`/github\` — GitHub repolarni yuklash\n\`/import owner/repo\` — repo import\n\`/push\` — GitHub'ga push\n\`/model\` — model tanlash\n\`/clear\` — chatni tozalash`, false),
     };
     if (slashCmds[cmd]) { await slashCmds[cmd](); return; }
     if (cmd === '/import') {
@@ -1943,10 +2021,10 @@ Nima quramiz?`, false);
     } catch (e) {
       this.hideTyping();
       ActivityBar.error();
-      const isKeyErr = /kalit|key|api|auth|401|403/i.test(e.message);
+      const isKeyErr = /kalit|key|401|403/i.test(e.message);
       const hint = isKeyErr
-        ? '\n\n💡 Bepul kalit: [Groq](https://console.groq.com/keys) yoki Sozlamalar → AI'
-        : '\n\n💡 Internet aloqasini tekshiring yoki keyinroq urinib ko\'ring';
+        ? '\n\n**Bepul kalit olish:**\n1. [groq.com/keys](https://console.groq.com/keys) ga kiring\n2. "Create API Key" bosing\n3. Sozlamalar → AI Kalitlari → Groq ga joylashtiring'
+        : '\n\n**Yechim:** Sozlamalar → AI Kalitlari → Groq kalit qo\'shing (bepul, 1 daqiqa)';
       this.appendBubble('ai', `❌ **${e.message}**${hint}`, false);
       Tasks.remove(taskId);
       this.busy = false;
