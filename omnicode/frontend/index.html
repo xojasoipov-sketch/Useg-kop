@@ -8,36 +8,34 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/main.css">
 <style>
-.activity-badge{font-size:12px!important}
 #activity-bar{display:flex;gap:12px;padding:6px 16px;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
-.act-item{opacity:.9}
 .sp-badge{font-size:10px;font-weight:800;background:linear-gradient(135deg,#ff4d4f,#a855f7);color:#fff;padding:2px 8px;border-radius:8px;margin-left:6px}
-.ic{display:block;flex-shrink:0}
-.nav-icon .ic,.qa-icon .ic,.s-ico .ic,.stat-badge .ic,.step-ico .ic,.ac-icon .ic{width:22px;height:22px}
-.nav-icon{color:var(--text3)}
-.nav-item.active .nav-icon{color:var(--accent)}
+.ic{display:block;flex-shrink:0}.nav-icon .ic,.qa-icon .ic,.s-ico .ic{width:22px;height:22px}
+.nav-icon{color:var(--text3)}.nav-item.active .nav-icon{color:var(--accent)}
 .qa-icon.red{color:#ff6b6b}.qa-icon.blue{color:#60a5fa}.qa-icon.purple{color:#c084fc}.qa-icon.green{color:#4ade80}.qa-icon.orange{color:#fb923c}
-.notif-btn .ic{color:var(--text2)}
 .tool-chip .ic{width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:4px}
 .input-btn.send .ic{width:18px;height:18px}
-.chat-menu .ic,.chat-edit .ic{width:20px;height:20px;color:var(--text2)}
-.search-icon .ic{width:16px;height:16px;color:var(--text3)}
 .key-input-row{display:flex;gap:8px;align-items:center;padding:0 20px 4px}
 .key-input-row .sh-input{margin:0;flex:1;width:auto}
-.key-test-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-.key-status{font-size:11px;padding:0 20px 10px;color:var(--text3)}
-.key-status.ok{color:var(--green)}.key-status.err{color:var(--accent)}
-.s-ico{color:var(--text)}
-.active-proj-chip{font-size:11px;font-weight:700;padding:3px 10px;background:rgba(255,77,79,0.12);border:1px solid rgba(255,77,79,0.25);color:var(--accent);border-radius:20px;margin-left:8px}
-.apply-btn{display:block;margin-top:12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;width:100%;text-align:left}
-.inline-code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.key-test-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.key-status{font-size:11px;padding:0 20px 10px;color:var(--text3)}.key-status.ok{color:var(--green)}.key-status.err{color:var(--accent)}
+.qa-grid{grid-template-columns:repeat(4,1fr)!important}
+.apply-btn{display:block;margin-top:12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;width:100%}
 .editor-ta{width:100%;height:100%;background:var(--bg);border:none;outline:none;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.75;padding:14px 16px;resize:none}
-.diff-add{color:var(--green);background:rgba(34,197,94,0.08)}
-.diff-del{color:var(--accent);background:rgba(255,77,79,0.08);text-decoration:line-through}
-.diff-same{color:var(--text3)}
+.diff-add{color:var(--green);background:rgba(34,197,94,0.08)}.diff-del{color:var(--accent);background:rgba(255,77,79,0.08);text-decoration:line-through}.diff-same{color:var(--text3)}
 .diff-body{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;padding:12px;overflow:auto;max-height:50vh;background:var(--bg)}
 .step-dot.gray{background:var(--text3)}
-.qa-grid{grid-template-columns:repeat(4,1fr)!important}
+.prompt-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin:0 20px 10px;cursor:pointer}
+.prompt-title{font-weight:800;font-size:14px;margin-bottom:4px}.prompt-cat{font-size:10px;color:var(--accent);font-weight:700;text-transform:uppercase;margin-bottom:6px}.prompt-body{font-size:12px;color:var(--text3)}
+.mon-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 20px}
+.mon-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px}.mon-l{font-size:11px;color:var(--text3)}.mon-v{font-size:22px;font-weight:800}
+.mon-row{display:flex;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);font-size:13px}
+.mon-row .ok{color:var(--green);font-weight:700}.mon-row .bad{color:var(--text3)}
+.preview-wrap{flex:1;display:flex;justify-content:center;background:#111;padding:12px;overflow:auto}
+.preview-wrap.mobile iframe{width:390px;height:100%;max-width:100%;border:1px solid var(--border);border-radius:12px;background:#fff}
+.preview-wrap.desktop iframe{width:100%;height:100%;border:1px solid var(--border);border-radius:8px;background:#fff}
+.chat-actions{display:flex;gap:6px;padding:4px 20px;flex-wrap:wrap}
+.chip-mini{font-size:11px;padding:4px 10px;border-radius:16px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer}
 </style>
 </head>
 <body>
@@ -45,41 +43,28 @@
 <div id="home" class="screen active">
   <div class="scroll-area">
     <div class="home-top">
-      <div class="home-greeting">
-        <h2 id="greeting-text">Xayrli kun</h2>
-        <p>SadiPrime + Supabase cloud tayyor.</p>
-      </div>
-      <button class="notif-btn" onclick="KeyVault.open()" title="API kalitlar" data-ic="key" data-ic-size="18"></button>
+      <div class="home-greeting"><h2 id="greeting-text">Xayrli kun</h2><p>Premium AI Coding Platform</p></div>
+      <button class="notif-btn" onclick="KeyVault.open()" data-ic="key" data-ic-size="18"></button>
     </div>
     <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Kalitlar</div>
-        <div class="stat-row"><div class="stat-value" id="usage-pct">—</div><div class="stat-badge red" data-ic="zap" data-ic-size="18"></div></div>
-        <div class="stat-progress"><div class="stat-bar" id="usage-bar" style="width:0%"></div></div>
-        <div class="stat-sub">OpenRouter · Groq · GitHub</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Cloud</div>
-        <div class="stat-row"><div class="stat-value" id="sb-status-home">—</div><div class="stat-badge green" data-ic="shield" data-ic-size="18"></div></div>
-        <div class="stat-progress"><div class="stat-bar" id="sb-bar" style="width:0%;background:var(--green)"></div></div>
-        <div class="stat-sub">Supabase</div>
-      </div>
+      <div class="stat-card"><div class="stat-label">Kalitlar</div><div class="stat-row"><div class="stat-value" id="usage-pct">—</div><div class="stat-badge red" data-ic="zap" data-ic-size="18"></div></div><div class="stat-progress"><div class="stat-bar" id="usage-bar" style="width:0%"></div></div><div class="stat-sub">AI · GitHub</div></div>
+      <div class="stat-card"><div class="stat-label">Cloud</div><div class="stat-row"><div class="stat-value" id="sb-status-home">—</div><div class="stat-badge green" data-ic="shield" data-ic-size="18"></div></div><div class="stat-progress"><div class="stat-bar" id="sb-bar" style="width:0%;background:var(--green)"></div></div><div class="stat-sub">Supabase</div></div>
     </div>
     <div class="quick-section">
-      <div class="section-head" style="margin-bottom:12px"><span class="section-title">Tezkor amallar</span></div>
+      <div class="section-head" style="margin-bottom:12px"><span class="section-title">Modullar</span></div>
       <div class="qa-grid">
         <div class="qa-item" onclick="SadiPrime.open()"><div class="qa-icon red" data-ic="brain"></div><span class="qa-label">SadiPrime</span></div>
         <div class="qa-item" onclick="App.nav('ai')"><div class="qa-icon blue" data-ic="chat"></div><span class="qa-label">AI Chat</span></div>
-        <div class="qa-item" onclick="App.newProject()"><div class="qa-icon blue" data-ic="plus"></div><span class="qa-label">Yangi loyiha</span></div>
-        <div class="qa-item" onclick="SB.syncAll()"><div class="qa-icon green" data-ic="sync"></div><span class="qa-label">Cloud sync</span></div>
-        <div class="qa-item" onclick="App.nav('smm')"><div class="qa-icon green" data-ic="phone"></div><span class="qa-label">SMM AI</span></div>
+        <div class="qa-item" onclick="App.newProject()"><div class="qa-icon blue" data-ic="plus"></div><span class="qa-label">Loyiha</span></div>
+        <div class="qa-item" onclick="PromptLib.open()"><div class="qa-icon purple" data-ic="spark"></div><span class="qa-label">Promptlar</span></div>
+        <div class="qa-item" onclick="Preview.open()"><div class="qa-icon green" data-ic="phone"></div><span class="qa-label">Preview</span></div>
+        <div class="qa-item" onclick="App.nav('monitor')"><div class="qa-icon orange" data-ic="zap"></div><span class="qa-label">Monitor</span></div>
         <div class="qa-item" onclick="App.nav('agents')"><div class="qa-icon purple" data-ic="agents"></div><span class="qa-label">Agentlar</span></div>
-        <div class="qa-item" onclick="SelfHeal.analyze()"><div class="qa-icon red" data-ic="heal"></div><span class="qa-label">Self-Heal</span></div>
-        <div class="qa-item" onclick="SB.snapshot().then(function(){toast('Cloud snapshot')})"><div class="qa-icon green" data-ic="save"></div><span class="qa-label">Snapshot</span></div>
-        <div class="qa-item" onclick="SadiPrime.toggleAutoPush()"><div class="qa-icon orange" data-ic="github"></div><span class="qa-label">Auto-push</span></div>
-        <div class="qa-item" onclick="KeyVault.open()"><div class="qa-icon blue" data-ic="key"></div><span class="qa-label">Kalitlar</span></div>
+        <div class="qa-item" onclick="DebugCenter.autoFix()"><div class="qa-icon red" data-ic="heal"></div><span class="qa-label">Debug</span></div>
         <div class="qa-item" onclick="App.nav('deploy')"><div class="qa-icon green" data-ic="rocket"></div><span class="qa-label">Deploy</span></div>
-        <div class="qa-item" onclick="State.projectId?SB.pushProject(State.projectId).then(function(r){toast(r.files+' fayl cloud')}).catch(function(e){toast(e.message)}):toast('Loyiha tanlang')"><div class="qa-icon purple" data-ic="upload"></div><span class="qa-label">Push cloud</span></div>
+        <div class="qa-item" onclick="SB.syncAll()"><div class="qa-icon green" data-ic="sync"></div><span class="qa-label">Cloud</span></div>
+        <div class="qa-item" onclick="KeyVault.open()"><div class="qa-icon blue" data-ic="key"></div><span class="qa-label">Kalitlar</span></div>
+        <div class="qa-item" onclick="App.nav('settings')"><div class="qa-icon purple" data-ic="settings"></div><span class="qa-label">Sozlama</span></div>
       </div>
     </div>
     <div class="recent-section">
@@ -93,62 +78,74 @@
   <div class="chat-header">
     <div class="chat-header-left">
       <span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span>
-      <span class="chat-title">SadiPrime</span>
-      <span class="sp-badge">AI</span>
+      <span class="chat-title">SadiPrime</span><span class="sp-badge">AI</span>
       <span class="active-proj-chip" id="active-project-label" style="display:none"></span>
     </div>
     <span class="chat-edit" onclick="AI.clear()" data-ic="edit" data-ic-size="18"></span>
   </div>
-  <div id="activity-bar">
-    <span class="act-item" style="color:var(--green)">+0</span>
-    <span class="act-item" style="color:var(--accent)">-0</span>
-    <span class="act-item">0 fayl</span>
-    <span class="act-item">0 agent</span>
+  <div id="activity-bar"><span class="act-item" style="color:var(--green)">+0</span><span class="act-item" style="color:var(--accent)">-0</span><span class="act-item">0 fayl</span><span class="act-item">0 agent</span></div>
+  <div class="chat-actions">
+    <span class="chip-mini" onclick="AI.regenerate()">Regenerate</span>
+    <span class="chip-mini" onclick="AI.continue()">Continue</span>
+    <span class="chip-mini" onclick="PromptLib.open()">Prompt</span>
+    <span class="chip-mini" onclick="Vision.attach()">Rasm</span>
+    <span class="chip-mini" onclick="Voice.start()">Ovoz</span>
+    <span class="chip-mini" onclick="Preview.open()">Preview</span>
   </div>
   <div id="chat-messages" class="chat-messages"></div>
   <div class="chat-tools-bar">
     <div class="tool-chip active" onclick="AI.toggleTool(this,'code')"><span data-ic="code" data-ic-size="14"></span> Kod</div>
-    <div class="tool-chip" onclick="AI.toggleTool(this,'files')"><span data-ic="file" data-ic-size="14"></span> Fayl</div>
     <div class="tool-chip" onclick="SadiPrime.pushIfLinked()"><span data-ic="github" data-ic-size="14"></span> Push</div>
     <div class="tool-chip" onclick="SelfHeal.analyze()"><span data-ic="heal" data-ic-size="14"></span> Tuzat</div>
-    <div class="tool-chip" onclick="SB.saveChat().then(function(){toast('Chat cloud')})"><span data-ic="save" data-ic-size="14"></span> Save</div>
+    <div class="tool-chip" onclick="ParallelAI.run(document.getElementById('chat-input').value||'Qisqa javob ber')"><span data-ic="spark" data-ic-size="14"></span> Parallel</div>
     <div class="tool-chip" onclick="App.openModelPicker()"><span data-ic="brain" data-ic-size="14"></span> <span id="model-label">Llama 3.3</span></div>
   </div>
   <div class="chat-bottom">
     <div class="chat-input-wrap">
-      <textarea id="chat-input" class="chat-input" placeholder="Kod yozing · @fayl · /push /snapshot" rows="1" onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
+      <textarea id="chat-input" class="chat-input" placeholder="Kod · @fayl · /parallel · /preview" rows="1" onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
       <button class="input-btn send" onclick="AI.send()" data-ic="send" data-ic-size="18"></button>
     </div>
   </div>
 </div>
 
-<div id="smm" class="screen">
-  <div class="chat-header">
-    <div class="chat-header-left">
-      <span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span>
-      <span class="chat-title">SMM AI</span>
-    </div>
-  </div>
-  <div id="smm-messages" class="chat-messages"></div>
-  <div class="chat-bottom">
-    <div class="chat-input-wrap">
-      <textarea id="smm-input" class="chat-input" placeholder="Post, caption, hashtag..." rows="1" onkeydown="SMMAI.onKey(event)"></textarea>
-      <button class="input-btn send" onclick="SMMAI.send()" data-ic="send" data-ic-size="18"></button>
-    </div>
+<div id="prompts" class="screen">
+  <div class="chat-header"><span class="chat-title">Prompt Library</span></div>
+  <div class="scroll-area">
+    <div class="search-box"><span class="search-icon" data-ic="search" data-ic-size="16"></span><input id="prompts-search" type="text" placeholder="Qidirish..." oninput="PromptLib.render()"></div>
+    <div id="prompts-list"></div>
   </div>
 </div>
 
-<div id="projects" class="screen">
+<div id="monitor" class="screen">
+  <div class="chat-header"><span class="chat-title">Monitoring</span></div>
+  <div class="scroll-area" id="monitor-body"></div>
+</div>
+
+<div id="preview" class="screen">
   <div class="chat-header">
-    <span class="chat-title">Loyihalar</span>
-    <button class="notif-btn" onclick="Projects.newProject()" data-ic="plus" data-ic-size="18"></button>
+    <span class="chat-menu" onclick="App.nav('ai')" data-ic="menu" data-ic-size="20"></span>
+    <span class="chat-title">Preview</span>
+    <span class="chip-mini" onclick="Preview.setWidth('mobile')">Mobile</span>
+    <span class="chip-mini" onclick="Preview.setWidth('desktop')">Desktop</span>
+    <span class="chip-mini" onclick="Preview.refresh()">Refresh</span>
   </div>
+  <div id="preview-wrap" class="preview-wrap mobile"><iframe id="preview-frame" title="preview" sandbox="allow-scripts"></iframe></div>
+</div>
+
+<div id="smm" class="screen">
+  <div class="chat-header"><div class="chat-header-left"><span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span><span class="chat-title">SMM AI</span></div></div>
+  <div id="smm-messages" class="chat-messages"></div>
+  <div class="chat-bottom"><div class="chat-input-wrap"><textarea id="smm-input" class="chat-input" placeholder="Post..." rows="1" onkeydown="SMMAI.onKey(event)"></textarea><button class="input-btn send" onclick="SMMAI.send()" data-ic="send" data-ic-size="18"></button></div></div>
+</div>
+
+<div id="projects" class="screen">
+  <div class="chat-header"><span class="chat-title">Loyihalar</span><button class="notif-btn" onclick="Projects.newProject()" data-ic="plus" data-ic-size="18"></button></div>
   <div class="scroll-area">
     <div class="search-box"><span class="search-icon" data-ic="search" data-ic-size="16"></span><input type="text" placeholder="Qidirish..." oninput="Projects.search(this.value)"></div>
     <div class="filter-tabs">
       <div class="filter-tab active" onclick="Projects.filter('all',this)">Barchasi</div>
       <div class="filter-tab" onclick="Projects.filter('recent',this)">So'nggi</div>
-      <div class="filter-tab" onclick="SB.pullProjects().then(function(p){toast((p&&p.length||0)+' cloud loyiha')})">Cloud</div>
+      <div class="filter-tab" onclick="SB.pullProjects().then(function(p){toast((p&&p.length||0)+' cloud')})">Cloud</div>
     </div>
     <div id="projects-tree"></div>
   </div>
@@ -159,14 +156,14 @@
     <span class="ed-back" onclick="App.nav('projects')">‹</span>
     <span class="ed-filename" id="ed-filename">nomsiz</span>
     <span class="ed-badge" id="ed-badge">Matn</span>
-    <button onclick="Editor.aiEdit()" style="background:rgba(255,77,79,0.15);border:1px solid rgba(255,77,79,0.3);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer">AI</button>
+    <button onclick="Editor.aiEdit()" style="background:rgba(255,77,79,0.15);border:1px solid rgba(255,77,79,0.3);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px">AI</button>
+    <button onclick="Preview.open()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px">Preview</button>
   </div>
   <div class="code-view" id="code-view" style="padding:0;overflow:auto;flex:1"></div>
   <div class="terminal-panel">
     <div class="term-tabs">
       <div class="term-tab active" onclick="Editor.termTab(this,'terminal')">Terminal</div>
       <div class="term-tab" onclick="Editor.termTab(this,'problems')">Muammolar</div>
-      <div class="term-tab" onclick="Editor.termTab(this,'output')">Natija</div>
       <div class="term-tab" onclick="Editor.termTab(this,'git')">Git</div>
     </div>
     <div class="term-body" id="term-body"><div><span class="t-prompt">$ </span><span class="t-dim">Fayl oching</span></div></div>
@@ -174,167 +171,72 @@
 </div>
 
 <div id="agents" class="screen">
-  <div class="chat-header">
-    <span class="chat-title">AI Agentlar</span>
-    <span class="chat-edit" onclick="Agents.runMaster()" data-ic="send" data-ic-size="18"></span>
-  </div>
-  <div class="scroll-area">
-    <div class="agents-page">
-      <div class="master-card" onclick="SadiPrime.open()">
-        <div class="master-left"><h3>SadiPrime</h3><p>Premium AI coding · cloud memory · GitHub</p><span class="master-badge">Master</span></div>
-        <div class="orb master-orb"></div>
-      </div>
-      <div class="agents-grid">
-        <div class="agent-card" onclick="Agents.run('planner')"><div class="ac-top"><div class="ac-icon orange" data-ic="spark"></div><div class="ac-sdot green"></div></div><div class="ac-name">Reja</div><div class="ac-desc">Plan to Execute</div><span class="ac-badge active">Skill</span></div>
-        <div class="agent-card" onclick="Agents.run('coder')"><div class="ac-top"><div class="ac-icon green" data-ic="code"></div><div class="ac-sdot green"></div></div><div class="ac-name">Coder</div><div class="ac-desc">Kod</div><span class="ac-badge active">Faol</span></div>
-        <div class="agent-card" onclick="Agents.run('reviewer')"><div class="ac-top"><div class="ac-icon red" data-ic="search"></div><div class="ac-sdot green"></div></div><div class="ac-name">Review</div><div class="ac-desc">Tekshiruv</div><span class="ac-badge active">Faol</span></div>
-        <div class="agent-card" onclick="SelfHeal.analyze()"><div class="ac-top"><div class="ac-icon yellow" data-ic="heal"></div><div class="ac-sdot green"></div></div><div class="ac-name">Self-Heal</div><div class="ac-desc">Tuzatish</div><span class="ac-badge active">Faol</span></div>
-      </div>
+  <div class="chat-header"><span class="chat-title">AI Agentlar</span><span class="chat-edit" onclick="Agents.runMaster()" data-ic="send" data-ic-size="18"></span></div>
+  <div class="scroll-area"><div class="agents-page">
+    <div class="master-card" onclick="SadiPrime.open()"><div class="master-left"><h3>SadiPrime Master</h3><p>Orchestrator · parallel · cloud</p><span class="master-badge">Master</span></div><div class="orb master-orb"></div></div>
+    <div class="agents-grid">
+      <div class="agent-card" onclick="Agents.run('planner')"><div class="ac-top"><div class="ac-icon orange" data-ic="spark"></div><div class="ac-sdot green"></div></div><div class="ac-name">Planner</div><div class="ac-desc">Reja</div></div>
+      <div class="agent-card" onclick="Agents.run('coder')"><div class="ac-top"><div class="ac-icon green" data-ic="code"></div><div class="ac-sdot green"></div></div><div class="ac-name">Coder</div><div class="ac-desc">Kod</div></div>
+      <div class="agent-card" onclick="Agents.run('backend')"><div class="ac-top"><div class="ac-icon blue" data-ic="shield"></div><div class="ac-sdot green"></div></div><div class="ac-name">Backend</div><div class="ac-desc">API/DB</div></div>
+      <div class="agent-card" onclick="Agents.run('frontend')"><div class="ac-top"><div class="ac-icon purple" data-ic="phone"></div><div class="ac-sdot green"></div></div><div class="ac-name">Frontend</div><div class="ac-desc">UI</div></div>
+      <div class="agent-card" onclick="Agents.run('reviewer')"><div class="ac-top"><div class="ac-icon red" data-ic="search"></div><div class="ac-sdot green"></div></div><div class="ac-name">Reviewer</div><div class="ac-desc">Review</div></div>
+      <div class="agent-card" onclick="Agents.run('security')"><div class="ac-top"><div class="ac-icon red" data-ic="shield"></div><div class="ac-sdot green"></div></div><div class="ac-name">Security</div><div class="ac-desc">Audit</div></div>
+      <div class="agent-card" onclick="Agents.run('tester')"><div class="ac-top"><div class="ac-icon green" data-ic="check"></div><div class="ac-sdot green"></div></div><div class="ac-name">Testing</div><div class="ac-desc">Test</div></div>
+      <div class="agent-card" onclick="Agents.run('devops')"><div class="ac-top"><div class="ac-icon orange" data-ic="rocket"></div><div class="ac-sdot green"></div></div><div class="ac-name">DevOps</div><div class="ac-desc">Deploy</div></div>
     </div>
-  </div>
+  </div></div>
 </div>
 
 <div id="deploy" class="screen">
   <div class="chat-header"><span class="chat-title">Joylashtirish</span></div>
   <div class="scroll-area">
-    <div class="deploy-hero">
-      <div class="orb deploy-orb"></div>
-      <button class="deploy-btn" onclick="Deploy.start()">Hozir joylashtirish</button>
-      <div class="deploy-sub-text">GitHub · SadiPrime auto-push</div>
-    </div>
+    <div class="deploy-hero"><div class="orb deploy-orb"></div><button class="deploy-btn" onclick="Deploy.start()">Hozir joylashtirish</button><div class="deploy-sub-text">Build · Test · Push · Live</div></div>
     <div class="deploy-status">
       <div class="step-row"><div class="step-ico blue" data-ic="github"></div><div class="step-inf"><div class="step-n">GitHub</div><div class="step-d">Tayyor</div></div><div class="step-dot gray" id="step-github"></div></div>
       <div class="step-row"><div class="step-ico green" data-ic="code"></div><div class="step-inf"><div class="step-n">Build</div><div class="step-d" id="step-build-desc">Kutilmoqda</div></div><div class="step-dot gray" id="step-build"></div></div>
       <div class="step-row"><div class="step-ico purple" data-ic="check"></div><div class="step-inf"><div class="step-n">Test</div><div class="step-d">Kutilmoqda</div></div><div class="step-dot gray" id="step-tests"></div></div>
       <div class="step-row"><div class="step-ico orange" data-ic="rocket"></div><div class="step-inf"><div class="step-n">Deploy</div><div class="step-d" id="step-deploy-desc">Kutilmoqda</div></div><div class="step-dot gray" id="step-deploy"></div></div>
     </div>
-    <div class="logs-section">
-      <div class="section-head"><span class="section-title">Loglar</span></div>
-      <div class="logs-box" id="deploy-logs"><div class="log-line"><span class="log-t">--:--</span><span class="log-m t-dim">Boshlash uchun tugmani bosing</span></div></div>
-    </div>
+    <div class="logs-section"><div class="section-head"><span class="section-title">Loglar</span></div><div class="logs-box" id="deploy-logs"></div></div>
   </div>
 </div>
 
 <div id="settings" class="screen">
   <div class="chat-header"><span class="chat-title">Sozlamalar</span></div>
   <div class="scroll-area settings-wrap">
-    <div class="s-section">
-      <div class="s-section-title">API Kalitlar</div>
-      <div class="s-group">
-        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico red" data-ic="key" data-ic-size="18"></div><span class="s-label">Barcha kalitlar + test</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico gray" data-ic="github" data-ic-size="18"></div><span class="s-label">GitHub</span><span id="gh-status" class="s-val">—</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico blue" data-ic="zap" data-ic-size="18"></div><span class="s-label">OpenRouter / Groq</span><span id="or-status" class="s-val">—</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico green" data-ic="shield" data-ic-size="18"></div><span class="s-label">Supabase</span><span id="sb-status" class="s-val">—</span><span class="s-chevron">›</span></div>
-      </div>
-    </div>
-    <div class="s-section">
-      <div class="s-section-title">Cloud (Supabase)</div>
-      <div class="s-group">
-        <div class="s-row" onclick="SB.test().then(function(r){toast(r.msg);document.getElementById('sb-status').textContent=r.ok?'Ulangan':'Xato';document.getElementById('sb-status').className=r.ok?'s-connected':'s-val'})"><div class="s-ico green" data-ic="zap" data-ic-size="18"></div><span class="s-label">Ulanishni tekshirish</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="SB.syncAll()"><div class="s-ico blue" data-ic="sync" data-ic-size="18"></div><span class="s-label">To'liq sync (pull)</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="State.projectId?SB.pushProject(State.projectId).then(function(r){toast('Cloud: '+r.files+' fayl')}).catch(function(e){toast(e.message)}):toast('Loyiha tanlang')"><div class="s-ico purple" data-ic="save" data-ic-size="18"></div><span class="s-label">Loyihani cloudga yuborish</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="SB.snapshot().then(function(){toast('Snapshot OK')}).catch(function(e){toast(e.message)})"><div class="s-ico orange" data-ic="save" data-ic-size="18"></div><span class="s-label">Full snapshot</span><span class="s-chevron">›</span></div>
-      </div>
-    </div>
-    <div class="s-section">
-      <div class="s-section-title">SadiPrime</div>
-      <div class="s-group">
-        <div class="s-row" onclick="SadiPrime.open()"><div class="s-ico purple" data-ic="brain" data-ic-size="18"></div><span class="s-label">SadiPrime ochish</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="SadiPrime.toggleAutoPush()"><div class="s-ico green" data-ic="github" data-ic-size="18"></div><span class="s-label">Auto-push</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="App.openModelPicker()"><div class="s-ico green" data-ic="brain" data-ic-size="18"></div><span class="s-label">Model</span><span class="s-val" id="default-model-val">Llama 3.3</span><span class="s-chevron">›</span></div>
-      </div>
-    </div>
+    <div class="s-section"><div class="s-section-title">API</div><div class="s-group">
+      <div class="s-row" onclick="KeyVault.open()"><div class="s-ico red" data-ic="key" data-ic-size="18"></div><span class="s-label">Kalitlar + test</span><span class="s-chevron">›</span></div>
+      <div class="s-row" onclick="KeyVault.open()"><div class="s-ico gray" data-ic="github" data-ic-size="18"></div><span class="s-label">GitHub</span><span id="gh-status" class="s-val">—</span><span class="s-chevron">›</span></div>
+      <div class="s-row" onclick="KeyVault.open()"><div class="s-ico green" data-ic="shield" data-ic-size="18"></div><span class="s-label">Supabase</span><span id="sb-status" class="s-val">—</span><span class="s-chevron">›</span></div>
+      <div class="s-row" onclick="KeyVault.open()"><div class="s-ico blue" data-ic="zap" data-ic-size="18"></div><span class="s-label">OpenRouter / Groq</span><span id="or-status" class="s-val">—</span><span class="s-chevron">›</span></div>
+    </div></div>
+    <div class="s-section"><div class="s-section-title">AI</div><div class="s-group">
+      <div class="s-row" onclick="App.openModelPicker()"><div class="s-ico green" data-ic="brain" data-ic-size="18"></div><span class="s-label">Model</span><span class="s-val" id="default-model-val">Llama 3.3</span><span class="s-chevron">›</span></div>
+      <div class="s-row" onclick="ModelRouter.toggle()"><div class="s-ico purple" data-ic="spark" data-ic-size="18"></div><span class="s-label">Auto-model (vazifa bo'yicha)</span><span class="s-chevron">›</span></div>
+      <div class="s-row" onclick="SadiPrime.toggleAutoPush()"><div class="s-ico green" data-ic="github" data-ic-size="18"></div><span class="s-label">Auto-push</span><span class="s-chevron">›</span></div>
+      <div class="s-row" onclick="App.nav('monitor')"><div class="s-ico orange" data-ic="zap" data-ic-size="18"></div><span class="s-label">Monitoring</span><span class="s-chevron">›</span></div>
+    </div></div>
+    <div class="s-section"><div class="s-section-title">Cloud</div><div class="s-group">
+      <div class="s-row" onclick="SB.syncAll()"><div class="s-ico blue" data-ic="sync" data-ic-size="18"></div><span class="s-label">Sync</span><span class="s-chevron">›</span></div>
+      <div class="s-row" onclick="SB.snapshot().then(function(){toast('OK')})"><div class="s-ico purple" data-ic="save" data-ic-size="18"></div><span class="s-label">Snapshot</span><span class="s-chevron">›</span></div>
+    </div></div>
   </div>
 </div>
 
 <nav class="nav">
   <div class="nav-item active" id="nav-home" onclick="App.nav('home')"><div class="nav-icon" data-ic="home" data-ic-size="22"></div><div class="nav-label">Bosh</div></div>
   <div class="nav-item" id="nav-ai" onclick="App.nav('ai')"><div class="nav-icon" data-ic="brain" data-ic-size="22"></div><div class="nav-label">Prime</div></div>
-  <div class="nav-item" id="nav-smm" onclick="App.nav('smm')"><div class="nav-icon" data-ic="phone" data-ic-size="22"></div><div class="nav-label">SMM</div></div>
   <div class="nav-item" id="nav-projects" onclick="App.nav('projects')"><div class="nav-icon" data-ic="folder" data-ic-size="22"></div><div class="nav-label">Loyiha</div></div>
   <div class="nav-item" id="nav-agents" onclick="App.nav('agents')"><div class="nav-icon" data-ic="agents" data-ic-size="22"></div><div class="nav-label">Agent</div></div>
   <div class="nav-item" id="nav-settings" onclick="App.nav('settings')"><div class="nav-icon" data-ic="settings" data-ic-size="22"></div><div class="nav-label">Sozlama</div></div>
 </nav>
 
-<div id="connector-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'connector-sheet')">
-  <div class="sheet">
-    <div class="sh-handle"></div>
-    <div class="sh-title" id="connector-sheet-title">API Kalitlar</div>
-    <div id="connector-fields"></div>
-    <button class="sh-btn" onclick="Settings.save()">Xavfsiz saqlash</button>
-  </div>
-</div>
-
-<div id="agent-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'agent-sheet')">
-  <div class="sheet">
-    <div class="sh-handle"></div>
-    <div class="sh-title" id="agent-sheet-title">Agent</div>
-    <label class="sh-label">Vazifa</label>
-    <textarea id="agent-task-input" class="sh-input" rows="3" placeholder="Batafsil yozing..." style="resize:none;height:80px"></textarea>
-    <button class="sh-btn" onclick="Agents.executeTask()">Ishga tushirish</button>
-  </div>
-</div>
-
-<div id="new-project-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'new-project-sheet')">
-  <div class="sheet">
-    <div class="sh-handle"></div>
-    <div class="sh-title">Yangi loyiha</div>
-    <label class="sh-label">Nomi</label>
-    <input id="new-project-name" class="sh-input" placeholder="Mening ilovam" autofocus>
-    <label class="sh-label">Shablon</label>
-    <select id="new-project-template" class="sh-input">
-      <option value="blank">Bo'sh</option>
-      <option value="react">React + Vite</option>
-      <option value="nextjs">Next.js</option>
-      <option value="telegram-bot">Telegram Bot</option>
-    </select>
-    <button class="sh-btn" onclick="Projects.newProject()">Yaratish</button>
-  </div>
-</div>
-
-<div id="model-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'model-sheet')">
-  <div class="sheet">
-    <div class="sh-handle"></div>
-    <div class="sh-title">AI Model</div>
-    <div id="model-list" style="padding:0 20px 8px"></div>
-  </div>
-</div>
-
-<div id="diff-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'diff-sheet')">
-  <div class="sheet" style="border-radius:22px 22px 0 0">
-    <div class="sh-handle"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 20px 12px">
-      <div>
-        <div style="font-size:17px;font-weight:800" id="diff-title">O'zgarishlar</div>
-        <div style="font-size:12px;color:var(--text3)" id="diff-nav">1 / 1</div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="DiffView.prev()" id="diff-prev" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px">‹</button>
-        <button onclick="DiffView.next()" id="diff-next" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px">›</button>
-      </div>
-    </div>
-    <div class="diff-body" id="diff-body"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 20px 8px">
-      <button onclick="DiffView.rejectAll()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:13px;border-radius:10px;font-size:14px;font-weight:700">Rad etish</button>
-      <button onclick="DiffView.applyAll()" style="background:var(--green);border:none;color:#fff;padding:13px;border-radius:10px;font-size:14px;font-weight:800">Qo'llash</button>
-    </div>
-  </div>
-</div>
-
-<div id="github-deploy-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'github-deploy-sheet')">
-  <div class="sheet">
-    <div class="sh-handle"></div>
-    <div class="sh-title">GitHubga yuborish</div>
-    <label class="sh-label">Username</label>
-    <input id="gh-owner" class="sh-input" placeholder="username">
-    <label class="sh-label">Repo</label>
-    <input id="gh-repo" class="sh-input" placeholder="my-app">
-    <label class="sh-label">Branch</label>
-    <input id="gh-branch" class="sh-input" value="main">
-    <button class="sh-btn" onclick="Deploy.setupAndPush()">Push</button>
-  </div>
-</div>
-
+<div id="connector-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'connector-sheet')"><div class="sheet"><div class="sh-handle"></div><div class="sh-title" id="connector-sheet-title">API</div><div id="connector-fields"></div><button class="sh-btn" onclick="Settings.save()">Saqlash</button></div></div>
+<div id="agent-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'agent-sheet')"><div class="sheet"><div class="sh-handle"></div><div class="sh-title" id="agent-sheet-title">Agent</div><label class="sh-label">Vazifa</label><textarea id="agent-task-input" class="sh-input" rows="3" style="resize:none;height:80px"></textarea><button class="sh-btn" onclick="Agents.executeTask()">Ishga tushirish</button></div></div>
+<div id="new-project-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'new-project-sheet')"><div class="sheet"><div class="sh-handle"></div><div class="sh-title">Yangi loyiha</div><label class="sh-label">Nomi</label><input id="new-project-name" class="sh-input" placeholder="Ilova"><label class="sh-label">Shablon</label><select id="new-project-template" class="sh-input"><option value="blank">Bo'sh</option><option value="react">React</option><option value="nextjs">Next.js</option><option value="telegram-bot">Telegram Bot</option></select><button class="sh-btn" onclick="Projects.newProject()">Yaratish</button></div></div>
+<div id="model-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'model-sheet')"><div class="sheet"><div class="sh-handle"></div><div class="sh-title">Model</div><div id="model-list" style="padding:0 20px 8px"></div></div></div>
+<div id="diff-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'diff-sheet')"><div class="sheet"><div class="sh-handle"></div><div style="display:flex;justify-content:space-between;padding:0 20px 12px"><div><div style="font-size:17px;font-weight:800" id="diff-title">Diff</div><div style="font-size:12px;color:var(--text3)" id="diff-nav">1/1</div></div><div style="display:flex;gap:8px"><button onclick="DiffView.prev()" id="diff-prev" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px">‹</button><button onclick="DiffView.next()" id="diff-next" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px">›</button></div></div><div class="diff-body" id="diff-body"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 20px"><button onclick="DiffView.rejectAll()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:13px;border-radius:10px;font-weight:700">Rad</button><button onclick="DiffView.applyAll()" style="background:var(--green);border:none;color:#fff;padding:13px;border-radius:10px;font-weight:800">Qo'llash</button></div></div></div>
+<div id="github-deploy-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'github-deploy-sheet')"><div class="sheet"><div class="sh-handle"></div><div class="sh-title">GitHub</div><label class="sh-label">Username</label><input id="gh-owner" class="sh-input"><label class="sh-label">Repo</label><input id="gh-repo" class="sh-input"><label class="sh-label">Branch</label><input id="gh-branch" class="sh-input" value="main"><button class="sh-btn" onclick="Deploy.setupAndPush()">Push</button></div></div>
 <div id="toast" class="toast"></div>
 
 <script src="app.js"></script>
@@ -342,21 +244,20 @@
 <script src="sadiprime.js"></script>
 <script src="premium.js"></script>
 <script src="supabase.js"></script>
+<script src="product.js"></script>
 <script>
-// Premium boot: Supabase status + icons
-setTimeout(async function () {
-  if (typeof renderIcons === 'function') renderIcons();
-  if (typeof KeyVault !== 'undefined') KeyVault.refreshStatusUI();
-  if (typeof SB !== 'undefined' && SB.ready()) {
-    const r = await SB.test();
-    const el = document.getElementById('sb-status');
-    const home = document.getElementById('sb-status-home');
-    const bar = document.getElementById('sb-bar');
-    if (el) { el.textContent = r.ok ? 'Ulangan' : 'Sozla'; el.className = r.ok ? 's-connected' : 's-val'; }
-    if (home) home.textContent = r.ok ? 'ON' : 'OFF';
-    if (bar) bar.style.width = r.ok ? '100%' : '0%';
+setTimeout(async function(){
+  if(typeof renderIcons==='function')renderIcons();
+  if(typeof KeyVault!=='undefined')KeyVault.refreshStatusUI();
+  if(typeof Monitor!=='undefined')Monitor.render();
+  if(typeof SB!=='undefined'&&SB.ready()){
+    const r=await SB.test();
+    const el=document.getElementById('sb-status'),h=document.getElementById('sb-status-home'),b=document.getElementById('sb-bar');
+    if(el){el.textContent=r.ok?'Ulangan':'Sozla';el.className=r.ok?'s-connected':'s-val'}
+    if(h)h.textContent=r.ok?'ON':'OFF';
+    if(b)b.style.width=r.ok?'100%':'0%';
   }
-}, 600);
+},500);
 </script>
 </body>
 </html>
