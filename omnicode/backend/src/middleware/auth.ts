@@ -23,6 +23,18 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
   return c.json({ error: 'Unauthorized' }, 401);
 }
 
+function b64urlDecode(str: string): string {
+  const padded = str.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (4 - (str.length % 4)) % 4);
+  return atob(padded);
+}
+
+function b64urlToBytes(str: string): Uint8Array {
+  const binary = b64urlDecode(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 async function verifyTelegramData(initData: string, botToken: string) {
   const params = new URLSearchParams(initData);
   const hash = params.get('hash');
@@ -48,14 +60,29 @@ async function verifyTelegramData(initData: string, botToken: string) {
 }
 
 async function verifyJWT(token: string, secret: string) {
-  const [header, body, sig] = token.split('.');
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
-  const valid = await crypto.subtle.verify('HMAC', key,
-    Uint8Array.from(atob(sig), c => c.charCodeAt(0)),
-    new TextEncoder().encode(`${header}.${body}`));
+  const parts = token.split('.');
+  if (parts.length !== 3) throw new Error('Invalid token format');
+  const [header, body, sig] = parts;
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify']
+  );
+  const valid = await crypto.subtle.verify(
+    'HMAC',
+    key,
+    b64urlToBytes(sig),
+    new TextEncoder().encode(`${header}.${body}`)
+  );
   if (!valid) throw new Error('Invalid signature');
-  const payload = JSON.parse(atob(body));
-  if (payload.exp < Date.now()) throw new Error('Expired');
+
+  const payload = JSON.parse(b64urlDecode(body));
+  // exp is in seconds (JWT standard)
+  if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+    throw new Error('Expired');
+  }
   return payload;
 }
