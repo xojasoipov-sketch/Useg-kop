@@ -1250,94 +1250,117 @@ const Home = {
 //  AI CHAT — with streaming
 // ══════════════════════════════════════════════════════════════
 const AGENT_SYSTEMS = {
-  master:     'You are the Master Agent. Orchestrate specialized agents for complex tasks. Be concise and direct.',
-  planner:    'You are the Planner Agent. Create detailed technical roadmaps and task breakdowns.',
-  researcher: 'You are the Research Agent. Find accurate information and best practices.',
-  coder:      'You are the Coding Agent. Write production-ready code. Use <WRITE_FILE path="...">content</WRITE_FILE> for files.',
-  designer:   'You are the UI Designer Agent. Create beautiful, mobile-first interfaces with HTML/CSS.',
-  reviewer:   'You are the Code Review Agent. Find bugs, security issues, performance problems.',
-  tester:     'You are the Testing Agent. Write comprehensive tests (unit, integration, e2e).',
-  deployer:   'You are the Deployment Agent. Handle CI/CD, Docker, cloud deployments.',
-  backend:    'You are the Backend Agent. Design scalable APIs and databases.',
-  security:   'You are the Security Agent. Find vulnerabilities and provide fixes.',
-  optimizer:  'You are the Optimization Agent. Improve performance and reduce complexity.',
-  docs:       'You are the Documentation Agent. Write clear, comprehensive documentation.',
+  master:     'Sen Bosh Agent. Murakkab vazifalarni taqsimlab, parallel bajarassan.',
+  planner:    'Sen Rejalashtiruvchi Agent. Texnik yo\'l xaritasi va vazifalarni aniq va batafsil tuzassan.',
+  researcher: 'Sen Tadqiqotchi Agent. Aniq ma\'lumot, eng yaxshi amaliyotlar va hujjatlarni topassan.',
+  coder:      'Sen Kod Yozuvchi Agent. Production-ready, to\'liq ishlaydigan kod yozassan. WRITE_FILE formatdan foydalanassan.',
+  designer:   'Sen UI/UX Dizayner Agent. Go\'zal, mobile-first interfeys yaratasan. Faqat HTML/CSS/JS.',
+  reviewer:   'Sen Kod Tekshiruvchi Agent. Xatolar, xavfsizlik muammolari, performance muammolarini topassan.',
+  tester:     'Sen Test Yozuvchi Agent. Unit, integration, e2e testlar yozassan.',
+  deployer:   'Sen Deploy Agent. CI/CD, GitHub Actions, cloud deploy boshqarassan.',
+  backend:    'Sen Backend Agent. Scalable API, database schema, server logika yozassan.',
+  security:   'Sen Xavfsizlik Agent. Zaifliklarni topib, xavfsiz kod yozassan.',
+  optimizer:  'Sen Optimizator Agent. Performance yaxshilab, kod murakkabligini kamaytirassan.',
+  docs:       'Sen Hujjatlashtiruvchi Agent. Aniq, tushunarli hujjat va README yozassan.',
 };
 
 const AI = {
   busy: false,
 
+  // ═══════════════════════════════════════════════════════════════
+  //  MIYA — Claude Code kabi ishlaydigan to'liq agent tizimi
+  // ═══════════════════════════════════════════════════════════════
   system() {
-    const agentSys = State.agent ? AGENT_SYSTEMS[State.agent] : '';
+    const project    = State.projectId ? PM.get(State.projectId) : null;
     const projectCtx = State.projectId ? FS.context(State.projectId) : '';
-    const project = State.projectId ? PM.get(State.projectId) : null;
-    const ghToken = Git.token();
-    const ghActive = State.activeTools.has('github');
-    const ghCtx = State.githubCtx
-      ? State.githubCtx
-      : ghToken
-        ? 'GITHUB: Token ulangan (foydalanuvchi GitHub akkauntini bog\'lagan). Repolarni ko\'rish uchun <GH_LIST_REPOS/> ishlatib ma\'lumot oling.'
-        : 'GITHUB: Token yo\'q — foydalanuvchiga "Sozlamalar → Kod → GitHub token" qo\'shishini ayting.';
+    const agentRole  = State.agent ? `\n## Agent roli\n${AGENT_SYSTEMS[State.agent]}\n` : '';
+    const ghActive   = State.activeTools.has('github') && Git.token();
+    const ghCtx      = State.githubCtx || (ghActive ? 'GitHub: ulangan, repolar yuklanishi kutilmoqda' : '');
+    const now        = new Date().toLocaleString('uz-UZ');
 
-    return `You are OmniCode — a super-intelligent AI coding assistant running as a Telegram Mini App. You work like Cursor AI / Claude Code on mobile.
+    return `Sen OmniCode — mobil uchun Claude Code. Foydalanuvchi: xojasoipov@gmail.com
+Sana: ${now}
+${agentRole}
+## Sen kimsan
+- Mustaqil, avtonomik AI dasturlash agenti
+- Vazifani boshidan oxirigacha mustaqil bajarasan — foydalanuvchi har qadamda ruxsat so'ramaydi
+- Kod yozasan, fayllarni o'qib tahrir qilasan, GitHub'ga push qilasan, xatolarni tuzatasan
+- Faqat O'zbek tilida gaplashasan (kod ichida inglizcha yozuv OK)
 
-${agentSys}
-
-═══ VIRTUAL FILE SYSTEM ═══
-Write/create files using:
-<WRITE_FILE path="relative/path/file.ext">
-complete file content here
+## Fayl yozish protokoli
+Kod yozganda DOIM bu formatdan foydalanasan:
+\`\`\`
+<WRITE_FILE path="relative/path/file.js">
+...to'liq fayl kontenti...
 </WRITE_FILE>
-Always write COMPLETE file contents. Multiple files OK. User approves diffs before applying.
+\`\`\`
+- DOIM to'liq fayl yozasan — hech qachon qisman yoki "... qolgan kod ..." emas
+- Bir javobda bir nechta fayl yozish mumkin
+- Foydalanuvchi diff ko'rib tasdiqlaydi — lekin sen to'liq yozasan
 
-═══ GITHUB ═══
+## GitHub imkoniyatlari
 ${ghActive
-  ? `✅ GitHub ulangan. GitHub ma'lumotlari xabar ichida [GitHub ma'lumotlari] blokida keladi — ular HAQIQIY, to'g'ridan GitHub API dan olingan.
-- Repo, fayl, kod so'ralganda — siz uni allaqachon [GitHub ma'lumotlari] bo'limida olasiz
-- "men GitHub'ga kira olmayman" DEMA — ma'lumotlar sizga tayyor berilgan
-- Kodni tahrirlab, to'liq yangilangan faylni WRITE_FILE formatda yoz`
-  : '⚠️ GitHub chip faol emas (🐙 GitHub chipni bosing)'}
-${ghCtx}
+  ? `✅ GitHub ulangan — ${ghCtx}
 
-═══ CONTEXT ═══
-ACTIVE PROJECT: ${project ? `"${project.name}"` : 'None'}
-ACTIVE TOOLS: ${[...State.activeTools].join(', ')}
-SUPABASE: connected (tomkxsdkerpbvlumubbg.supabase.co)
-${projectCtx}
+Foydalanuvchi so'raganda:
+- Repolarni ko'rish → [GitHub ma'lumotlari] blokida keladi (allaqachon yuklangan)
+- Fayl o'qish → [GitHub ma'lumotlari] blokida to'liq kod bor
+- Kod o'zgartirish → WRITE_FILE bilan yoz → "GitHub'ga push" tugmasi chiqadi
+- Avtomatik push → GitHub chip active + token bor → push bo'ladi
+- HECH QACHON "men GitHub'ga kira olmayman" dema — ma'lumot tayyor beriladi`
+  : `⚠️ GitHub chip faol emas
+Agar foydalanuvchi GitHub haqida so'rasa: "🐙 GitHub chipni bosing, keyin token kiriting" de`}
 
-═══ RULES ═══
-- Use Uzbek when user writes in Uzbek
-- Be concise, no unnecessary text
-- Write working, complete code
-- For GitHub questions when tool is active: USE THE GH_ COMMANDS, don't explain how to use GitHub website`;
+## Joriy holat
+PROJECT: ${project ? `"${project.name}" (id: ${project.id})` : 'tanlanmagan'}
+TOOLS: ${[...State.activeTools].join(', ') || 'hech biri'}
+SUPABASE: ulangan (tomkxsdkerpbvlumubbg.supabase.co)
+${projectCtx ? '\n## Loyiha fayllari\n' + projectCtx : ''}
+
+## Qoidalar — BULARNI DOIM BAJO QIL
+1. **Vazifani to'liq tugat** — "men bu qila olmayman" dema, yo'l top
+2. **To'liq kod yoz** — hech qachon "// qolgan kod shu yerga" dema
+3. **Qisqa gapir** — keraksiz tushuntirish yo'q, ish qil
+4. **Xatoni o'zing tuzat** — agar biror narsa noto'g'ri bo'lsa, o'zin tuzat
+5. **Avtomatik ish qil** — foydalanuvchi "qil" desa, so'ramasdan bajar
+6. **Kod + tushuntirish** — avval kod, keyin 2-3 qator nima qilganingni ayt
+7. **O'zbek tilida** — foydalanuvchi o'zbek yozsа, sen ham o'zbek til
+
+## Sen qila olasanlar
+- Har qanday dasturlash tili: JS, TS, Python, Go, Rust, Java...
+- Frontend: React, Vue, Svelte, HTML/CSS, Tailwind
+- Backend: Node, Express, FastAPI, Supabase Edge Functions
+- Mobile: React Native, Telegram Mini App
+- GitHub: repolarni ko'rish, fayl o'qish, kod push qilish, repo yaratish
+- Supabase: jadvallar, funksiyalar, auth, storage
+- O'z-o'zini tuzatish: xatolarni topib tuzatish, kod sifatini oshirish
+- Loyiha arxitekturasi: structure, patterns, best practices`;
   },
 
   addWelcome() {
     const el = document.getElementById('chat-messages');
     if (!el) return;
     el.innerHTML = '';
-    this.appendBubble('ai', `**OmniCode AI 3.0** — Claude Code + Supabase 🚀
+    const ghOk = Git.token();
+    this.appendBubble('ai', `# OmniCode AI — Tayyor 🚀
 
-**Yangi imkoniyatlar:**
-- 🌊 **Real-time streaming** — javoblar token-by-token
-- ☁️ **Supabase bulut sinxron** — loyihalar avtomatik saqlanadi
-- 🔧 **O'z-o'zini tuzatish** — AI xatolarni o'zi topib tuzatadi
-- ⌘ **Buyruqlar palitasi** — ⌘ tugmasi yoki \`/\` bilan
-- 🔌 **MCP ulanishlar** — Supabase, GitHub, Figma, Vercel va boshqalar
+Salom! Men sizning shaxsiy AI dasturlash agentingizman.
+
+**Nima qila olaman:**
+→ Kod yozaman, tuzataman, tushuntiraman
+→ GitHub repolaringizni ko'raman, fayllarni o'qiyman, push qilaman
+→ Loyiha yarataman — birinchi commitgacha
+→ Xatolarni o'zim topib tuzataman
 
 **Boshlash:**
-1. Loyiha yarating (Loyihalar bo'limi)
-2. Nima qurishni yozing
-3. AI fayllarni yozadi → siz diff ko'rib tasdiqlaysiz
+${ghOk
+  ? '✅ GitHub ulangan — 🐙 chipni bosib repolarni yuklang'
+  : '1. Sozlamalar → Kod → GitHub token qo\'shing\n2. 🐙 GitHub chipni bosing'}
 
-**Tezkor buyruqlar:** \`/fix\` tuzatish · \`/sync\` saqlash · \`/model\` model almashtirish · \`/github\` repolarni ko'rish · \`/import owner/repo\` import qilish
+**Tezkor buyruqlar:**
+\`/fix\` xatolarni tuzat · \`/github\` repolarni yukla · \`/self\` OmniCode kodini import qil
 
-**GitHub bilan ishlash:**
-1. Sozlamalar → Kod → GitHub token kiriting
-2. Chat da 🐙 GitHub chipni bosing
-3. AI sizning barcha repolaringizni ko'radi va ular bilan ishlaydi
-
-Bugun nima quramiz?`, false);
+Nima quramiz?`, false);
   },
 
   appendBubble(role, text, hasWrites) {
@@ -1381,202 +1404,185 @@ Bugun nima quramiz?`, false);
     if (!msg || this.busy) return;
     if (inp) { inp.value = ''; inp.style.height = ''; }
 
-    // Handle slash commands (startsWith for flexible matching)
+    // ── Slash buyruqlar ──────────────────────────────────────────
     const cmd = msg.split(' ')[0].toLowerCase();
-    if (cmd === '/fix' || cmd === '/tuzat') { await SelfHeal.analyze(); return; }
-    if (cmd === '/sync' || cmd === '/saqlash') { await SB.syncAll(); return; }
-    if (cmd === '/model') { App.openModelPicker(); return; }
-    if (cmd === '/clear' || cmd === '/tozala') { this.clear(); return; }
-    if (cmd === '/palette') { Palette.open(); return; }
-    if (cmd === '/github' || cmd === '/repos' || cmd === '/gh') {
-      await this._loadGithubContext();
-      return;
-    }
-    if (cmd === '/self' || cmd === '/omnicode' || cmd === '/import-self') {
-      await SelfImport.run();
-      return;
-    }
+    const slashCmds = {
+      '/fix': () => SelfHeal.analyze(),
+      '/tuzat': () => SelfHeal.analyze(),
+      '/sync': () => SB.syncAll(),
+      '/saqlash': () => SB.syncAll(),
+      '/model': () => App.openModelPicker(),
+      '/clear': () => this.clear(),
+      '/tozala': () => this.clear(),
+      '/palette': () => Palette.open(),
+      '/github': () => this._loadGithubContext(),
+      '/gh': () => this._loadGithubContext(),
+      '/repos': () => this._loadGithubContext(),
+      '/self': () => SelfImport.run(),
+      '/omnicode': () => SelfImport.run(),
+    };
+    if (slashCmds[cmd]) { await slashCmds[cmd](); return; }
     if (cmd === '/import') {
       const repoFull = msg.split(' ')[1];
-      if (!repoFull || !repoFull.includes('/')) { toast('Format: /import owner/repo'); return; }
+      if (!repoFull?.includes('/')) { toast('Format: /import owner/repo'); return; }
       const [owner, repo] = repoFull.split('/');
       const pid = State.projectId;
       if (!pid) { toast('Avval loyiha tanlang'); return; }
       toast(`⬇️ ${repoFull} import qilinmoqda...`);
       try {
         await Git.importRepoToProject(owner, repo, pid);
-        toast(`✅ ${repoFull} import qilindi`);
-        this.appendBubble('ai', `✅ **${repoFull}** loyihaga import qilindi!\n\nFayllar Loyihalar → Fayllar bo'limida ko'rinadi. Qanday o'zgartirish qilishni so'rang.`);
+        this.appendBubble('ai', `✅ **${repoFull}** import qilindi! Fayllarni ko'rish uchun Loyihalar → Fayllar.`);
       } catch (e) { toast('Import xatosi: ' + e.message); }
       return;
     }
+    if (cmd === '/push') {
+      // /push [owner/repo] [branch]
+      const parts = msg.split(' ');
+      await this._autoPushAll(parts[1], parts[2]);
+      return;
+    }
 
-    // If GitHub tool active but context not loaded yet — auto-load first
+    // ── GitHub auto-load ────────────────────────────────────────
     if (State.activeTools.has('github') && !State.githubCtx && Git.token()) {
       await this._loadGithubContext();
     }
 
+    // ── User bubble ─────────────────────────────────────────────
     const resolved = await this.resolveRefs(msg);
     this.appendBubble('user', msg, false);
 
-    // ── SMART PRE-FETCH: GitHub dan avtomatik ma'lumot olamiz ──
-    // AI dan so'ramay, biz o'zimiz o'qib, tayyor kontekst beramiz
-    let autoContext = '';
+    // ── Smart pre-fetch: biz o'zimiz o'qib, AI ga tayyor beramiz ─
+    let autoCtx = '';
     if (State.activeTools.has('github') && Git.token()) {
-      autoContext = await this._autoFetchGithubContext(msg);
+      this._showStatus('🔍 GitHub ma\'lumotlari yuklanmoqda...');
+      autoCtx = await this._autoFetchGithubContext(msg);
+      this._hideStatus();
     }
 
-    const userContent = autoContext
-      ? `${resolved}\n\n[GitHub ma'lumotlari (avtomatik yuklangan)]:\n${autoContext}`
+    const userContent = autoCtx
+      ? `${resolved}\n\n━━━ GitHub ma'lumotlari (haqiqiy, API dan) ━━━\n${autoCtx}`
       : resolved;
 
     State.chatHistory.push({ role: 'user', content: userContent });
-
     this.busy = true;
-    const taskId = Tasks.add('AI Chat', msg.slice(0, 40) + '...');
-    Tasks.update(taskId, { progress: 20 });
 
+    const taskId = Tasks.add('🤖 AI', msg.slice(0, 40));
     const messages = [
       { role: 'system', content: this.system() },
-      ...State.chatHistory.slice(-16),
+      ...State.chatHistory.slice(-14),
     ];
 
-    const chatEl = document.getElementById('chat-messages');
-    let streamBubble = null;
-    let replied = false;
-
+    // ── Streaming ────────────────────────────────────────────────
+    const chatEl  = document.getElementById('chat-messages');
     const useStream = StreamAI.enabled() && State.model.stream;
+    let reply = '';
 
-    if (useStream) {
-      // Don't show typing indicator for streaming
-      const onChunk = (full) => {
-        if (!streamBubble) {
-          streamBubble = document.createElement('div');
-          streamBubble.className = 'bubble ai';
-          chatEl.appendChild(streamBubble);
-        }
-        streamBubble.innerHTML = MD.render(FS.stripCommands(full)) + '<span class="stream-cursor"></span>';
-        chatEl.scrollTop = chatEl.scrollHeight;
-        replied = true;
-      };
-
-      Tasks.update(taskId, { progress: 50 });
-
-      try {
-        const reply = await StreamAI.call(messages, null, onChunk);
-        if (streamBubble) {
-          // Finalize
-          streamBubble.innerHTML = MD.render(FS.stripCommands(reply));
-          // Execute GitHub tool commands if any
-          let finalReply = reply;
-          if (GitTools.has(reply)) {
-            streamBubble.innerHTML = MD.render('⚙️ *GitHub API chaqirilmoqda...*');
-            const { cleanReply, toolResults } = await GitTools.execute(reply);
-            finalReply = cleanReply + (toolResults.length ? '\n\n' + toolResults.join('\n\n---\n\n') : '');
-            // Re-run AI with tool results injected
-            if (toolResults.length && cleanReply.trim().length < 50) {
-              const toolMsg = toolResults.join('\n\n');
-              State.chatHistory.push({ role: 'assistant', content: reply });
-              State.chatHistory.push({ role: 'user', content: '[GitHub tool natijalari]:\n' + toolMsg + '\n\nYuqoridagi ma\'lumotlarga asoslanib javob bering.' });
-              const msgs2 = [{ role: 'system', content: this.system() }, ...State.chatHistory.slice(-16)];
-              try {
-                let followUp = '';
-                if (StreamAI.enabled() && State.model.stream) {
-                  followUp = await StreamAI.call(msgs2, null, (full) => {
-                    streamBubble.innerHTML = MD.render(toolMsg + '\n\n---\n\n' + full) + '<span class="stream-cursor"></span>';
-                    chatEl.scrollTop = chatEl.scrollHeight;
-                  });
-                } else {
-                  followUp = await AIRouter.call(msgs2);
-                }
-                finalReply = toolMsg + '\n\n---\n\n' + followUp;
-                State.chatHistory.push({ role: 'assistant', content: followUp });
-              } catch { /* use tool results as reply */ }
-              streamBubble.innerHTML = MD.render(FS.stripCommands(finalReply));
-              this._addBubbleActions(streamBubble, finalReply);
-              const approxTokens = Math.floor(finalReply.length / 4);
-              Analytics.track(approxTokens);
-              Tasks.update(taskId, { progress: 100, status: 'done' });
-              Tasks.remove(taskId);
-              this.busy = false;
-              if (App.screen === 'home') Home.refresh();
-              return;
-            }
+    try {
+      if (useStream) {
+        let bubble = null;
+        reply = await StreamAI.call(messages, null, (full) => {
+          if (!bubble) {
+            bubble = document.createElement('div');
+            bubble.className = 'bubble ai';
+            chatEl.appendChild(bubble);
           }
-
-          streamBubble.innerHTML = MD.render(FS.stripCommands(finalReply));
-          this._addBubbleActions(streamBubble, finalReply);
-
-          const approxTokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + finalReply.length) / 4);
-          Analytics.track(approxTokens);
-          State.chatHistory.push({ role: 'assistant', content: finalReply });
-          Tasks.update(taskId, { progress: 100, status: 'done' });
-          Tasks.remove(taskId);
-          this.busy = false;
-          if (App.screen === 'home') Home.refresh();
-          return;
-        }
-      } catch (e) {
-        console.warn('Stream failed, falling back:', e.message);
-        if (streamBubble) { streamBubble.remove(); streamBubble = null; }
+          bubble.innerHTML = MD.render(FS.stripCommands(full)) + '<span class="stream-cursor"></span>';
+          chatEl.scrollTop = chatEl.scrollHeight;
+        });
+        if (bubble) bubble.innerHTML = MD.render(FS.stripCommands(reply));
+        await this._finalize(reply, bubble, messages, chatEl, taskId);
+        return;
       }
+    } catch (e) {
+      console.warn('Stream xatosi, fallback:', e.message);
     }
 
-    // Non-streaming fallback
-    if (!useStream || !replied) {
-      this.showTyping();
-      Tasks.update(taskId, { progress: 60 });
-      try {
-        let reply = await AIRouter.call(messages);
-        this.hideTyping();
+    // ── Non-streaming ────────────────────────────────────────────
+    this.showTyping();
+    try {
+      reply = await AIRouter.call(messages);
+    } catch (e) {
+      this.hideTyping();
+      this.appendBubble('ai', `❌ **${e.message}**\n\nSozlamalar → AI bo'limiga kalit qo'shing.`, false);
+      Tasks.remove(taskId);
+      this.busy = false;
+      return;
+    }
+    this.hideTyping();
+    const div = this.appendBubble('ai', reply, false);
+    await this._finalize(reply, div, messages, chatEl, taskId);
+  },
 
-        // Execute GitHub tools if any
-        if (GitTools.has(reply)) {
-          this.appendBubble('ai', '⚙️ *GitHub API chaqirilmoqda...*', false);
-          const { cleanReply, toolResults } = await GitTools.execute(reply);
-          if (toolResults.length) {
-            const toolMsg = toolResults.join('\n\n---\n\n');
-            // Feed results back for AI to summarize
-            State.chatHistory.push({ role: 'assistant', content: reply });
-            State.chatHistory.push({ role: 'user', content: '[GitHub tool natijalari]:\n' + toolMsg + '\n\nYuqoridagi ma\'lumotlarga asoslanib o\'zbek tilida javob bering.' });
-            const msgs2 = [{ role: 'system', content: this.system() }, ...State.chatHistory.slice(-16)];
-            this.showTyping();
-            try { reply = toolMsg + '\n\n---\n\n' + await AIRouter.call(msgs2); }
-            catch { reply = toolMsg; }
-            this.hideTyping();
-          } else {
-            reply = cleanReply;
-          }
-          // remove "thinking" bubble
-          document.getElementById('chat-messages')?.lastElementChild?.remove();
-        }
+  // ── Javobni tugallash: fayllar, auto-push, action buttons ──
+  async _finalize(reply, el, messages, chatEl, taskId) {
+    const writes = FS.parseWrites(reply);
 
-        const approxTokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + reply.length) / 4);
-        Analytics.track(approxTokens);
-        const writes = FS.parseWrites(reply);
-        if (writes.length) {
-          State.pendingWrites = writes;
-          this.appendBubble('ai', reply, true);
-          toast(`📝 ${writes.length} ta fayl qo'llashga tayyor`);
-        } else {
-          this.appendBubble('ai', reply, false);
-        }
-        State.chatHistory.push({ role: 'assistant', content: reply });
-        Tasks.update(taskId, { progress: 100, status: 'done' });
-        Tasks.remove(taskId);
-      } catch (e) {
-        this.hideTyping();
-        this.appendBubble('ai', `❌ **${e.message}**\n\nAI yoqish uchun **Sozlamalar → AI** bo'limiga kalit qo'shing.`, false);
-        Tasks.remove(taskId);
-      }
+    // VFS ga saqlash
+    if (writes.length && State.projectId) {
+      writes.forEach(w => FS.write(State.projectId, w.path, w.content));
+      State.pendingWrites = writes;
     }
 
+    // GitHub chip active + token bor → avtomatik push
+    if (writes.length && State.activeTools.has('github') && Git.token()) {
+      await this._autoPushWrites(writes);
+    }
+
+    // Action tugmalar
+    if (el) this._addBubbleActions(el, reply, writes);
+
+    const tokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + reply.length) / 4);
+    Analytics.track(tokens);
+    State.chatHistory.push({ role: 'assistant', content: reply });
+    Tasks.remove(taskId);
     this.busy = false;
     if (App.screen === 'home') Home.refresh();
   },
 
-  _addBubbleActions(el, reply) {
-    const writes = FS.parseWrites(reply);
+  // ── Yozilgan fayllarni GitHub ga avtomatik push ──────────────
+  async _autoPushWrites(writes) {
+    const p      = State.projectId ? PM.get(State.projectId) : null;
+    const owner  = p?.github?.owner  || 'xojasoipov-sketch';
+    const repo   = p?.github?.repo   || 'Useg-kop';
+    const branch = p?.github?.branch || 'claude/shuni-chuntr-va-qil-60bfra';
+    let ok = 0;
+    this._showStatus(`🐙 ${writes.length} ta fayl GitHub'ga push qilinmoqda...`);
+    for (const w of writes) {
+      try {
+        await Git.pushFile(owner, repo, w.path, w.content, branch, `ai: update ${w.path}`);
+        ok++;
+      } catch (e) { console.warn('push fail:', w.path, e.message); }
+    }
+    this._hideStatus();
+    if (ok > 0) toast(`✅ ${ok} ta fayl GitHub'ga push qilindi (${branch})`);
+  },
+
+  // ── Barcha loyiha fayllarini push ───────────────────────────
+  async _autoPushAll(repoFull, branch) {
+    const pid = State.projectId;
+    if (!pid) { toast('Loyiha tanlanmagan'); return; }
+    const files = FS.index(pid);
+    if (!files.length) { toast('Push qilish uchun fayl yo\'q'); return; }
+    const [owner, repo] = (repoFull || '').split('/');
+    await this._autoPushWrites(files.map(path => ({ path, content: FS.read(pid, path) })));
+  },
+
+  // ── Status indicator ─────────────────────────────────────────
+  _showStatus(text) {
+    let el = document.getElementById('ai-status-bar');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'ai-status-bar';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(30,30,30,0.95);backdrop-filter:blur(10px);padding:8px 16px;font-size:12px;color:var(--text2);text-align:center;border-bottom:1px solid var(--border)';
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.style.display = 'block';
+  },
+  _hideStatus() { document.getElementById('ai-status-bar')?.remove(); },
+
+  _addBubbleActions(el, reply, writes) {
+    if (!writes) writes = FS.parseWrites(reply);
     if (writes.length) {
       State.pendingWrites = writes;
       const row = document.createElement('div');
