@@ -575,64 +575,10 @@
       <div class="s-section">
         <div class="s-section-title">AI API Kalitlar</div>
         <div class="s-group">
-          <div class="s-row" onclick="Settings.openORKeys()">
-            <div class="s-ico red"><svg width="14" height="14"><use href="#ic-refresh"/></svg></div>
-            <span class="s-label">OpenRouter <span style="font-size:10px;color:var(--text3)" id="or-key-count"></span></span>
-            <span id="or-status" class="s-val">Sozlanmagan</span>
-            <span class="s-chevron">›</span>
-          </div>
-          <div class="s-row" onclick="Settings.openConnector('cerebras')">
-            <div class="s-ico purple"><svg width="14" height="14"><use href="#ic-cpu"/></svg></div>
-            <span class="s-label">Cerebras (2000 tok/s)</span>
-            <span id="cerebras-status" class="s-val">Sozlanmagan</span>
-            <span class="s-chevron">›</span>
-          </div>
-          <div class="s-row" onclick="Settings.openConnector('anthropic')">
-            <div class="s-ico orange"><svg width="14" height="14"><use href="#ic-brain"/></svg></div>
-            <span class="s-label">Anthropic / Claude</span>
-            <span id="anthropic-status" class="s-val">Sozlanmagan</span>
-            <span class="s-chevron">›</span>
-          </div>
-          <div class="s-row" onclick="Settings.openConnector('gemini')">
-            <div class="s-ico blue"><svg width="14" height="14"><use href="#ic-zap"/></svg></div>
-            <span class="s-label">Google Gemini</span>
-            <span id="gemini-status" class="s-val">Sozlanmagan</span>
-            <span class="s-chevron">›</span>
-          </div>
-          <div class="s-row" onclick="Settings.openConnector('groq')">
-            <div class="s-ico purple"><svg width="14" height="14"><use href="#ic-zap"/></svg></div>
-            <span class="s-label">Groq (eng tez, stream)</span>
-            <span id="groq-status" class="s-val">Sozlanmagan</span>
-            <span class="s-chevron">›</span>
-          </div>
-          <div class="s-row" onclick="Settings.openConnector('deepseek')">
-            <div class="s-ico blue"><svg width="14" height="14"><use href="#ic-search"/></svg></div>
-            <span class="s-label">DeepSeek</span>
-            <span id="deepseek-status" class="s-val">Sozlanmagan</span>
-            <span class="s-chevron">›</span>
-          </div>
-          <div class="s-row" onclick="Settings.openMistralKeys()">
-            <div class="s-ico green"><svg width="14" height="14"><use href="#ic-waves"/></svg></div>
-            <span class="s-label">Mistral AI <span id="mistral-key-count" style="font-size:10px;color:var(--text3)"></span></span>
-            <span id="mistral-status" class="s-val">Sozlanmagan</span>
-            <span class="s-chevron">›</span>
-          </div>
-          <div class="s-row" onclick="Settings.openConnector('together')">
-            <div class="s-ico yellow"><svg width="14" height="14"><use href="#ic-cpu"/></svg></div>
-            <span class="s-label">Together AI</span>
-            <span id="together-status" class="s-val">Sozlanmagan</span>
-            <span class="s-chevron">›</span>
-          </div>
-          <div class="s-row" onclick="Settings.openConnector('huggingface')">
-            <div class="s-ico orange"><svg width="14" height="14"><use href="#ic-server"/></svg></div>
-            <span class="s-label">HuggingFace</span>
-            <span id="hf-status" class="s-val">Sozlanmagan</span>
-            <span class="s-chevron">›</span>
-          </div>
-          <div class="s-row" onclick="Settings.openConnector('nvidia')">
-            <div class="s-ico green"><svg width="14" height="14"><use href="#ic-settings"/></svg></div>
-            <span class="s-label">NVIDIA NIM</span>
-            <span id="nvidia-status" class="s-val">Sozlanmagan</span>
+          <div class="s-row" onclick="Settings.openSadiPrime()" style="background:linear-gradient(135deg,rgba(80,160,255,0.08),rgba(80,255,150,0.06))">
+            <div class="s-ico" style="background:linear-gradient(135deg,#50a0ff,#50ff96);color:#fff"><svg width="14" height="14"><use href="#ic-zap"/></svg></div>
+            <span class="s-label" style="font-weight:700">⚡ SadiPrime AI</span>
+            <span id="sadi-status" class="s-val">Sozlanmagan</span>
             <span class="s-chevron">›</span>
           </div>
         </div>
@@ -1043,6 +989,6 @@
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
-<script src="app.js?v=20250726-7&bust=key-test"></script>
+<script src="app.js?v=20250726-8&bust=sadiprime"></script>
 </body>
 </html>

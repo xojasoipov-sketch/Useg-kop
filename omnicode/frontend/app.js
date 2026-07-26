@@ -802,151 +802,165 @@ const AIRouter = {
     throw lastErr || new Error('OpenRouter barcha kalitlar tugadi');
   },
 
+  // ── Ko'p kalit yordamchi (barcha provayderlar uchun) ──
+  _pKeys(name) {
+    const k = Store.get('keys', {});
+    const legacy = k[name] ? [k[name]] : [];
+    const arr = Store.get(name + '_keys', []).filter(Boolean);
+    return [...new Set([...arr, ...legacy])];
+  },
+  _pAddKey(name, key) {
+    if (!key || key.length < 8) return false;
+    const arr = Store.get(name + '_keys', []);
+    if (arr.includes(key)) return false;
+    arr.push(key); Store.set(name + '_keys', arr); return true;
+  },
+  _pRemoveKey(name, index) {
+    const arr = Store.get(name + '_keys', []); arr.splice(index, 1); Store.set(name + '_keys', arr);
+  },
+  async _pCall(name, keys, fn) {
+    if (!keys.length) throw new Error(name + ' kaliti yo\'q');
+    let lastErr;
+    for (const key of keys) {
+      try {
+        const result = await fn(key);
+        return result;
+      } catch (e) {
+        const code = parseInt((e.message || '').match(/\d+/)?.[0]);
+        if (code === 429 || code === 402 || code === 401) { lastErr = e; continue; }
+        throw e;
+      }
+    }
+    throw lastErr || new Error(name + ': barcha kalitlar tugadi');
+  },
+
   async groq(messages) {
-    const key = Store.get('keys', {}).groq;
-    if (!key) throw new Error('Groq kaliti yo\'q');
     const trimmed = this._trimMessages(messages, 20000);
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: trimmed, max_tokens: 8192 }),
+    return this._pCall('Groq', this._pKeys('groq'), async (key) => {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: trimmed, max_tokens: 8192 }),
+      });
+      if (!res.ok) throw new Error('Groq ' + res.status);
+      return (await res.json()).choices[0].message.content;
     });
-    if (!res.ok) throw new Error(`Groq ${res.status}`);
-    return (await res.json()).choices[0].message.content;
   },
 
   async anthropic(messages) {
-    const key = Store.get('keys', {}).anthropic;
-    if (!key) throw new Error('Anthropic kaliti yo\'q');
     const sys = messages.find(m => m.role === 'system');
     const msgs = messages.filter(m => m.role !== 'system');
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: 8192, system: sys?.content || '', messages: msgs }),
+    return this._pCall('Anthropic', this._pKeys('anthropic'), async (key) => {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: 8192, system: sys?.content || '', messages: msgs }),
+      });
+      if (!res.ok) throw new Error('Anthropic ' + res.status);
+      return (await res.json()).content[0].text;
     });
-    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
-    return (await res.json()).content[0].text;
   },
 
   async gemini(messages) {
-    const key = Store.get('keys', {}).gemini;
-    if (!key) throw new Error('Gemini kaliti yo\'q');
     const parts = messages.filter(m => m.role !== 'system').map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: parts }),
+    return this._pCall('Gemini', this._pKeys('gemini'), async (key) => {
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: parts }),
+      });
+      if (!res.ok) throw new Error('Gemini ' + res.status);
+      return (await res.json()).candidates[0].content.parts[0].text;
     });
-    if (!res.ok) throw new Error(`Gemini ${res.status}`);
-    return (await res.json()).candidates[0].content.parts[0].text;
   },
 
   async deepseek(messages) {
-    const key = Store.get('keys', {}).deepseek;
-    if (!key) throw new Error('DeepSeek kaliti yo\'q');
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'deepseek-chat', messages, max_tokens: 8192 }),
+    return this._pCall('DeepSeek', this._pKeys('deepseek'), async (key) => {
+      const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model: 'deepseek-chat', messages, max_tokens: 8192 }),
+      });
+      if (!res.ok) throw new Error('DeepSeek ' + res.status);
+      return (await res.json()).choices[0].message.content;
     });
-    if (!res.ok) throw new Error(`DeepSeek ${res.status}`);
-    return (await res.json()).choices[0].message.content;
   },
 
-  mistralKeys() {
-    const k = Store.get('keys', {});
-    const legacy = k.mistral ? [k.mistral] : [];
-    const arr = Store.get('mistral_keys', []).filter(Boolean);
-    return [...new Set([...arr, ...legacy])];
-  },
-  addMistralKey(key) {
-    if (!key || key.length < 10) return false;
-    const arr = Store.get('mistral_keys', []);
-    if (arr.includes(key)) return false;
-    arr.push(key); Store.set('mistral_keys', arr); return true;
-  },
-  removeMistralKey(index) {
-    const arr = Store.get('mistral_keys', []); arr.splice(index, 1); Store.set('mistral_keys', arr);
-  },
+  mistralKeys() { return this._pKeys('mistral'); },
+  addMistralKey(key) { return this._pAddKey('mistral', key); },
+  removeMistralKey(index) { this._pRemoveKey('mistral', index); },
 
   async mistral(messages) {
-    const keys = this.mistralKeys();
-    if (!keys.length) throw new Error('Mistral kaliti yo\'q');
-    let lastErr;
-    for (const key of keys) {
+    return this._pCall('Mistral', this._pKeys('mistral'), async (key) => {
       const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify({ model: 'mistral-small-latest', messages, max_tokens: 8192 }),
       });
-      if (res.status === 429 || res.status === 402) { lastErr = new Error(`Mistral ${res.status}`); continue; }
-      if (!res.ok) throw new Error(`Mistral ${res.status}`);
+      if (!res.ok) throw new Error('Mistral ' + res.status);
       return (await res.json()).choices[0].message.content;
-    }
-    throw lastErr || new Error('Mistral: barcha kalitlar tugadi');
+    });
   },
 
   async together(messages) {
-    const key = Store.get('keys', {}).together;
-    if (!key) throw new Error('Together kaliti yo\'q');
-    const res = await fetch('https://api.together.xyz/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'meta-llama/Llama-3-70b-chat-hf', messages, max_tokens: 8192 }),
+    return this._pCall('Together', this._pKeys('together'), async (key) => {
+      const res = await fetch('https://api.together.xyz/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model: 'meta-llama/Llama-3-70b-chat-hf', messages, max_tokens: 8192 }),
+      });
+      if (!res.ok) throw new Error('Together ' + res.status);
+      return (await res.json()).choices[0].message.content;
     });
-    if (!res.ok) throw new Error(`Together ${res.status}`);
-    return (await res.json()).choices[0].message.content;
   },
 
   async githubModels(messages, modelId = 'gpt-4o-mini') {
-    // GitHub token bilan bepul — foydalanuvchi allaqachon ulagan
-    const key = Store.get('keys', {}).github;
-    if (!key) throw new Error('GitHub token yo\'q');
     const trimmed = this._trimMessages(messages, 16000);
-    const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: modelId, messages: trimmed, max_tokens: 4096 }),
+    return this._pCall('GitHub', this._pKeys('github'), async (key) => {
+      const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model: modelId, messages: trimmed, max_tokens: 4096 }),
+      });
+      if (!res.ok) throw new Error('GitHubModels ' + res.status);
+      return (await res.json()).choices[0].message.content;
     });
-    if (!res.ok) throw new Error(`GitHubModels ${res.status}`);
-    return (await res.json()).choices[0].message.content;
   },
 
   async cerebras(messages) {
-    const key = Store.get('keys', {}).cerebras;
-    if (!key) throw new Error('Cerebras kaliti yo\'q');
     const trimmed = this._trimMessages(messages, 16000);
-    const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'llama-3.3-70b', messages: trimmed, max_tokens: 8192 }),
+    return this._pCall('Cerebras', this._pKeys('cerebras'), async (key) => {
+      const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ model: 'llama-3.3-70b', messages: trimmed, max_tokens: 8192 }),
+      });
+      if (!res.ok) throw new Error('Cerebras ' + res.status);
+      return (await res.json()).choices[0].message.content;
     });
-    if (!res.ok) throw new Error(`Cerebras ${res.status}`);
-    return (await res.json()).choices[0].message.content;
   },
 
   async huggingface(messages) {
-    const key = Store.get('keys', {}).hf || '';
     const trimmed = this._trimMessages(messages, 8000);
-    const last = trimmed.filter(m => m.role !== 'system').map(m => `${m.role}: ${m.content}`).join('\n');
-    const sys = trimmed.find(m => m.role === 'system')?.content || '';
-    const prompt = (sys ? sys.slice(0, 500) + '\n\n' : '') + last + '\nassistant:';
-    const headers = { 'Content-Type': 'application/json' };
-    if (key) headers['Authorization'] = `Bearer ${key}`;
-    const res = await fetch('https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(key ? { 'Authorization': `Bearer ${key}` } : {}) },
-      body: JSON.stringify({ model: 'Qwen/Qwen2.5-72B-Instruct', messages: trimmed.filter(m => m.role !== 'system'), max_tokens: 2048 }),
+    const msgs = trimmed.filter(m => m.role !== 'system');
+    const hfKeys = this._pKeys('hf');
+    // HuggingFace kalitsiz ham ishlaydi
+    const keys = hfKeys.length ? hfKeys : [''];
+    return this._pCall('HuggingFace', keys, async (key) => {
+      const res = await fetch('https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(key ? { 'Authorization': 'Bearer ' + key } : {}) },
+        body: JSON.stringify({ model: 'Qwen/Qwen2.5-72B-Instruct', messages: msgs, max_tokens: 2048 }),
+      });
+      if (!res.ok) throw new Error('HuggingFace ' + res.status);
+      const data = await res.json();
+      const content = data?.choices?.[0]?.message?.content || data?.[0]?.generated_text;
+      if (!content) throw new Error('HuggingFace empty');
+      return content;
     });
-    if (!res.ok) throw new Error(`HuggingFace ${res.status}`);
-    const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content || data?.[0]?.generated_text;
-    if (!content) throw new Error('HuggingFace empty');
-    return content;
   },
 
   _flattenMessages(messages) {
@@ -3288,20 +3302,32 @@ const PROVIDER_CONFIGS = {
 const Settings = {
   _conn: null,
 
+  _SADI_PROVIDERS: [
+    { id: 'groq',      label: 'Groq',        hint: 'groq.com/keys',                   testUrl: 'https://api.groq.com/openai/v1/chat/completions',              testBody: (k) => ({ model:'llama-3.3-70b-versatile', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'gemini',    label: 'Gemini',       hint: 'aistudio.google.com',              testUrl: null, gemini: true },
+    { id: 'anthropic', label: 'Anthropic',    hint: 'console.anthropic.com',            testUrl: 'https://api.anthropic.com/v1/messages',                        testBody: (k) => ({ model:'claude-3-5-haiku-20241022', max_tokens:5, messages:[{role:'user',content:'Hi'}] }), anthropic: true },
+    { id: 'deepseek',  label: 'DeepSeek',     hint: 'platform.deepseek.com',            testUrl: 'https://api.deepseek.com/v1/chat/completions',                 testBody: (k) => ({ model:'deepseek-chat', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'mistral',   label: 'Mistral',      hint: 'console.mistral.ai',               testUrl: 'https://api.mistral.ai/v1/chat/completions',                   testBody: (k) => ({ model:'mistral-small-latest', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'together',  label: 'Together AI',  hint: 'api.together.ai',                  testUrl: 'https://api.together.xyz/v1/chat/completions',                  testBody: (k) => ({ model:'meta-llama/Llama-3-70b-chat-hf', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'cerebras',  label: 'Cerebras',     hint: 'inference.cerebras.ai',            testUrl: 'https://api.cerebras.ai/v1/chat/completions',                  testBody: (k) => ({ model:'llama-3.3-70b', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'github',    label: 'GitHub Models', hint: 'github.com/settings/tokens',      testUrl: 'https://models.inference.ai.azure.com/chat/completions',        testBody: (k) => ({ model:'gpt-4o-mini', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'nvidia',    label: 'NVIDIA NIM',   hint: 'build.nvidia.com',                 testUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',          testBody: (k) => ({ model:'meta/llama-3.1-70b-instruct', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'hf',        label: 'HuggingFace',  hint: 'huggingface.co/settings/tokens',   testUrl: 'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions', testBody: (k) => ({ model:'Qwen/Qwen2.5-72B-Instruct', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'or',        label: 'OpenRouter',   hint: 'openrouter.ai/keys',               testUrl: 'https://openrouter.ai/api/v1/chat/completions',                 testBody: (k) => ({ model:'meta-llama/llama-3.1-8b-instruct:free', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+  ],
+
   refresh() {
     const keys = Store.get('keys', {});
+    // SadiPrime umumiy holat
+    const totalKeys = this._SADI_PROVIDERS.reduce((sum, p) => sum + AIRouter._pKeys(p.id).length, 0);
+    const sadiStatus = document.getElementById('sadi-status');
+    if (sadiStatus) {
+      sadiStatus.textContent = totalKeys > 0 ? 'Ulangan (' + totalKeys + ' ta)' : 'Sozlanmagan';
+      sadiStatus.className = totalKeys > 0 ? 's-connected' : 's-val';
+    }
     const orKeys = AIRouter.keys();
-    const orCount = document.getElementById('or-key-count');
-    if (orCount) orCount.textContent = orKeys.length > 0 ? '(' + orKeys.length + ' ta kalit)' : '';
-    const mistralKeys = AIRouter.mistralKeys();
-    const mistralCount = document.getElementById('mistral-key-count');
-    if (mistralCount) mistralCount.textContent = mistralKeys.length > 0 ? '(' + mistralKeys.length + ' ta kalit)' : '';
     const statuses = {
-      'or-status': orKeys.length > 0, 'gh-status': !!keys.github, 'groq-status': !!keys.groq,
-      'anthropic-status': !!keys.anthropic, 'gemini-status': !!keys.gemini,
-      'deepseek-status': !!keys.deepseek, 'mistral-status': mistralKeys.length > 0,
-      'together-status': !!keys.together, 'hf-status': !!keys.hf, 'nvidia-status': !!keys.nvidia,
-      'cerebras-status': !!keys.cerebras,
+      'gh-status': AIRouter._pKeys('github').length > 0,
     };
     for (const [id, connected] of Object.entries(statuses)) {
       const el = document.getElementById(id);
@@ -3327,6 +3353,114 @@ const Settings = {
     el.classList.add('active');
     const content = document.getElementById('stab-' + tabId);
     if (content) content.classList.add('active');
+  },
+
+  openSadiPrime() {
+    const el = document.getElementById('connector-sheet-title');
+    if (el) el.textContent = '⚡ SadiPrime AI';
+    const fields = document.getElementById('connector-fields');
+    if (fields) fields.innerHTML = this._renderSadiUI();
+    const saveBtn = document.getElementById('connector-save-btn');
+    if (saveBtn) { saveBtn.textContent = 'Yopish'; saveBtn.onclick = () => Sheet.close('connector-sheet'); }
+    Sheet.open('connector-sheet');
+  },
+
+  _renderSadiUI() {
+    const sections = this._SADI_PROVIDERS.map(p => {
+      const keys = AIRouter._pKeys(p.id);
+      const rows = keys.map((k, i) => `
+        <div id="sadi-row-${p.id}-${i}" style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)">
+          <span style="flex:1;font-size:11px;color:var(--text2);font-family:monospace">...${k.slice(-10)}</span>
+          <button onclick="Settings._sadiTestKey('${p.id}',${i})" id="sadi-test-${p.id}-${i}" style="padding:3px 8px;border-radius:5px;background:rgba(80,160,255,0.15);color:#50a0ff;border:none;font-size:10px;cursor:pointer">Test</button>
+          <button onclick="Settings._sadiRemoveKey('${p.id}',${i})" style="padding:3px 8px;border-radius:5px;background:rgba(255,80,80,0.15);color:#ff5050;border:none;font-size:10px;cursor:pointer">✕</button>
+        </div>`).join('');
+      const statusDot = keys.length > 0 ? '🟢' : '⚪';
+      return `
+        <div style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:12px;font-weight:600;color:var(--text1)">${statusDot} ${p.label}</span>
+            <span style="font-size:10px;color:var(--text3)">${keys.length} ta kalit</span>
+          </div>
+          ${rows || '<div style="font-size:10px;color:var(--text3);padding:2px 0">Kalit yo\'q — quyida qo\'shing</div>'}
+          <div style="display:flex;gap:4px;margin-top:4px">
+            <input id="sadi-inp-${p.id}" placeholder="${p.hint}" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:11px">
+            <button onclick="Settings._sadiAddKey('${p.id}')" style="padding:6px 10px;border-radius:6px;background:rgba(80,200,120,0.2);color:#50c878;border:none;font-size:11px;cursor:pointer">+</button>
+          </div>
+        </div>`;
+    }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0 0 14px">');
+
+    const total = this._SADI_PROVIDERS.reduce((s, p) => s + AIRouter._pKeys(p.id).length, 0);
+    return `
+      <div style="padding:0 16px 12px">
+        <p style="font-size:12px;color:var(--text3);margin:0 0 14px">Jami <b style="color:var(--text1)">${total} ta</b> kalit. Biri limit bersa avtomatik keyingisiga o'tadi.</p>
+        <button onclick="Settings._sadiTestAll()" style="width:100%;padding:8px;border-radius:8px;background:rgba(80,160,255,0.15);color:#50a0ff;border:1px solid rgba(80,160,255,0.3);font-size:12px;cursor:pointer;margin-bottom:16px">Hammasini tekshirish</button>
+        ${sections}
+      </div>`;
+  },
+
+  _sadiAddKey(providerId) {
+    const inp = document.getElementById('sadi-inp-' + providerId);
+    const val = inp?.value?.trim();
+    if (!val) { toast('Kalit bo\'sh'); return; }
+    const added = AIRouter._pAddKey(providerId, val);
+    if (!added) { toast('Allaqachon qo\'shilgan'); return; }
+    const total = this._SADI_PROVIDERS.reduce((s, p) => s + AIRouter._pKeys(p.id).length, 0);
+    toast('✅ Qo\'shildi (jami: ' + total + ' ta kalit)');
+    if (inp) inp.value = '';
+    document.getElementById('connector-fields').innerHTML = this._renderSadiUI();
+    this.refresh();
+  },
+
+  _sadiRemoveKey(providerId, index) {
+    AIRouter._pRemoveKey(providerId, index);
+    toast('O\'chirildi');
+    document.getElementById('connector-fields').innerHTML = this._renderSadiUI();
+    this.refresh();
+  },
+
+  async _sadiTestKey(providerId, index) {
+    const keys = AIRouter._pKeys(providerId);
+    const key = keys[index];
+    const btn = document.getElementById('sadi-test-' + providerId + '-' + index);
+    const row = document.getElementById('sadi-row-' + providerId + '-' + index);
+    if (btn) { btn.textContent = '...'; btn.disabled = true; }
+    try {
+      const p = this._SADI_PROVIDERS.find(x => x.id === providerId);
+      let ok = false;
+      if (p && p.testUrl) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (p.authHeader) headers['Authorization'] = 'Bearer ' + key;
+        if (p.anthropic) { headers['x-api-key'] = key; headers['anthropic-version'] = '2023-06-01'; headers['anthropic-dangerous-direct-browser-access'] = 'true'; delete headers['Authorization']; }
+        if (p.gemini) {
+          // Gemini key URL da
+          const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hi' }] }] }),
+          });
+          ok = res.ok;
+        } else {
+          const res = await fetch(p.testUrl, { method: 'POST', headers, body: JSON.stringify(p.testBody(key)) });
+          ok = res.ok;
+        }
+      }
+      if (ok) {
+        if (btn) { btn.textContent = '✅'; btn.style.color = '#50ff80'; btn.disabled = false; }
+        if (row) row.style.background = 'rgba(80,255,80,0.05)';
+      } else {
+        if (btn) { btn.textContent = '❌'; btn.style.color = '#ff5050'; btn.disabled = false; }
+        if (row) row.style.background = 'rgba(255,80,80,0.05)';
+      }
+    } catch {
+      if (btn) { btn.textContent = '❌'; btn.style.color = '#ff5050'; btn.disabled = false; }
+    }
+  },
+
+  async _sadiTestAll() {
+    for (const p of this._SADI_PROVIDERS) {
+      const keys = AIRouter._pKeys(p.id);
+      for (let i = 0; i < keys.length; i++) await this._sadiTestKey(p.id, i);
+    }
+    toast('Tekshiruv tugadi');
   },
 
   openORKeys() {
