@@ -44,6 +44,12 @@ const smmAIReducer = (state = initialState.smmAI, action) => {
       return { ...state, currentStep: state.currentStep + 1 };
     case 'PREV_STEP':
       return { ...state, currentStep: state.currentStep - 1 };
+    case 'ADD_MEMORY':
+      return { ...state, memories: [...state.memories, action.payload] };
+    case 'DELETE_MEMORY':
+      return { ...state, memories: state.memories.filter(memory => memory.id !== action.payload) };
+    case 'CLEAR_MEMORIES':
+      return { ...state, memories: [] };
     default:
       return state;
   }
