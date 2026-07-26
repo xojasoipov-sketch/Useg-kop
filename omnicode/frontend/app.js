@@ -1290,27 +1290,13 @@ complete file content here
 </WRITE_FILE>
 Always write COMPLETE file contents. Multiple files OK. User approves diffs before applying.
 
-═══ GITHUB TOOL PROTOCOL ═══
-${ghActive ? '✅ GITHUB TOOL IS ACTIVE — you can and SHOULD use these commands:' : '⚠️ GitHub tool not active (user must tap 🐙 GitHub chip)'}
-
-When you need GitHub data, emit these exact XML tags in your response (the app will execute them and show results):
-
-<GH_LIST_REPOS/>                          — list all user repos with details
-<GH_LIST_FILES owner="x" repo="y" path=""/>  — list files in repo directory
-<GH_READ_FILE owner="x" repo="y" path="src/main.js"/>  — read a file from GitHub
-<GH_WRITE_FILE owner="x" repo="y" path="src/main.js" message="fix: update logic">
-file content here
-</GH_WRITE_FILE>                           — write/commit file to GitHub
-<GH_CREATE_REPO name="my-app" private="false"/>  — create new repository
-
-RULES FOR GITHUB:
-- If user asks "nechta repoyim bor" or "repolarimni ko'rsat" → emit <GH_LIST_REPOS/>
-- If user asks to read/edit a repo file → first <GH_LIST_FILES>, then <GH_READ_FILE>
-- If user asks to push changes → use <GH_WRITE_FILE> with actual content
-- NEVER say "I cannot access GitHub" — you CAN via these commands
-- NEVER make up repo names — use <GH_LIST_REPOS/> to get real ones first
-- After reading a file with GH_READ_FILE, you can edit it and push back with GH_WRITE_FILE
-
+═══ GITHUB ═══
+${ghActive
+  ? `✅ GitHub ulangan. GitHub ma'lumotlari xabar ichida [GitHub ma'lumotlari] blokida keladi — ular HAQIQIY, to'g'ridan GitHub API dan olingan.
+- Repo, fayl, kod so'ralganda — siz uni allaqachon [GitHub ma'lumotlari] bo'limida olasiz
+- "men GitHub'ga kira olmayman" DEMA — ma'lumotlar sizga tayyor berilgan
+- Kodni tahrirlab, to'liq yangilangan faylni WRITE_FILE formatda yoz`
+  : '⚠️ GitHub chip faol emas (🐙 GitHub chipni bosing)'}
 ${ghCtx}
 
 ═══ CONTEXT ═══
@@ -1432,7 +1418,19 @@ Bugun nima quramiz?`, false);
 
     const resolved = await this.resolveRefs(msg);
     this.appendBubble('user', msg, false);
-    State.chatHistory.push({ role: 'user', content: resolved });
+
+    // ── SMART PRE-FETCH: GitHub dan avtomatik ma'lumot olamiz ──
+    // AI dan so'ramay, biz o'zimiz o'qib, tayyor kontekst beramiz
+    let autoContext = '';
+    if (State.activeTools.has('github') && Git.token()) {
+      autoContext = await this._autoFetchGithubContext(msg);
+    }
+
+    const userContent = autoContext
+      ? `${resolved}\n\n[GitHub ma'lumotlari (avtomatik yuklangan)]:\n${autoContext}`
+      : resolved;
+
+    State.chatHistory.push({ role: 'user', content: userContent });
 
     this.busy = true;
     const taskId = Tasks.add('AI Chat', msg.slice(0, 40) + '...');
@@ -1581,11 +1579,27 @@ Bugun nima quramiz?`, false);
     const writes = FS.parseWrites(reply);
     if (writes.length) {
       State.pendingWrites = writes;
-      const btn = document.createElement('button');
-      btn.className = 'apply-btn';
-      btn.textContent = `📝 ${writes.length} ta faylni qo'llash`;
-      btn.onclick = () => DiffView.show();
-      el.appendChild(btn);
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px';
+
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'apply-btn';
+      applyBtn.style.flex = '1';
+      applyBtn.textContent = `📝 ${writes.length} ta faylni qo'llash`;
+      applyBtn.onclick = () => DiffView.show();
+      row.appendChild(applyBtn);
+
+      // If GitHub active — show direct push button
+      if (State.activeTools.has('github') && Git.token()) {
+        const ghBtn = document.createElement('button');
+        ghBtn.className = 'apply-btn';
+        ghBtn.style.cssText = 'flex:1;background:rgba(88,166,255,0.12);border-color:rgba(88,166,255,0.3);color:#58a6ff';
+        ghBtn.textContent = `🐙 GitHub'ga push`;
+        ghBtn.onclick = () => AI._pushWritesToGithub(writes);
+        row.appendChild(ghBtn);
+      }
+
+      el.appendChild(row);
       toast(`📝 ${writes.length} ta fayl tayyor`);
     }
     const chips = document.createElement('div');
@@ -1593,6 +1607,27 @@ Bugun nima quramiz?`, false);
     chips.innerHTML = [['Improve','Yaxshilash'],['Explain','Tushuntirish'],['Shorter','Qisqartirish'],['Fix bugs','Xatolarni tuzat']].map(([a,uz]) =>
       `<button class="bubble-chip" onclick="AI.quickAction('${a}')">${uz}</button>`).join('');
     el.appendChild(chips);
+  },
+
+  async _pushWritesToGithub(writes) {
+    const p = State.projectId ? PM.get(State.projectId) : null;
+    const owner = p?.github?.owner || 'xojasoipov-sketch';
+    const repo = p?.github?.repo || 'Useg-kop';
+    const branch = p?.github?.branch || 'claude/shuni-chuntr-va-qil-60bfra';
+
+    toast(`🐙 ${writes.length} ta fayl GitHub'ga yuklanmoqda...`);
+    let ok = 0;
+    for (const w of writes) {
+      try {
+        await Git.pushFile(owner, repo, w.path, w.content, branch, `update ${w.path} via OmniCode AI`);
+        FS.write(State.projectId || 'default', w.path, w.content);
+        ok++;
+      } catch (e) {
+        toast(`❌ ${w.path}: ${e.message}`);
+      }
+    }
+    toast(`✅ ${ok}/${writes.length} fayl GitHub'ga yuklandi`);
+    this.appendBubble('ai', `✅ **${ok} ta fayl GitHub'ga push qilindi**\n${writes.map(w=>`• \`${w.path}\``).join('\n')}\n\nBranch: \`${branch}\``, false);
   },
 
   async resolveRefs(text) {
@@ -1606,6 +1641,87 @@ Bugun nima quramiz?`, false);
   clear() { State.chatHistory = []; this.addWelcome(); },
   onKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } },
   autoGrow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; },
+
+  // Smart pre-fetch: xuddi men kabi — avval o'qiymiz, keyin javob beramiz
+  async _autoFetchGithubContext(msg) {
+    const lower = msg.toLowerCase();
+    const parts = [];
+
+    try {
+      // 1. Repos so'rasa — ro'yxat olamiz
+      const wantsRepos = /repo|loyih|nechta|ko['']rsat|list|bor|sanam|github/i.test(lower);
+      if (wantsRepos && !State.githubCtx) {
+        const [me, repos] = await Promise.all([Git.me(), Git.repos()]);
+        State.githubCtx = `GITHUB: @${me.login} — ${repos.length} ta repo`;
+        const list = repos.slice(0, 30).map(r =>
+          `${r.full_name} | ${r.private?'private':'public'} | ${r.language||'?'} | ⭐${r.stargazers_count} | ${r.updated_at?.slice(0,10)}`
+        ).join('\n');
+        parts.push(`=== GitHub Repolar (@${me.login}) ===\n${list}`);
+      } else if (wantsRepos && State.githubCtx) {
+        // Refresh if needed
+        try {
+          const repos = await Git.repos();
+          const list = repos.slice(0, 30).map(r =>
+            `${r.full_name} | ${r.private?'private':'public'} | ${r.language||'?'} | ⭐${r.stargazers_count} | ${r.updated_at?.slice(0,10)}`
+          ).join('\n');
+          parts.push(`=== GitHub Repolar ===\n${list}`);
+        } catch {}
+      }
+
+      // 2. Fayl nomini aniqlash — .js, .html, .css, .py, .md, .json, .ts
+      const fileMatch = msg.match(/([a-zA-Z0-9_\-/.]+\.(js|ts|html|css|py|json|md|txt|yaml|yml|sh|go|rs|java|cpp|c))/gi);
+      if (fileMatch) {
+        for (const filePath of fileMatch.slice(0, 3)) {
+          // repo/path formatini aniqlash
+          let owner, repo, path;
+          if (filePath.includes('/') && !filePath.startsWith('/')) {
+            const segs = filePath.split('/');
+            if (segs.length >= 3 && State.githubCtx) {
+              owner = segs[0]; repo = segs[1]; path = segs.slice(2).join('/');
+            }
+          }
+          // Default: joriy loyiha github dan olish
+          if (!owner && State.projectId) {
+            const p = PM.get(State.projectId);
+            if (p?.github) { owner = p.github.owner; repo = p.github.repo; path = filePath; }
+          }
+          // Default: xojasoipov-sketch/Useg-kop repo
+          if (!owner) { owner = 'xojasoipov-sketch'; repo = 'Useg-kop'; path = filePath; }
+
+          try {
+            const content = await Git.getFileContent(owner, repo, path, 'claude/shuni-chuntr-va-qil-60bfra')
+              || await Git.getFileContent(owner, repo, path, 'main');
+            if (content) {
+              const ext = path.split('.').pop();
+              const preview = content.length > 4000 ? content.slice(0, 4000) + '\n... (qisqartirildi)' : content;
+              parts.push(`=== ${owner}/${repo}/${path} ===\n\`\`\`${ext}\n${preview}\n\`\`\``);
+              // Cache to VFS
+              if (State.projectId) FS.write(State.projectId, path, content);
+            }
+          } catch {}
+        }
+      }
+
+      // 3. Repo ichidagi fayllar so'rasa
+      const wantsFiles = /fayl|file|papka|folder|tuzilma|struktur|nima bor|ko['']rsat/i.test(lower);
+      const repoMatch = msg.match(/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_.-]+)/);
+      if (wantsFiles && repoMatch) {
+        const [, owner, repo] = repoMatch;
+        try {
+          const items = await Git.getRepoContents(owner, repo, '');
+          if (Array.isArray(items)) {
+            const tree = items.map(i => `${i.type === 'dir' ? '📁' : '📄'} ${i.name}${i.type === 'file' ? ` (${(i.size/1024).toFixed(1)}kb)` : '/'}`).join('\n');
+            parts.push(`=== ${owner}/${repo} fayl tuzilmasi ===\n${tree}`);
+          }
+        } catch {}
+      }
+
+    } catch (e) {
+      console.warn('autoFetch error:', e.message);
+    }
+
+    return parts.join('\n\n');
+  },
 
   toggleTool(el, name) {
     if (State.activeTools.has(name)) {
@@ -1624,24 +1740,49 @@ Bugun nima quramiz?`, false);
     const token = Git.token();
     if (!token) {
       toast('⚠️ GitHub token yo\'q — Sozlamalar → Kod bo\'limiga o\'ting');
+      // Show setup guide in chat
+      this.appendBubble('ai', `🔑 **GitHub token kerak**
+
+1. [github.com/settings/tokens](https://github.com/settings/tokens) ga o'ting
+2. **"Generate new token (classic)"** bosing
+3. \`repo\` huquqini belgilang
+4. Tokenni nusxalang
+5. OmniCode **Sozlamalar → Kod → GitHub Token** ga joylashtiring
+
+Keyin 🐙 GitHub chipni qayta bosing.`);
       return;
     }
-    toast('🐙 GitHub repolar yuklanmoqda...');
+    toast('🐙 GitHub yuklanmoqda...');
     try {
       const [me, repos] = await Promise.all([Git.me(), Git.repos()]);
-      const repoList = repos.slice(0, 20).map(r =>
-        `- ${r.full_name} (${r.private ? 'private' : 'public'}, ⭐${r.stargazers_count}, ${r.language || 'unknown'}, updated: ${r.updated_at?.slice(0,10)})`
+      const repoList = repos.map(r =>
+        `- ${r.full_name} (${r.private?'private':'public'}, ${r.language||'?'}, ⭐${r.stargazers_count}, ${r.updated_at?.slice(0,10)})`
       ).join('\n');
-      State.githubCtx = `GITHUB USER: ${me.login} (${me.name || ''})\nGITHUB REPOS (${repos.length}):\n${repoList}`;
+      State.githubCtx = `GITHUB USER: @${me.login} (${me.name||''})\nREPOS (${repos.length}):\n${repoList}`;
 
-      // Show a system-like message in chat
-      this.appendBubble('ai', `🐙 **GitHub ulandi** — @${me.login}\n\n**${repos.length} ta repo topildi:**\n${repos.slice(0,8).map(r => `• \`${r.name}\` — ${r.description || r.language || 'no desc'}`).join('\n')}${repos.length > 8 ? `\n...va ${repos.length-8} ta boshqa` : ''}\n\nEndi menga repo haqida so'rang, fayllarni ko'ring yoki GitHub orqali kodni push qiling.`);
+      const repoItems = repos.slice(0, 10).map(r =>
+        `• **${r.name}** — ${r.description || r.language || '—'} ${r.private?'🔒':'🌐'}`
+      ).join('\n');
+
+      this.appendBubble('ai', `🐙 **GitHub ulandi — @${me.login}**
+
+**${repos.length} ta repo:**
+${repoItems}${repos.length > 10 ? `\n...va ${repos.length-10} ta boshqa` : ''}
+
+Endi so'rang:
+• *"app.js ni o'qi"* — fayl kontentini olib beraman
+• *"nechta repoyim bor"* — to'liq ro'yxat
+• *"Useg-kop/app.js ni tahrirlash"* — kodni o'qib, o'zgartirib, push qilaman
+• *"yangi repo yarat"* — GitHub'da repo ochaman`);
+
+      // Update chip label
+      const chip = document.getElementById('gh-chip');
+      if (chip) chip.innerHTML = `🐙 @${me.login} <span style="color:var(--green);font-size:10px">●</span>`;
+
     } catch (e) {
       toast('GitHub xatosi: ' + e.message);
       State.activeTools.delete('github');
-      document.querySelectorAll('.tool-chip').forEach(el => {
-        if (el.getAttribute('onclick')?.includes('github')) el.classList.remove('active');
-      });
+      document.getElementById('gh-chip')?.classList.remove('active');
     }
   },
 
