@@ -766,7 +766,7 @@ const AIRouter = {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 8192 }),
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: this._flattenMessages(messages), max_tokens: 8192 }),
     });
     if (!res.ok) throw new Error(`Groq ${res.status}`);
     return (await res.json()).choices[0].message.content;
@@ -838,7 +838,19 @@ const AIRouter = {
     return (await res.json()).choices[0].message.content;
   },
 
+  _flattenMessages(messages) {
+    // Array content bo'lsa (vision) — Pollinations uchun text ga aylantir
+    return messages.map(m => {
+      if (Array.isArray(m.content)) {
+        const text = m.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+        return { ...m, content: text };
+      }
+      return m;
+    });
+  },
+
   async pollinations(messages) {
+    const flat = this._flattenMessages(messages);
     // Try multiple models — Pollinations key talab qilmaydi
     const models = ['openai', 'openai-large', 'mistral', 'claude-hybridspace'];
     let lastErr;
@@ -847,7 +859,7 @@ const AIRouter = {
         const res = await fetch('https://text.pollinations.ai/openai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: mdl, messages, max_tokens: 4096, seed: 42 }),
+          body: JSON.stringify({ model: mdl, messages: flat, max_tokens: 4096, seed: 42 }),
         });
         if (!res.ok) { lastErr = new Error(`Pollinations/${mdl} ${res.status}`); continue; }
         const data = await res.json();
@@ -861,8 +873,9 @@ const AIRouter = {
 
   async pollinationsText(messages) {
     // GET endpoint — hech qanday key yo'q, eng ishonchli
-    const last = messages[messages.length - 1]?.content || '';
-    const sys = messages.find(m => m.role === 'system')?.content || '';
+    const flat = this._flattenMessages(messages);
+    const last = flat[flat.length - 1]?.content || '';
+    const sys = flat.find(m => m.role === 'system')?.content || '';
     const prompt = encodeURIComponent((sys ? sys + '\n\n' : '') + last);
     const res = await fetch(`https://text.pollinations.ai/${prompt}?model=openai&seed=42`);
     if (!res.ok) throw new Error(`Pollinations text ${res.status}`);
@@ -1261,8 +1274,34 @@ AI javobida quyidagi taglar → app.js execute qiladi:
 // ══════════════════════════════════════════════════════════════
 const SelfHeal = {
   async analyze() {
-    const projectId = State.projectId;
-    if (!projectId) { toast('⚠️ Avval loyiha tanlang'); App.nav('projects'); return; }
+    let projectId = State.projectId;
+
+    // Loyiha yo'q bo'lsa — OmniCode o'z kodini tahlil qiladi (GitHub dan)
+    if (!projectId) {
+      App.nav('ai');
+      AI.appendBubble('ai', `🔧 **O'z-o'zini tuzatish** — loyiha topilmadi, OmniCode o'z kodini tekshirmoqda...`, false);
+      // GitHub token bor bo'lsa — omnicode/frontend/app.js ni o'qib tahlil qiladi
+      if (Git.token()) {
+        const taskId2 = Tasks.add('🔧 SelfHeal', 'O\'z kodi tahlil qilinmoqda');
+        try {
+          const code = await Git.getFileContent('xojasoipov-sketch', 'Useg-kop', 'omnicode/frontend/app.js', 'claude/shuni-chuntr-va-qil-60bfra');
+          const msgs = [
+            { role: 'system', content: AI.system() },
+            { role: 'user', content: `OmniCode app.js kodini tahlil qil, xatolarni topib tuzat:\n\`\`\`js\n${(code||'').slice(0,15000)}\n\`\`\`` },
+          ];
+          ActivityBar.start('thinking');
+          const reply = await AIRouter.call(msgs);
+          const el = AI.appendBubble('ai', reply, false);
+          await AI._finalize(reply, el, msgs, document.getElementById('chat-messages'), taskId2);
+        } catch(e) {
+          Tasks.remove(taskId2);
+          AI.appendBubble('ai', `❌ GitHub token kerak: Sozlamalar → GitHub token qo'shing`, false);
+        }
+      } else {
+        AI.appendBubble('ai', `⚠️ Loyiha tanlang yoki GitHub token qo'shing.\n\n**Qanday qilish:**\n1. Sozlamalar → GitHub → token kiriting\n2. Yoki Loyihalar → Yangi loyiha yarating`, false);
+      }
+      return;
+    }
 
     App.nav('ai');
     const taskId = Tasks.add('🔧 O\'z-o\'zini tuzatish', 'Loyiha tahlil qilinmoqda...');
@@ -1721,14 +1760,29 @@ Nima quramiz?`, false);
       '/repos': () => this._loadGithubContext(),
       '/self': () => SelfImport.run(),
       '/omnicode': () => SelfImport.run(),
+      '/push': async () => {
+        const parts = msg.split(' ');
+        await this._autoPushAll(parts[1], parts[2]);
+      },
+      '/agents': () => App.nav('agents'),
+      '/deploy': () => App.nav('deploy'),
+      '/projects': () => App.nav('projects'),
+      '/home': () => App.nav('home'),
+      '/help': () => this.appendBubble('ai', `**OmniCode buyruqlari:**\n\`/fix\` — kodni o'z-o'zini tuzatish\n\`/self\` — o'z kodini import qilish\n\`/sync\` — bulutga saqlash\n\`/pull\` — bulutdan yuklash\n\`/github\` — GitHub repolarni yuklash\n\`/import owner/repo\` — repo import\n\`/push\` — GitHub'ga push\n\`/model\` — model tanlash\n\`/clear\` — chatni tozalash\n\`@fayl.js\` — fayl kontentini qo'shish`, false),
     };
     if (slashCmds[cmd]) { await slashCmds[cmd](); return; }
     if (cmd === '/import') {
       const repoFull = msg.split(' ')[1];
       if (!repoFull?.includes('/')) { toast('Format: /import owner/repo'); return; }
       const [owner, repo] = repoFull.split('/');
-      const pid = State.projectId;
-      if (!pid) { toast('Avval loyiha tanlang'); return; }
+      let pid = State.projectId;
+      if (!pid) {
+        // Avtomatik loyiha yaratamiz
+        const newP = PM.create(repoFull);
+        PM.setCurrent(newP.id);
+        pid = newP.id;
+        toast(`📁 "${repoFull}" loyihasi yaratildi`);
+      }
       toast(`⬇️ ${repoFull} import qilinmoqda...`);
       try {
         await Git.importRepoToProject(owner, repo, pid);
@@ -1736,13 +1790,6 @@ Nima quramiz?`, false);
       } catch (e) { toast('Import xatosi: ' + e.message); }
       return;
     }
-    if (cmd === '/push') {
-      // /push [owner/repo] [branch]
-      const parts = msg.split(' ');
-      await this._autoPushAll(parts[1], parts[2]);
-      return;
-    }
-
     // ── GitHub auto-load ────────────────────────────────────────
     if (State.activeTools.has('github') && !State.githubCtx && Git.token()) {
       await this._loadGithubContext();
@@ -1753,10 +1800,13 @@ Nima quramiz?`, false);
     const visionContent = Attach.buildVisionMessages(msg);
     Attach.clear();
 
-    // ── Smart pre-fetch: biz o'zimiz o'qib, AI ga tayyor beramiz ─
+    // ── Smart pre-fetch: GitHub chip bo'lmasa ham fayl so'rasa o'qiymiz ─
     const resolved = await this.resolveRefs(msg);
     let autoCtx = '';
-    if (State.activeTools.has('github') && Git.token()) {
+    const wantsFile = /\.(js|ts|html|css|py|json|md|txt|yaml|yml|sh|go|rs|java|cpp|c|jsx|tsx|vue)\b/i.test(msg);
+    const wantsGH   = /repo|branch|github|commit|push|pull/i.test(msg);
+    const needsFetch = (wantsFile || wantsGH) && Git.token();
+    if (State.activeTools.has('github') && Git.token() || needsFetch) {
       this._showStatus('🔍 GitHub ma\'lumotlari yuklanmoqda...');
       autoCtx = await this._autoFetchGithubContext(msg);
       this._hideStatus();
