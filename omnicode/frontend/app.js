@@ -3303,17 +3303,17 @@ const Settings = {
   _conn: null,
 
   _SADI_PROVIDERS: [
-    { id: 'groq',      label: 'Groq',        hint: 'groq.com/keys',                   testUrl: 'https://api.groq.com/openai/v1/chat/completions',              testBody: (k) => ({ model:'llama-3.3-70b-versatile', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
-    { id: 'gemini',    label: 'Gemini',       hint: 'aistudio.google.com',              testUrl: null, gemini: true },
-    { id: 'anthropic', label: 'Anthropic',    hint: 'console.anthropic.com',            testUrl: 'https://api.anthropic.com/v1/messages',                        testBody: (k) => ({ model:'claude-3-5-haiku-20241022', max_tokens:5, messages:[{role:'user',content:'Hi'}] }), anthropic: true },
-    { id: 'deepseek',  label: 'DeepSeek',     hint: 'platform.deepseek.com',            testUrl: 'https://api.deepseek.com/v1/chat/completions',                 testBody: (k) => ({ model:'deepseek-chat', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
-    { id: 'mistral',   label: 'Mistral',      hint: 'console.mistral.ai',               testUrl: 'https://api.mistral.ai/v1/chat/completions',                   testBody: (k) => ({ model:'mistral-small-latest', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
-    { id: 'together',  label: 'Together AI',  hint: 'api.together.ai',                  testUrl: 'https://api.together.xyz/v1/chat/completions',                  testBody: (k) => ({ model:'meta-llama/Llama-3-70b-chat-hf', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
-    { id: 'cerebras',  label: 'Cerebras',     hint: 'inference.cerebras.ai',            testUrl: 'https://api.cerebras.ai/v1/chat/completions',                  testBody: (k) => ({ model:'llama-3.3-70b', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
-    { id: 'github',    label: 'GitHub Models', hint: 'github.com/settings/tokens',      testUrl: 'https://models.inference.ai.azure.com/chat/completions',        testBody: (k) => ({ model:'gpt-4o-mini', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
-    { id: 'nvidia',    label: 'NVIDIA NIM',   hint: 'build.nvidia.com',                 testUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',          testBody: (k) => ({ model:'meta/llama-3.1-70b-instruct', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
-    { id: 'hf',        label: 'HuggingFace',  hint: 'huggingface.co/settings/tokens',   testUrl: 'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions', testBody: (k) => ({ model:'Qwen/Qwen2.5-72B-Instruct', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
-    { id: 'or',        label: 'OpenRouter',   hint: 'openrouter.ai/keys',               testUrl: 'https://openrouter.ai/api/v1/chat/completions',                 testBody: (k) => ({ model:'meta-llama/llama-3.1-8b-instruct:free', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'groq',      label: 'Groq',         color: '#f0a500', hint: 'groq.com/keys',                  testUrl: 'https://api.groq.com/openai/v1/chat/completions',              testBody: () => ({ model:'llama-3.3-70b-versatile', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'gemini',    label: 'Gemini',        color: '#4285f4', hint: 'aistudio.google.com',             testUrl: null, gemini: true },
+    { id: 'anthropic', label: 'Anthropic',     color: '#c96442', hint: 'console.anthropic.com',           testUrl: 'https://api.anthropic.com/v1/messages',                        testBody: () => ({ model:'claude-3-5-haiku-20241022', max_tokens:5, messages:[{role:'user',content:'Hi'}] }), anthropic: true },
+    { id: 'deepseek',  label: 'DeepSeek',      color: '#1e88e5', hint: 'platform.deepseek.com',           testUrl: 'https://api.deepseek.com/v1/chat/completions',                 testBody: () => ({ model:'deepseek-chat', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'mistral',   label: 'Mistral',       color: '#ff7043', hint: 'console.mistral.ai',              testUrl: 'https://api.mistral.ai/v1/chat/completions',                   testBody: () => ({ model:'mistral-small-latest', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'together',  label: 'Together',      color: '#ab47bc', hint: 'api.together.ai',                 testUrl: 'https://api.together.xyz/v1/chat/completions',                  testBody: () => ({ model:'meta-llama/Llama-3-70b-chat-hf', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'cerebras',  label: 'Cerebras',      color: '#26a69a', hint: 'inference.cerebras.ai',           testUrl: 'https://api.cerebras.ai/v1/chat/completions',                  testBody: () => ({ model:'llama-3.3-70b', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'github',    label: 'GitHub',        color: '#24292e', hint: 'github.com/settings/tokens',     testUrl: 'https://models.inference.ai.azure.com/chat/completions',        testBody: () => ({ model:'gpt-4o-mini', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'nvidia',    label: 'NVIDIA',        color: '#76b900', hint: 'build.nvidia.com',                testUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',          testBody: () => ({ model:'meta/llama-3.1-70b-instruct', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'hf',        label: 'HuggingFace',   color: '#ff9d00', hint: 'huggingface.co/settings/tokens', testUrl: 'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions', testBody: () => ({ model:'Qwen/Qwen2.5-72B-Instruct', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
+    { id: 'or',        label: 'OpenRouter',    color: '#6c4de4', hint: 'openrouter.ai/keys',              testUrl: 'https://openrouter.ai/api/v1/chat/completions',                 testBody: () => ({ model:'meta-llama/llama-3.1-8b-instruct:free', messages:[{role:'user',content:'Hi'}], max_tokens:5 }), authHeader: true },
   ],
 
   refresh() {
@@ -3363,39 +3363,74 @@ const Settings = {
     const saveBtn = document.getElementById('connector-save-btn');
     if (saveBtn) { saveBtn.textContent = 'Yopish'; saveBtn.onclick = () => Sheet.close('connector-sheet'); }
     Sheet.open('connector-sheet');
+    // Dropdown o'zgarganda hint ko'rsat
+    setTimeout(() => {
+      const sel = document.getElementById('sadi-provider-select');
+      const hint = document.getElementById('sadi-hint');
+      if (sel && hint) {
+        const update = () => { const p = this._SADI_PROVIDERS.find(x => x.id === sel.value); if (p) hint.textContent = p.hint; };
+        sel.onchange = update; update();
+      }
+    }, 50);
   },
 
   _renderSadiUI() {
-    const sections = this._SADI_PROVIDERS.map(p => {
+    // Barcha kalitlar bitta ro'yxatda, har birida provayderning rangli nomi
+    const allRows = [];
+    for (const p of this._SADI_PROVIDERS) {
       const keys = AIRouter._pKeys(p.id);
-      const rows = keys.map((k, i) => `
-        <div id="sadi-row-${p.id}-${i}" style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)">
-          <span style="flex:1;font-size:11px;color:var(--text2);font-family:monospace">...${k.slice(-10)}</span>
-          <button onclick="Settings._sadiTestKey('${p.id}',${i})" id="sadi-test-${p.id}-${i}" style="padding:3px 8px;border-radius:5px;background:rgba(80,160,255,0.15);color:#50a0ff;border:none;font-size:10px;cursor:pointer">Test</button>
-          <button onclick="Settings._sadiRemoveKey('${p.id}',${i})" style="padding:3px 8px;border-radius:5px;background:rgba(255,80,80,0.15);color:#ff5050;border:none;font-size:10px;cursor:pointer">✕</button>
-        </div>`).join('');
-      const statusDot = keys.length > 0 ? '🟢' : '⚪';
-      return `
-        <div style="margin-bottom:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <span style="font-size:12px;font-weight:600;color:var(--text1)">${statusDot} ${p.label}</span>
-            <span style="font-size:10px;color:var(--text3)">${keys.length} ta kalit</span>
-          </div>
-          ${rows || '<div style="font-size:10px;color:var(--text3);padding:2px 0">Kalit yo\'q — quyida qo\'shing</div>'}
-          <div style="display:flex;gap:4px;margin-top:4px">
-            <input id="sadi-inp-${p.id}" placeholder="${p.hint}" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:11px">
-            <button onclick="Settings._sadiAddKey('${p.id}')" style="padding:6px 10px;border-radius:6px;background:rgba(80,200,120,0.2);color:#50c878;border:none;font-size:11px;cursor:pointer">+</button>
-          </div>
-        </div>`;
-    }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0 0 14px">');
+      keys.forEach((k, i) => {
+        allRows.push(`
+          <div id="sadi-row-${p.id}-${i}" style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+            <span style="padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;color:#fff;background:${p.color};white-space:nowrap;min-width:62px;text-align:center">${p.label}</span>
+            <span style="flex:1;font-size:11px;color:var(--text2);font-family:monospace;overflow:hidden;text-overflow:ellipsis">...${k.slice(-12)}</span>
+            <button onclick="Settings._sadiTestKey('${p.id}',${i})" id="sadi-test-${p.id}-${i}" style="padding:3px 9px;border-radius:5px;background:rgba(80,160,255,0.15);color:#50a0ff;border:none;font-size:10px;cursor:pointer;white-space:nowrap">Test</button>
+            <button onclick="Settings._sadiRemoveKey('${p.id}',${i})" style="padding:3px 9px;border-radius:5px;background:rgba(255,80,80,0.12);color:#ff5050;border:none;font-size:10px;cursor:pointer">✕</button>
+          </div>`);
+      });
+    }
 
-    const total = this._SADI_PROVIDERS.reduce((s, p) => s + AIRouter._pKeys(p.id).length, 0);
+    // Qo'shish bo'limi: provayderlar dropdown + input
+    const providerOpts = this._SADI_PROVIDERS.map(p =>
+      '<option value="' + p.id + '">' + p.label + '</option>'
+    ).join('');
+
+    const total = allRows.length;
     return `
       <div style="padding:0 16px 12px">
-        <p style="font-size:12px;color:var(--text3);margin:0 0 14px">Jami <b style="color:var(--text1)">${total} ta</b> kalit. Biri limit bersa avtomatik keyingisiga o'tadi.</p>
-        <button onclick="Settings._sadiTestAll()" style="width:100%;padding:8px;border-radius:8px;background:rgba(80,160,255,0.15);color:#50a0ff;border:1px solid rgba(80,160,255,0.3);font-size:12px;cursor:pointer;margin-bottom:16px">Hammasini tekshirish</button>
-        ${sections}
+        <p style="font-size:12px;color:var(--text3);margin:0 0 10px">Jami <b style="color:var(--text1)">${total} ta kalit</b> — biri limit bersa keyingisiga o'tadi.</p>
+        <button onclick="Settings._sadiTestAll()" style="width:100%;padding:8px;border-radius:8px;background:rgba(80,160,255,0.12);color:#50a0ff;border:1px solid rgba(80,160,255,0.25);font-size:12px;cursor:pointer;margin-bottom:12px">Hammasini tekshirish</button>
+        <div style="margin-bottom:14px">
+          ${allRows.length ? allRows.join('') : '<div style="font-size:11px;color:var(--text3);padding:8px 0;text-align:center">Hali kalit yo\'q — quyida qo\'shing</div>'}
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:12px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">Yangi kalit qo'shish</div>
+          <select id="sadi-provider-select" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:12px;margin-bottom:6px">
+            ${providerOpts}
+          </select>
+          <div style="display:flex;gap:6px">
+            <input id="sadi-new-key-inp" placeholder="API kalitini kiriting..." style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:12px">
+            <button onclick="Settings._sadiAddFromPanel()" style="padding:7px 14px;border-radius:8px;background:rgba(80,200,120,0.2);color:#50c878;border:1px solid rgba(80,200,120,0.3);font-size:12px;cursor:pointer;font-weight:600">+</button>
+          </div>
+          <div id="sadi-hint" style="font-size:10px;color:var(--text3);margin-top:4px"></div>
+        </div>
       </div>`;
+  },
+
+  _sadiAddFromPanel() {
+    const sel = document.getElementById('sadi-provider-select');
+    const inp = document.getElementById('sadi-new-key-inp');
+    if (!sel || !inp) return;
+    const providerId = sel.value;
+    const val = inp.value.trim();
+    if (!val) { toast('Kalit bo\'sh'); return; }
+    const added = AIRouter._pAddKey(providerId, val);
+    if (!added) { toast('Allaqachon qo\'shilgan'); return; }
+    const p = this._SADI_PROVIDERS.find(x => x.id === providerId);
+    toast('✅ ' + (p?.label || providerId) + ' kaliti qo\'shildi');
+    inp.value = '';
+    document.getElementById('connector-fields').innerHTML = this._renderSadiUI();
+    this.refresh();
   },
 
   _sadiAddKey(providerId) {
