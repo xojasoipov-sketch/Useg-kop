@@ -16,7 +16,6 @@
 .nav-icon .ic,.qa-icon .ic,.s-ico .ic,.stat-badge .ic,.step-ico .ic,.ac-icon .ic{width:22px;height:22px}
 .nav-icon{color:var(--text3)}
 .nav-item.active .nav-icon{color:var(--accent)}
-.qa-icon{color:var(--text)}
 .qa-icon.red{color:#ff6b6b}.qa-icon.blue{color:#60a5fa}.qa-icon.purple{color:#c084fc}.qa-icon.green{color:#4ade80}.qa-icon.orange{color:#fb923c}
 .notif-btn .ic{color:var(--text2)}
 .tool-chip .ic{width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:4px}
@@ -27,9 +26,18 @@
 .key-input-row .sh-input{margin:0;flex:1;width:auto}
 .key-test-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 .key-status{font-size:11px;padding:0 20px 10px;color:var(--text3)}
-.key-status.ok{color:var(--green)}
-.key-status.err{color:var(--accent)}
+.key-status.ok{color:var(--green)}.key-status.err{color:var(--accent)}
 .s-ico{color:var(--text)}
+.active-proj-chip{font-size:11px;font-weight:700;padding:3px 10px;background:rgba(255,77,79,0.12);border:1px solid rgba(255,77,79,0.25);color:var(--accent);border-radius:20px;margin-left:8px}
+.apply-btn{display:block;margin-top:12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;width:100%;text-align:left}
+.inline-code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.editor-ta{width:100%;height:100%;background:var(--bg);border:none;outline:none;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.75;padding:14px 16px;resize:none}
+.diff-add{color:var(--green);background:rgba(34,197,94,0.08)}
+.diff-del{color:var(--accent);background:rgba(255,77,79,0.08);text-decoration:line-through}
+.diff-same{color:var(--text3)}
+.diff-body{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;padding:12px;overflow:auto;max-height:50vh;background:var(--bg)}
+.step-dot.gray{background:var(--text3)}
+.qa-grid{grid-template-columns:repeat(4,1fr)!important}
 </style>
 </head>
 <body>
@@ -39,22 +47,22 @@
     <div class="home-top">
       <div class="home-greeting">
         <h2 id="greeting-text">Xayrli kun</h2>
-        <p>SadiPrime miyangiz tayyor.</p>
+        <p>SadiPrime + Supabase cloud tayyor.</p>
       </div>
       <button class="notif-btn" onclick="KeyVault.open()" title="API kalitlar" data-ic="key" data-ic-size="18"></button>
     </div>
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-label">Bugungi foydalanish</div>
-        <div class="stat-row"><div class="stat-value" id="usage-pct">0%</div><div class="stat-badge red" data-ic="zap" data-ic-size="18"></div></div>
+        <div class="stat-label">Kalitlar</div>
+        <div class="stat-row"><div class="stat-value" id="usage-pct">—</div><div class="stat-badge red" data-ic="zap" data-ic-size="18"></div></div>
         <div class="stat-progress"><div class="stat-bar" id="usage-bar" style="width:0%"></div></div>
-        <div class="stat-sub">Barcha kalitlar</div>
+        <div class="stat-sub">OpenRouter · Groq · GitHub</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">SadiPrime</div>
-        <div class="stat-row"><div class="stat-value">ON</div><div class="stat-badge green" data-ic="brain" data-ic-size="18"></div></div>
-        <div class="stat-progress"><div class="stat-bar" style="width:100%;background:var(--green)"></div></div>
-        <div class="stat-sub">Vibe coding</div>
+        <div class="stat-label">Cloud</div>
+        <div class="stat-row"><div class="stat-value" id="sb-status-home">—</div><div class="stat-badge green" data-ic="shield" data-ic-size="18"></div></div>
+        <div class="stat-progress"><div class="stat-bar" id="sb-bar" style="width:0%;background:var(--green)"></div></div>
+        <div class="stat-sub">Supabase</div>
       </div>
     </div>
     <div class="quick-section">
@@ -63,15 +71,15 @@
         <div class="qa-item" onclick="SadiPrime.open()"><div class="qa-icon red" data-ic="brain"></div><span class="qa-label">SadiPrime</span></div>
         <div class="qa-item" onclick="App.nav('ai')"><div class="qa-icon blue" data-ic="chat"></div><span class="qa-label">AI Chat</span></div>
         <div class="qa-item" onclick="App.newProject()"><div class="qa-icon blue" data-ic="plus"></div><span class="qa-label">Yangi loyiha</span></div>
-        <div class="qa-item" onclick="SelfImprove.run()"><div class="qa-icon purple" data-ic="spark"></div><span class="qa-label">Yaxshila</span></div>
+        <div class="qa-item" onclick="SB.syncAll()"><div class="qa-icon green" data-ic="sync"></div><span class="qa-label">Cloud sync</span></div>
         <div class="qa-item" onclick="App.nav('smm')"><div class="qa-icon green" data-ic="phone"></div><span class="qa-label">SMM AI</span></div>
         <div class="qa-item" onclick="App.nav('agents')"><div class="qa-icon purple" data-ic="agents"></div><span class="qa-label">Agentlar</span></div>
         <div class="qa-item" onclick="SelfHeal.analyze()"><div class="qa-icon red" data-ic="heal"></div><span class="qa-label">Self-Heal</span></div>
-        <div class="qa-item" onclick="SelfImport.snapshotApp().then(function(){toast('Snapshot OK')})"><div class="qa-icon green" data-ic="save"></div><span class="qa-label">Snapshot</span></div>
+        <div class="qa-item" onclick="SB.snapshot().then(function(){toast('Cloud snapshot')})"><div class="qa-icon green" data-ic="save"></div><span class="qa-label">Snapshot</span></div>
         <div class="qa-item" onclick="SadiPrime.toggleAutoPush()"><div class="qa-icon orange" data-ic="github"></div><span class="qa-label">Auto-push</span></div>
         <div class="qa-item" onclick="KeyVault.open()"><div class="qa-icon blue" data-ic="key"></div><span class="qa-label">Kalitlar</span></div>
         <div class="qa-item" onclick="App.nav('deploy')"><div class="qa-icon green" data-ic="rocket"></div><span class="qa-label">Deploy</span></div>
-        <div class="qa-item" onclick="SelfImport.restoreSnapshot()"><div class="qa-icon purple" data-ic="restore"></div><span class="qa-label">Restore</span></div>
+        <div class="qa-item" onclick="State.projectId?SB.pushProject(State.projectId).then(function(r){toast(r.files+' fayl cloud')}).catch(function(e){toast(e.message)}):toast('Loyiha tanlang')"><div class="qa-icon purple" data-ic="upload"></div><span class="qa-label">Push cloud</span></div>
       </div>
     </div>
     <div class="recent-section">
@@ -103,12 +111,12 @@
     <div class="tool-chip" onclick="AI.toggleTool(this,'files')"><span data-ic="file" data-ic-size="14"></span> Fayl</div>
     <div class="tool-chip" onclick="SadiPrime.pushIfLinked()"><span data-ic="github" data-ic-size="14"></span> Push</div>
     <div class="tool-chip" onclick="SelfHeal.analyze()"><span data-ic="heal" data-ic-size="14"></span> Tuzat</div>
-    <div class="tool-chip" onclick="SadiPrime.toggleAutoPush()"><span data-ic="sync" data-ic-size="14"></span> Auto</div>
+    <div class="tool-chip" onclick="SB.saveChat().then(function(){toast('Chat cloud')})"><span data-ic="save" data-ic-size="14"></span> Save</div>
     <div class="tool-chip" onclick="App.openModelPicker()"><span data-ic="brain" data-ic-size="14"></span> <span id="model-label">Llama 3.3</span></div>
   </div>
   <div class="chat-bottom">
     <div class="chat-input-wrap">
-      <textarea id="chat-input" class="chat-input" placeholder="SadiPrime: nima quramiz? /push /snapshot" rows="1" onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
+      <textarea id="chat-input" class="chat-input" placeholder="Kod yozing · @fayl · /push /snapshot" rows="1" onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
       <button class="input-btn send" onclick="AI.send()" data-ic="send" data-ic-size="18"></button>
     </div>
   </div>
@@ -140,7 +148,7 @@
     <div class="filter-tabs">
       <div class="filter-tab active" onclick="Projects.filter('all',this)">Barchasi</div>
       <div class="filter-tab" onclick="Projects.filter('recent',this)">So'nggi</div>
-      <div class="filter-tab" onclick="Projects.filter('starred',this)">Yulduzli</div>
+      <div class="filter-tab" onclick="SB.pullProjects().then(function(p){toast((p&&p.length||0)+' cloud loyiha')})">Cloud</div>
     </div>
     <div id="projects-tree"></div>
   </div>
@@ -173,7 +181,7 @@
   <div class="scroll-area">
     <div class="agents-page">
       <div class="master-card" onclick="SadiPrime.open()">
-        <div class="master-left"><h3>SadiPrime</h3><p>Barcha kalitlar · vibe coding · auto-push</p><span class="master-badge">Master</span></div>
+        <div class="master-left"><h3>SadiPrime</h3><p>Premium AI coding · cloud memory · GitHub</p><span class="master-badge">Master</span></div>
         <div class="orb master-orb"></div>
       </div>
       <div class="agents-grid">
@@ -214,18 +222,25 @@
       <div class="s-section-title">API Kalitlar</div>
       <div class="s-group">
         <div class="s-row" onclick="KeyVault.open()"><div class="s-ico red" data-ic="key" data-ic-size="18"></div><span class="s-label">Barcha kalitlar + test</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico red" data-ic="link" data-ic-size="18"></div><span class="s-label">OpenRouter</span><span class="s-connected" id="or-status">—</span><span class="s-chevron">›</span></div>
         <div class="s-row" onclick="KeyVault.open()"><div class="s-ico gray" data-ic="github" data-ic-size="18"></div><span class="s-label">GitHub</span><span id="gh-status" class="s-val">—</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico blue" data-ic="zap" data-ic-size="18"></div><span class="s-label">Groq</span><span id="groq-status" class="s-val">—</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico blue" data-ic="zap" data-ic-size="18"></div><span class="s-label">OpenRouter / Groq</span><span id="or-status" class="s-val">—</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico green" data-ic="shield" data-ic-size="18"></div><span class="s-label">Supabase</span><span id="sb-status" class="s-val">—</span><span class="s-chevron">›</span></div>
+      </div>
+    </div>
+    <div class="s-section">
+      <div class="s-section-title">Cloud (Supabase)</div>
+      <div class="s-group">
+        <div class="s-row" onclick="SB.test().then(function(r){toast(r.msg);document.getElementById('sb-status').textContent=r.ok?'Ulangan':'Xato';document.getElementById('sb-status').className=r.ok?'s-connected':'s-val'})"><div class="s-ico green" data-ic="zap" data-ic-size="18"></div><span class="s-label">Ulanishni tekshirish</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="SB.syncAll()"><div class="s-ico blue" data-ic="sync" data-ic-size="18"></div><span class="s-label">To'liq sync (pull)</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="State.projectId?SB.pushProject(State.projectId).then(function(r){toast('Cloud: '+r.files+' fayl')}).catch(function(e){toast(e.message)}):toast('Loyiha tanlang')"><div class="s-ico purple" data-ic="save" data-ic-size="18"></div><span class="s-label">Loyihani cloudga yuborish</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="SB.snapshot().then(function(){toast('Snapshot OK')}).catch(function(e){toast(e.message)})"><div class="s-ico orange" data-ic="save" data-ic-size="18"></div><span class="s-label">Full snapshot</span><span class="s-chevron">›</span></div>
       </div>
     </div>
     <div class="s-section">
       <div class="s-section-title">SadiPrime</div>
       <div class="s-group">
         <div class="s-row" onclick="SadiPrime.open()"><div class="s-ico purple" data-ic="brain" data-ic-size="18"></div><span class="s-label">SadiPrime ochish</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="SadiPrime.toggleAutoPush()"><div class="s-ico green" data-ic="github" data-ic-size="18"></div><span class="s-label">Auto-push yoq/o'ch</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="SelfImport.snapshotApp().then(function(){toast('Snapshot')})"><div class="s-ico blue" data-ic="save" data-ic-size="18"></div><span class="s-label">Snapshot saqlash</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="SelfImport.restoreSnapshot()"><div class="s-ico orange" data-ic="restore" data-ic-size="18"></div><span class="s-label">Snapshot tiklash</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="SadiPrime.toggleAutoPush()"><div class="s-ico green" data-ic="github" data-ic-size="18"></div><span class="s-label">Auto-push</span><span class="s-chevron">›</span></div>
         <div class="s-row" onclick="App.openModelPicker()"><div class="s-ico green" data-ic="brain" data-ic-size="18"></div><span class="s-label">Model</span><span class="s-val" id="default-model-val">Llama 3.3</span><span class="s-chevron">›</span></div>
       </div>
     </div>
@@ -241,29 +256,11 @@
   <div class="nav-item" id="nav-settings" onclick="App.nav('settings')"><div class="nav-icon" data-ic="settings" data-ic-size="22"></div><div class="nav-label">Sozlama</div></div>
 </nav>
 
-<style>
-.active-proj-chip{font-size:11px;font-weight:700;padding:3px 10px;background:rgba(255,77,79,0.12);border:1px solid rgba(255,77,79,0.25);color:var(--accent);border-radius:20px;margin-left:8px}
-.apply-btn{display:block;margin-top:12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;width:100%;text-align:left}
-.inline-code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px}
-.editor-ta{width:100%;height:100%;background:var(--bg);border:none;outline:none;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.75;padding:14px 16px;resize:none}
-.diff-add{color:var(--green);background:rgba(34,197,94,0.08)}
-.diff-del{color:var(--accent);background:rgba(255,77,79,0.08);text-decoration:line-through}
-.diff-same{color:var(--text3)}
-.diff-body{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;padding:12px;overflow:auto;max-height:50vh;background:var(--bg)}
-.step-dot.gray{background:var(--text3)}
-.qa-grid{grid-template-columns:repeat(4,1fr)!important}
-</style>
-
 <div id="connector-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'connector-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
     <div class="sh-title" id="connector-sheet-title">API Kalitlar</div>
-    <div id="connector-fields">
-      <label class="sh-label">Key 1</label>
-      <input id="conn-key1" class="sh-input" type="password" placeholder="Kalit...">
-      <label class="sh-label">Key 2 (ixtiyoriy)</label>
-      <input id="conn-key2" class="sh-input" type="password" placeholder="Kalit...">
-    </div>
+    <div id="connector-fields"></div>
     <button class="sh-btn" onclick="Settings.save()">Xavfsiz saqlash</button>
   </div>
 </div>
@@ -344,5 +341,22 @@
 <script src="features.js"></script>
 <script src="sadiprime.js"></script>
 <script src="premium.js"></script>
+<script src="supabase.js"></script>
+<script>
+// Premium boot: Supabase status + icons
+setTimeout(async function () {
+  if (typeof renderIcons === 'function') renderIcons();
+  if (typeof KeyVault !== 'undefined') KeyVault.refreshStatusUI();
+  if (typeof SB !== 'undefined' && SB.ready()) {
+    const r = await SB.test();
+    const el = document.getElementById('sb-status');
+    const home = document.getElementById('sb-status-home');
+    const bar = document.getElementById('sb-bar');
+    if (el) { el.textContent = r.ok ? 'Ulangan' : 'Sozla'; el.className = r.ok ? 's-connected' : 's-val'; }
+    if (home) home.textContent = r.ok ? 'ON' : 'OFF';
+    if (bar) bar.style.width = r.ok ? '100%' : '0%';
+  }
+}, 600);
+</script>
 </body>
 </html>
