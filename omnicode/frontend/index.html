@@ -12,6 +12,24 @@
 #activity-bar{display:flex;gap:12px;padding:6px 16px;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
 .act-item{opacity:.9}
 .sp-badge{font-size:10px;font-weight:800;background:linear-gradient(135deg,#ff4d4f,#a855f7);color:#fff;padding:2px 8px;border-radius:8px;margin-left:6px}
+.ic{display:block;flex-shrink:0}
+.nav-icon .ic,.qa-icon .ic,.s-ico .ic,.stat-badge .ic,.step-ico .ic,.ac-icon .ic{width:22px;height:22px}
+.nav-icon{color:var(--text3)}
+.nav-item.active .nav-icon{color:var(--accent)}
+.qa-icon{color:var(--text)}
+.qa-icon.red{color:#ff6b6b}.qa-icon.blue{color:#60a5fa}.qa-icon.purple{color:#c084fc}.qa-icon.green{color:#4ade80}.qa-icon.orange{color:#fb923c}
+.notif-btn .ic{color:var(--text2)}
+.tool-chip .ic{width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:4px}
+.input-btn.send .ic{width:18px;height:18px}
+.chat-menu .ic,.chat-edit .ic{width:20px;height:20px;color:var(--text2)}
+.search-icon .ic{width:16px;height:16px;color:var(--text3)}
+.key-input-row{display:flex;gap:8px;align-items:center;padding:0 20px 4px}
+.key-input-row .sh-input{margin:0;flex:1;width:auto}
+.key-test-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.key-status{font-size:11px;padding:0 20px 10px;color:var(--text3)}
+.key-status.ok{color:var(--green)}
+.key-status.err{color:var(--accent)}
+.s-ico{color:var(--text)}
 </style>
 </head>
 <body>
@@ -23,18 +41,18 @@
         <h2 id="greeting-text">Xayrli kun</h2>
         <p>SadiPrime miyangiz tayyor.</p>
       </div>
-      <button class="notif-btn" onclick="KeysPanel.open()" title="API kalitlar">🔑</button>
+      <button class="notif-btn" onclick="KeyVault.open()" title="API kalitlar" data-ic="key" data-ic-size="18"></button>
     </div>
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-label">Bugungi foydalanish</div>
-        <div class="stat-row"><div class="stat-value" id="usage-pct">0%</div><div class="stat-badge red">📊</div></div>
+        <div class="stat-row"><div class="stat-value" id="usage-pct">0%</div><div class="stat-badge red" data-ic="zap" data-ic-size="18"></div></div>
         <div class="stat-progress"><div class="stat-bar" id="usage-bar" style="width:0%"></div></div>
         <div class="stat-sub">Barcha kalitlar</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">SadiPrime</div>
-        <div class="stat-row"><div class="stat-value">ON</div><div class="stat-badge green">🧠</div></div>
+        <div class="stat-row"><div class="stat-value">ON</div><div class="stat-badge green" data-ic="brain" data-ic-size="18"></div></div>
         <div class="stat-progress"><div class="stat-bar" style="width:100%;background:var(--green)"></div></div>
         <div class="stat-sub">Vibe coding</div>
       </div>
@@ -42,18 +60,18 @@
     <div class="quick-section">
       <div class="section-head" style="margin-bottom:12px"><span class="section-title">Tezkor amallar</span></div>
       <div class="qa-grid">
-        <div class="qa-item" onclick="SadiPrime.open()"><div class="qa-icon red">🧠</div><span class="qa-label">SadiPrime</span></div>
-        <div class="qa-item" onclick="App.nav('ai')"><div class="qa-icon blue">💬</div><span class="qa-label">AI Chat</span></div>
-        <div class="qa-item" onclick="App.newProject()"><div class="qa-icon blue">➕</div><span class="qa-label">Yangi loyiha</span></div>
-        <div class="qa-item" onclick="SelfImprove.run()"><div class="qa-icon purple">🔧</div><span class="qa-label">Yaxshila</span></div>
-        <div class="qa-item" onclick="App.nav('smm')"><div class="qa-icon green">📱</div><span class="qa-label">SMM AI</span></div>
-        <div class="qa-item" onclick="App.nav('agents')"><div class="qa-icon purple">🤖</div><span class="qa-label">Agentlar</span></div>
-        <div class="qa-item" onclick="SelfHeal.analyze()"><div class="qa-icon red">🩺</div><span class="qa-label">Self-Heal</span></div>
-        <div class="qa-item" onclick="SelfImport.snapshotApp().then(()=>toast('Snapshot OK'))"><div class="qa-icon green">💾</div><span class="qa-label">Snapshot</span></div>
-        <div class="qa-item" onclick="SadiPrime.toggleAutoPush()"><div class="qa-icon orange">🐙</div><span class="qa-label">Auto-push</span></div>
-        <div class="qa-item" onclick="KeysPanel.open()"><div class="qa-icon blue">🔑</div><span class="qa-label">Kalitlar</span></div>
-        <div class="qa-item" onclick="App.nav('deploy')"><div class="qa-icon green">🚀</div><span class="qa-label">Deploy</span></div>
-        <div class="qa-item" onclick="SelfImport.restoreSnapshot()"><div class="qa-icon purple">↩️</div><span class="qa-label">Restore</span></div>
+        <div class="qa-item" onclick="SadiPrime.open()"><div class="qa-icon red" data-ic="brain"></div><span class="qa-label">SadiPrime</span></div>
+        <div class="qa-item" onclick="App.nav('ai')"><div class="qa-icon blue" data-ic="chat"></div><span class="qa-label">AI Chat</span></div>
+        <div class="qa-item" onclick="App.newProject()"><div class="qa-icon blue" data-ic="plus"></div><span class="qa-label">Yangi loyiha</span></div>
+        <div class="qa-item" onclick="SelfImprove.run()"><div class="qa-icon purple" data-ic="spark"></div><span class="qa-label">Yaxshila</span></div>
+        <div class="qa-item" onclick="App.nav('smm')"><div class="qa-icon green" data-ic="phone"></div><span class="qa-label">SMM AI</span></div>
+        <div class="qa-item" onclick="App.nav('agents')"><div class="qa-icon purple" data-ic="agents"></div><span class="qa-label">Agentlar</span></div>
+        <div class="qa-item" onclick="SelfHeal.analyze()"><div class="qa-icon red" data-ic="heal"></div><span class="qa-label">Self-Heal</span></div>
+        <div class="qa-item" onclick="SelfImport.snapshotApp().then(function(){toast('Snapshot OK')})"><div class="qa-icon green" data-ic="save"></div><span class="qa-label">Snapshot</span></div>
+        <div class="qa-item" onclick="SadiPrime.toggleAutoPush()"><div class="qa-icon orange" data-ic="github"></div><span class="qa-label">Auto-push</span></div>
+        <div class="qa-item" onclick="KeyVault.open()"><div class="qa-icon blue" data-ic="key"></div><span class="qa-label">Kalitlar</span></div>
+        <div class="qa-item" onclick="App.nav('deploy')"><div class="qa-icon green" data-ic="rocket"></div><span class="qa-label">Deploy</span></div>
+        <div class="qa-item" onclick="SelfImport.restoreSnapshot()"><div class="qa-icon purple" data-ic="restore"></div><span class="qa-label">Restore</span></div>
       </div>
     </div>
     <div class="recent-section">
@@ -66,12 +84,12 @@
 <div id="ai" class="screen">
   <div class="chat-header">
     <div class="chat-header-left">
-      <span class="chat-menu" onclick="App.nav('home')">☰</span>
+      <span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span>
       <span class="chat-title">SadiPrime</span>
       <span class="sp-badge">AI</span>
       <span class="active-proj-chip" id="active-project-label" style="display:none"></span>
     </div>
-    <span class="chat-edit" onclick="AI.clear()">✏️</span>
+    <span class="chat-edit" onclick="AI.clear()" data-ic="edit" data-ic-size="18"></span>
   </div>
   <div id="activity-bar">
     <span class="act-item" style="color:var(--green)">+0</span>
@@ -81,17 +99,17 @@
   </div>
   <div id="chat-messages" class="chat-messages"></div>
   <div class="chat-tools-bar">
-    <div class="tool-chip active" onclick="AI.toggleTool(this,'code')">⚡ Kod</div>
-    <div class="tool-chip" onclick="AI.toggleTool(this,'files')">📁 Fayl</div>
-    <div class="tool-chip" onclick="SadiPrime.pushIfLinked()">🐙 Push</div>
-    <div class="tool-chip" onclick="SelfHeal.analyze()">🩺 Tuzat</div>
-    <div class="tool-chip" onclick="SadiPrime.toggleAutoPush()">🔄 Auto</div>
-    <div class="tool-chip" onclick="App.openModelPicker()">🧠 <span id="model-label">Llama 3.3</span></div>
+    <div class="tool-chip active" onclick="AI.toggleTool(this,'code')"><span data-ic="code" data-ic-size="14"></span> Kod</div>
+    <div class="tool-chip" onclick="AI.toggleTool(this,'files')"><span data-ic="file" data-ic-size="14"></span> Fayl</div>
+    <div class="tool-chip" onclick="SadiPrime.pushIfLinked()"><span data-ic="github" data-ic-size="14"></span> Push</div>
+    <div class="tool-chip" onclick="SelfHeal.analyze()"><span data-ic="heal" data-ic-size="14"></span> Tuzat</div>
+    <div class="tool-chip" onclick="SadiPrime.toggleAutoPush()"><span data-ic="sync" data-ic-size="14"></span> Auto</div>
+    <div class="tool-chip" onclick="App.openModelPicker()"><span data-ic="brain" data-ic-size="14"></span> <span id="model-label">Llama 3.3</span></div>
   </div>
   <div class="chat-bottom">
     <div class="chat-input-wrap">
       <textarea id="chat-input" class="chat-input" placeholder="SadiPrime: nima quramiz? /push /snapshot" rows="1" onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
-      <button class="input-btn send" onclick="AI.send()">▶</button>
+      <button class="input-btn send" onclick="AI.send()" data-ic="send" data-ic-size="18"></button>
     </div>
   </div>
 </div>
@@ -99,7 +117,7 @@
 <div id="smm" class="screen">
   <div class="chat-header">
     <div class="chat-header-left">
-      <span class="chat-menu" onclick="App.nav('home')">☰</span>
+      <span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span>
       <span class="chat-title">SMM AI</span>
     </div>
   </div>
@@ -107,7 +125,7 @@
   <div class="chat-bottom">
     <div class="chat-input-wrap">
       <textarea id="smm-input" class="chat-input" placeholder="Post, caption, hashtag..." rows="1" onkeydown="SMMAI.onKey(event)"></textarea>
-      <button class="input-btn send" onclick="SMMAI.send()">▶</button>
+      <button class="input-btn send" onclick="SMMAI.send()" data-ic="send" data-ic-size="18"></button>
     </div>
   </div>
 </div>
@@ -115,10 +133,10 @@
 <div id="projects" class="screen">
   <div class="chat-header">
     <span class="chat-title">Loyihalar</span>
-    <button class="notif-btn" onclick="Projects.newProject()">+</button>
+    <button class="notif-btn" onclick="Projects.newProject()" data-ic="plus" data-ic-size="18"></button>
   </div>
   <div class="scroll-area">
-    <div class="search-box"><span class="search-icon">🔍</span><input type="text" placeholder="Qidirish..." oninput="Projects.search(this.value)"></div>
+    <div class="search-box"><span class="search-icon" data-ic="search" data-ic-size="16"></span><input type="text" placeholder="Qidirish..." oninput="Projects.search(this.value)"></div>
     <div class="filter-tabs">
       <div class="filter-tab active" onclick="Projects.filter('all',this)">Barchasi</div>
       <div class="filter-tab" onclick="Projects.filter('recent',this)">So'nggi</div>
@@ -133,7 +151,7 @@
     <span class="ed-back" onclick="App.nav('projects')">‹</span>
     <span class="ed-filename" id="ed-filename">nomsiz</span>
     <span class="ed-badge" id="ed-badge">Matn</span>
-    <button onclick="Editor.aiEdit()" style="background:rgba(255,77,79,0.15);border:1px solid rgba(255,77,79,0.3);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer">✨ AI</button>
+    <button onclick="Editor.aiEdit()" style="background:rgba(255,77,79,0.15);border:1px solid rgba(255,77,79,0.3);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer">AI</button>
   </div>
   <div class="code-view" id="code-view" style="padding:0;overflow:auto;flex:1"></div>
   <div class="terminal-panel">
@@ -150,19 +168,19 @@
 <div id="agents" class="screen">
   <div class="chat-header">
     <span class="chat-title">AI Agentlar</span>
-    <span class="chat-edit" onclick="Agents.runMaster()">▶</span>
+    <span class="chat-edit" onclick="Agents.runMaster()" data-ic="send" data-ic-size="18"></span>
   </div>
   <div class="scroll-area">
     <div class="agents-page">
       <div class="master-card" onclick="SadiPrime.open()">
-        <div class="master-left"><h3>SadiPrime</h3><p>Barcha kalitlar · vibe coding · auto-push</p><span class="master-badge">● Master</span></div>
+        <div class="master-left"><h3>SadiPrime</h3><p>Barcha kalitlar · vibe coding · auto-push</p><span class="master-badge">Master</span></div>
         <div class="orb master-orb"></div>
       </div>
       <div class="agents-grid">
-        <div class="agent-card" onclick="Agents.run('planner')"><div class="ac-top"><div class="ac-icon orange">♦</div><div class="ac-sdot green"></div></div><div class="ac-name">Reja</div><div class="ac-desc">Plan→Execute</div><span class="ac-badge active">Skill</span></div>
-        <div class="agent-card" onclick="Agents.run('coder')"><div class="ac-top"><div class="ac-icon green">⟨⟩</div><div class="ac-sdot green"></div></div><div class="ac-name">Coder</div><div class="ac-desc">Kod</div><span class="ac-badge active">Faol</span></div>
-        <div class="agent-card" onclick="Agents.run('reviewer')"><div class="ac-top"><div class="ac-icon red">🔎</div><div class="ac-sdot green"></div></div><div class="ac-name">Review</div><div class="ac-desc">Tekshiruv</div><span class="ac-badge active">Faol</span></div>
-        <div class="agent-card" onclick="SelfHeal.analyze()"><div class="ac-top"><div class="ac-icon yellow">🩺</div><div class="ac-sdot green"></div></div><div class="ac-name">Self-Heal</div><div class="ac-desc">Tuzatish</div><span class="ac-badge active">Faol</span></div>
+        <div class="agent-card" onclick="Agents.run('planner')"><div class="ac-top"><div class="ac-icon orange" data-ic="spark"></div><div class="ac-sdot green"></div></div><div class="ac-name">Reja</div><div class="ac-desc">Plan to Execute</div><span class="ac-badge active">Skill</span></div>
+        <div class="agent-card" onclick="Agents.run('coder')"><div class="ac-top"><div class="ac-icon green" data-ic="code"></div><div class="ac-sdot green"></div></div><div class="ac-name">Coder</div><div class="ac-desc">Kod</div><span class="ac-badge active">Faol</span></div>
+        <div class="agent-card" onclick="Agents.run('reviewer')"><div class="ac-top"><div class="ac-icon red" data-ic="search"></div><div class="ac-sdot green"></div></div><div class="ac-name">Review</div><div class="ac-desc">Tekshiruv</div><span class="ac-badge active">Faol</span></div>
+        <div class="agent-card" onclick="SelfHeal.analyze()"><div class="ac-top"><div class="ac-icon yellow" data-ic="heal"></div><div class="ac-sdot green"></div></div><div class="ac-name">Self-Heal</div><div class="ac-desc">Tuzatish</div><span class="ac-badge active">Faol</span></div>
       </div>
     </div>
   </div>
@@ -173,18 +191,18 @@
   <div class="scroll-area">
     <div class="deploy-hero">
       <div class="orb deploy-orb"></div>
-      <button class="deploy-btn" onclick="Deploy.start()">▶ Hozir joylashtirish</button>
+      <button class="deploy-btn" onclick="Deploy.start()">Hozir joylashtirish</button>
       <div class="deploy-sub-text">GitHub · SadiPrime auto-push</div>
     </div>
     <div class="deploy-status">
-      <div class="step-row"><div class="step-ico blue">🐙</div><div class="step-inf"><div class="step-n">GitHub</div><div class="step-d">Tayyor</div></div><div class="step-dot gray" id="step-github"></div></div>
-      <div class="step-row"><div class="step-ico green">🔨</div><div class="step-inf"><div class="step-n">Build</div><div class="step-d" id="step-build-desc">Kutilmoqda</div></div><div class="step-dot gray" id="step-build"></div></div>
-      <div class="step-row"><div class="step-ico purple">✅</div><div class="step-inf"><div class="step-n">Test</div><div class="step-d">Kutilmoqda</div></div><div class="step-dot gray" id="step-tests"></div></div>
-      <div class="step-row"><div class="step-ico orange">🚀</div><div class="step-inf"><div class="step-n">Deploy</div><div class="step-d" id="step-deploy-desc">Kutilmoqda</div></div><div class="step-dot gray" id="step-deploy"></div></div>
+      <div class="step-row"><div class="step-ico blue" data-ic="github"></div><div class="step-inf"><div class="step-n">GitHub</div><div class="step-d">Tayyor</div></div><div class="step-dot gray" id="step-github"></div></div>
+      <div class="step-row"><div class="step-ico green" data-ic="code"></div><div class="step-inf"><div class="step-n">Build</div><div class="step-d" id="step-build-desc">Kutilmoqda</div></div><div class="step-dot gray" id="step-build"></div></div>
+      <div class="step-row"><div class="step-ico purple" data-ic="check"></div><div class="step-inf"><div class="step-n">Test</div><div class="step-d">Kutilmoqda</div></div><div class="step-dot gray" id="step-tests"></div></div>
+      <div class="step-row"><div class="step-ico orange" data-ic="rocket"></div><div class="step-inf"><div class="step-n">Deploy</div><div class="step-d" id="step-deploy-desc">Kutilmoqda</div></div><div class="step-dot gray" id="step-deploy"></div></div>
     </div>
     <div class="logs-section">
       <div class="section-head"><span class="section-title">Loglar</span></div>
-      <div class="logs-box" id="deploy-logs"><div class="log-line"><span class="log-t">--:--</span><span class="log-m t-dim">› Boshlash uchun tugmani bosing</span></div></div>
+      <div class="logs-box" id="deploy-logs"><div class="log-line"><span class="log-t">--:--</span><span class="log-m t-dim">Boshlash uchun tugmani bosing</span></div></div>
     </div>
   </div>
 </div>
@@ -193,34 +211,34 @@
   <div class="chat-header"><span class="chat-title">Sozlamalar</span></div>
   <div class="scroll-area settings-wrap">
     <div class="s-section">
-      <div class="s-section-title">API Kalitlar + Supabase</div>
+      <div class="s-section-title">API Kalitlar</div>
       <div class="s-group">
-        <div class="s-row" onclick="KeysPanel.open()"><div class="s-ico red">🔑</div><span class="s-label">Barcha kalitlar + SelfImport</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="Settings.openConnector('openrouter')"><div class="s-ico red">🔄</div><span class="s-label">OpenRouter</span><span class="s-connected" id="or-status">—</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="Settings.openConnector('github')"><div class="s-ico gray">🐙</div><span class="s-label">GitHub</span><span id="gh-status" class="s-val">—</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="Settings.openConnector('groq')"><div class="s-ico blue">⚡</div><span class="s-label">Groq</span><span id="groq-status" class="s-val">—</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico red" data-ic="key" data-ic-size="18"></div><span class="s-label">Barcha kalitlar + test</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico red" data-ic="link" data-ic-size="18"></div><span class="s-label">OpenRouter</span><span class="s-connected" id="or-status">—</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico gray" data-ic="github" data-ic-size="18"></div><span class="s-label">GitHub</span><span id="gh-status" class="s-val">—</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="KeyVault.open()"><div class="s-ico blue" data-ic="zap" data-ic-size="18"></div><span class="s-label">Groq</span><span id="groq-status" class="s-val">—</span><span class="s-chevron">›</span></div>
       </div>
     </div>
     <div class="s-section">
       <div class="s-section-title">SadiPrime</div>
       <div class="s-group">
-        <div class="s-row" onclick="SadiPrime.open()"><div class="s-ico purple">🧠</div><span class="s-label">SadiPrime ochish</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="SadiPrime.toggleAutoPush()"><div class="s-ico green">🐙</div><span class="s-label">Auto-push yoq/o'ch</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="SelfImport.snapshotApp().then(()=>toast('Snapshot'))"><div class="s-ico blue">💾</div><span class="s-label">Snapshot saqlash</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="SelfImport.restoreSnapshot()"><div class="s-ico orange">↩️</div><span class="s-label">Snapshot tiklash</span><span class="s-chevron">›</span></div>
-        <div class="s-row" onclick="App.openModelPicker()"><div class="s-ico green">🧠</div><span class="s-label">Model</span><span class="s-val" id="default-model-val">Llama 3.3</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="SadiPrime.open()"><div class="s-ico purple" data-ic="brain" data-ic-size="18"></div><span class="s-label">SadiPrime ochish</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="SadiPrime.toggleAutoPush()"><div class="s-ico green" data-ic="github" data-ic-size="18"></div><span class="s-label">Auto-push yoq/o'ch</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="SelfImport.snapshotApp().then(function(){toast('Snapshot')})"><div class="s-ico blue" data-ic="save" data-ic-size="18"></div><span class="s-label">Snapshot saqlash</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="SelfImport.restoreSnapshot()"><div class="s-ico orange" data-ic="restore" data-ic-size="18"></div><span class="s-label">Snapshot tiklash</span><span class="s-chevron">›</span></div>
+        <div class="s-row" onclick="App.openModelPicker()"><div class="s-ico green" data-ic="brain" data-ic-size="18"></div><span class="s-label">Model</span><span class="s-val" id="default-model-val">Llama 3.3</span><span class="s-chevron">›</span></div>
       </div>
     </div>
   </div>
 </div>
 
 <nav class="nav">
-  <div class="nav-item active" id="nav-home" onclick="App.nav('home')"><div class="nav-icon">🏠</div><div class="nav-label">Bosh</div></div>
-  <div class="nav-item" id="nav-ai" onclick="App.nav('ai')"><div class="nav-icon">🧠</div><div class="nav-label">Prime</div></div>
-  <div class="nav-item" id="nav-smm" onclick="App.nav('smm')"><div class="nav-icon">📱</div><div class="nav-label">SMM</div></div>
-  <div class="nav-item" id="nav-projects" onclick="App.nav('projects')"><div class="nav-icon">📁</div><div class="nav-label">Loyiha</div></div>
-  <div class="nav-item" id="nav-agents" onclick="App.nav('agents')"><div class="nav-icon">🤖</div><div class="nav-label">Agent</div></div>
-  <div class="nav-item" id="nav-settings" onclick="App.nav('settings')"><div class="nav-icon">⚙️</div><div class="nav-label">Sozlama</div></div>
+  <div class="nav-item active" id="nav-home" onclick="App.nav('home')"><div class="nav-icon" data-ic="home" data-ic-size="22"></div><div class="nav-label">Bosh</div></div>
+  <div class="nav-item" id="nav-ai" onclick="App.nav('ai')"><div class="nav-icon" data-ic="brain" data-ic-size="22"></div><div class="nav-label">Prime</div></div>
+  <div class="nav-item" id="nav-smm" onclick="App.nav('smm')"><div class="nav-icon" data-ic="phone" data-ic-size="22"></div><div class="nav-label">SMM</div></div>
+  <div class="nav-item" id="nav-projects" onclick="App.nav('projects')"><div class="nav-icon" data-ic="folder" data-ic-size="22"></div><div class="nav-label">Loyiha</div></div>
+  <div class="nav-item" id="nav-agents" onclick="App.nav('agents')"><div class="nav-icon" data-ic="agents" data-ic-size="22"></div><div class="nav-label">Agent</div></div>
+  <div class="nav-item" id="nav-settings" onclick="App.nav('settings')"><div class="nav-icon" data-ic="settings" data-ic-size="22"></div><div class="nav-label">Sozlama</div></div>
 </nav>
 
 <style>
@@ -256,7 +274,7 @@
     <div class="sh-title" id="agent-sheet-title">Agent</div>
     <label class="sh-label">Vazifa</label>
     <textarea id="agent-task-input" class="sh-input" rows="3" placeholder="Batafsil yozing..." style="resize:none;height:80px"></textarea>
-    <button class="sh-btn" onclick="Agents.executeTask()">▶ Ishga tushirish</button>
+    <button class="sh-btn" onclick="Agents.executeTask()">Ishga tushirish</button>
   </div>
 </div>
 
@@ -300,8 +318,8 @@
     </div>
     <div class="diff-body" id="diff-body"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 20px 8px">
-      <button onclick="DiffView.rejectAll()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:13px;border-radius:10px;font-size:14px;font-weight:700">✕ Rad etish</button>
-      <button onclick="DiffView.applyAll()" style="background:var(--green);border:none;color:#fff;padding:13px;border-radius:10px;font-size:14px;font-weight:800">✓ Qo'llash</button>
+      <button onclick="DiffView.rejectAll()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:13px;border-radius:10px;font-size:14px;font-weight:700">Rad etish</button>
+      <button onclick="DiffView.applyAll()" style="background:var(--green);border:none;color:#fff;padding:13px;border-radius:10px;font-size:14px;font-weight:800">Qo'llash</button>
     </div>
   </div>
 </div>
@@ -316,7 +334,7 @@
     <input id="gh-repo" class="sh-input" placeholder="my-app">
     <label class="sh-label">Branch</label>
     <input id="gh-branch" class="sh-input" value="main">
-    <button class="sh-btn" onclick="Deploy.setupAndPush()">🚀 Push</button>
+    <button class="sh-btn" onclick="Deploy.setupAndPush()">Push</button>
   </div>
 </div>
 
@@ -325,5 +343,6 @@
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="sadiprime.js"></script>
+<script src="premium.js"></script>
 </body>
 </html>
