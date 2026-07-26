@@ -745,23 +745,61 @@ const MODELS = [
 //  AI ROUTER — with fallback chain
 // ══════════════════════════════════════════════════════════════
 const AIRouter = {
-  keys() { const k = Store.get('keys', {}); return [k.or1, k.or2, k.or3, k.or4].filter(Boolean); },
+  // Cheksiz OR kalitlarni qaytaradi — eski or1..or4 + yangi or_keys array
+  keys() {
+    const k = Store.get('keys', {});
+    const legacy = [k.or1, k.or2, k.or3, k.or4].filter(Boolean);
+    const arr = Store.get('or_keys', []).filter(Boolean);
+    // birlashtir, takrorlanmasin
+    const all = [...new Set([...arr, ...legacy])];
+    return all;
+  },
+
+  // Yangi OpenRouter kalitini qo'shish
+  addKey(key) {
+    if (!key || !key.startsWith('sk-or')) return false;
+    const arr = Store.get('or_keys', []);
+    if (arr.includes(key)) return false;
+    arr.push(key);
+    Store.set('or_keys', arr);
+    return true;
+  },
+
+  // Kalitni o'chirish (index bo'yicha)
+  removeKey(index) {
+    const arr = Store.get('or_keys', []);
+    arr.splice(index, 1);
+    Store.set('or_keys', arr);
+  },
 
   // 429 = limit tugadi, 401/403 = kalit noto'g'ri — darhol skip
   _isHardFail(status) { return status === 401 || status === 403; },
   _isRateLimit(status) { return status === 429 || status === 503 || status === 529; },
 
+  // Barcha kalitlarni ketma-ket sinab chiqadi — biri 429 bo'lsa keyingisi
   async openrouter(messages, modelId) {
     const keys = this.keys();
     if (!keys.length) throw new Error('OpenRouter kaliti yo\'q');
-    const key = keys[Math.floor(Math.random() * keys.length)];
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://omnicode.app', 'X-Title': 'OmniCode' },
-      body: JSON.stringify({ model: modelId, messages, max_tokens: 8192 }),
-    });
-    if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-    return (await res.json()).choices[0].message.content;
+    let lastErr;
+    for (const key of keys) {
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://omnicode.app', 'X-Title': 'OmniCode' },
+          body: JSON.stringify({ model: modelId, messages, max_tokens: 8192 }),
+        });
+        if (!res.ok) {
+          lastErr = new Error(`OpenRouter ${res.status}`);
+          if (res.status === 429 || res.status === 402) { console.warn(`OR key ...${key.slice(-6)} limit → keyingisi`); continue; }
+          throw lastErr;
+        }
+        return (await res.json()).choices[0].message.content;
+      } catch (e) {
+        if (/429|402|limit/i.test(e.message)) { lastErr = e; continue; }
+        throw e;
+      }
+    }
+    throw lastErr || new Error('OpenRouter barcha kalitlar tugadi');
   },
 
   async groq(messages) {
@@ -1064,14 +1102,26 @@ const StreamAI = {
   async openrouter(messages, modelId, onChunk) {
     const keys = AIRouter.keys();
     if (!keys.length) throw new Error('OpenRouter kaliti yo\'q');
-    const key = keys[Math.floor(Math.random() * keys.length)];
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://omnicode.app', 'X-Title': 'OmniCode' },
-      body: JSON.stringify({ model: modelId, messages, max_tokens: 8192, stream: true }),
-    });
-    if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-    return this._pipe(res, onChunk);
+    let lastErr;
+    for (const key of keys) {
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://omnicode.app', 'X-Title': 'OmniCode' },
+          body: JSON.stringify({ model: modelId, messages, max_tokens: 8192, stream: true }),
+        });
+        if (!res.ok) {
+          lastErr = new Error(`OpenRouter ${res.status}`);
+          if (res.status === 429 || res.status === 402) { continue; }
+          throw lastErr;
+        }
+        return this._pipe(res, onChunk);
+      } catch (e) {
+        if (/429|402|limit/i.test(e.message)) { lastErr = e; continue; }
+        throw e;
+      }
+    }
+    throw lastErr || new Error('OpenRouter barcha kalitlar tugadi');
   },
 
   async groq(messages, onChunk) {
@@ -1955,13 +2005,38 @@ Nima quramiz?`, false);
               style="padding:7px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-size:12px;cursor:pointer">Saqlash</button>
           </div>
         </div>
-        ${hasAny ? `<div style="color:#3fb950;font-size:12px;text-align:center">✅ ${[keys.cerebras&&'Cerebras',keys.groq&&'Groq',keys.or1&&'OpenRouter',keys.anthropic&&'Anthropic',keys.gemini&&'Gemini'].filter(Boolean).join(', ')} ulangan</div>` : ''}
+        <div style="background:var(--bg2);border-radius:10px;padding:10px 12px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">🔁 OpenRouter (cheksiz kalit, ko'p model)</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px">openrouter.ai/keys → "Create Key" — nechtasini istasangiz qo'shing</div>
+          <div style="display:flex;gap:6px">
+            <input id="quick-or-key" placeholder="sk-or-v1-..."
+              style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:12px">
+            <button onclick="AI._saveORKeyQuick()"
+              style="padding:7px 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-size:12px;cursor:pointer">Qo'shish</button>
+          </div>
+          <div id="or-key-list-setup" style="margin-top:6px;font-size:11px;color:#3fb950"></div>
+        </div>
+        ${hasAny || AIRouter.keys().length ? `<div style="color:#3fb950;font-size:12px;text-align:center">✅ ${[keys.cerebras&&'Cerebras',keys.groq&&'Groq',AIRouter.keys().length&&\`OpenRouter(${AIRouter.keys().length})\`,keys.anthropic&&'Anthropic',keys.gemini&&'Gemini'].filter(Boolean).join(', ')} ulangan</div>` : ''}
         <button onclick="App.nav('settings')"
           style="padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer">
           Barcha kalitlar → Sozlamalar
         </button>
       </div>`;
     document.getElementById('chat-messages').scrollTop = 9999;
+  },
+
+  _saveORKeyQuick() {
+    const inp = document.getElementById('quick-or-key');
+    const val = inp?.value?.trim();
+    if (!val) { toast('Kalit bo\'sh'); return; }
+    if (!val.startsWith('sk-or')) { toast('Kalit sk-or-... bilan boshlanishi kerak'); return; }
+    const added = AIRouter.addKey(val);
+    if (!added) { toast('Bu kalit allaqachon qo\'shilgan'); return; }
+    if (inp) inp.value = '';
+    const count = AIRouter.keys().length;
+    toast(`✅ OpenRouter kaliti qo'shildi (jami: ${count} ta)`);
+    const listEl = document.getElementById('or-key-list-setup');
+    if (listEl) listEl.textContent = `✅ ${count} ta kalit ulangan`;
   },
 
   _saveQuickKey(provider, inputId) {
@@ -3054,8 +3129,11 @@ const Settings = {
 
   refresh() {
     const keys = Store.get('keys', {});
+    const orKeys = AIRouter.keys();
+    const orCount = document.getElementById('or-key-count');
+    if (orCount) orCount.textContent = orKeys.length > 0 ? `(${orKeys.length} ta kalit)` : '';
     const statuses = {
-      'or-status': !!keys.or1, 'gh-status': !!keys.github, 'groq-status': !!keys.groq,
+      'or-status': orKeys.length > 0, 'gh-status': !!keys.github, 'groq-status': !!keys.groq,
       'anthropic-status': !!keys.anthropic, 'gemini-status': !!keys.gemini,
       'deepseek-status': !!keys.deepseek, 'mistral-status': !!keys.mistral,
       'together-status': !!keys.together, 'hf-status': !!keys.hf, 'nvidia-status': !!keys.nvidia,
@@ -3087,12 +3165,67 @@ const Settings = {
     if (content) content.classList.add('active');
   },
 
+  openORKeys() {
+    const el = document.getElementById('connector-sheet-title');
+    if (el) el.textContent = 'OpenRouter Kalitlari';
+    const fields = document.getElementById('connector-fields');
+    if (fields) fields.innerHTML = this._renderORKeysUI();
+    // Save tugmasi almashtir
+    const saveBtn = document.getElementById('connector-save-btn');
+    if (saveBtn) { saveBtn.textContent = 'Qo\'shish'; saveBtn.onclick = () => Settings._addORKeyFromInput(); }
+    Sheet.open('connector-sheet');
+  },
+
+  _renderORKeysUI() {
+    const keys = AIRouter.keys();
+    const rows = keys.map((k, i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="flex:1;font-size:12px;color:var(--text2);font-family:monospace">sk-or-...${k.slice(-8)}</span>
+        <button onclick="Settings._removeORKey(${i})" style="padding:4px 10px;border-radius:6px;background:rgba(255,80,80,0.15);color:#ff5050;border:none;font-size:11px;cursor:pointer">O'chirish</button>
+      </div>`).join('');
+    return `
+      <div style="padding:0 20px 12px">
+        <p style="font-size:12px;color:var(--text3);margin:0 0 12px">Xohlagan miqdorda kalit qo'shing.<br>Biri 429 bo'lsa avtomatik keyingisiga o'tadi.</p>
+        ${rows || '<p style="font-size:12px;color:var(--text3)">Hali kalit yo\'q</p>'}
+        <div style="margin-top:12px;display:flex;gap:6px">
+          <input id="or-new-key" placeholder="sk-or-v1-..."
+            style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:12px">
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">openrouter.ai/keys → "Create Key"</div>
+      </div>`;
+  },
+
+  _addORKeyFromInput() {
+    const inp = document.getElementById('or-new-key');
+    const val = inp?.value?.trim();
+    if (!val) { toast('Kalit bo\'sh'); return; }
+    if (!val.startsWith('sk-or')) { toast('Kalit sk-or-... bilan boshlanishi kerak'); return; }
+    const added = AIRouter.addKey(val);
+    if (!added) { toast('Bu kalit allaqachon qo\'shilgan'); return; }
+    toast(`✅ Kalit qo\'shildi (jami: ${AIRouter.keys().length} ta)`);
+    if (inp) inp.value = '';
+    const fields = document.getElementById('connector-fields');
+    if (fields) fields.innerHTML = this._renderORKeysUI();
+    this.refresh();
+  },
+
+  _removeORKey(index) {
+    AIRouter.removeKey(index);
+    toast('Kalit o\'chirildi');
+    const fields = document.getElementById('connector-fields');
+    if (fields) fields.innerHTML = this._renderORKeysUI();
+    this.refresh();
+  },
+
   openConnector(name) {
     this._conn = name;
     const cfg = PROVIDER_CONFIGS[name];
     if (!cfg) return;
     const keys = Store.get('keys', {});
     document.getElementById('connector-sheet-title').textContent = cfg.title;
+    // Save tugmasini standart holatiga qaytaramiz
+    const saveBtn = document.getElementById('connector-save-btn');
+    if (saveBtn) { saveBtn.textContent = '🔒 Xavfsiz saqlash'; saveBtn.onclick = () => Settings.save(); }
     const fields = document.getElementById('connector-fields');
     if (fields) {
       fields.innerHTML = cfg.fields.map(f => `

@@ -572,10 +572,16 @@
       <div class="s-section">
         <div class="s-section-title">AI API Kalitlar</div>
         <div class="s-group">
-          <div class="s-row" onclick="Settings.openConnector('openrouter')">
+          <div class="s-row" onclick="Settings.openORKeys()">
             <div class="s-ico red"><svg width="14" height="14"><use href="#ic-refresh"/></svg></div>
-            <span class="s-label">OpenRouter</span>
+            <span class="s-label">OpenRouter <span style="font-size:10px;color:var(--text3)" id="or-key-count"></span></span>
             <span id="or-status" class="s-val">Sozlanmagan</span>
+            <span class="s-chevron">›</span>
+          </div>
+          <div class="s-row" onclick="Settings.openConnector('cerebras')">
+            <div class="s-ico purple"><svg width="14" height="14"><use href="#ic-cpu"/></svg></div>
+            <span class="s-label">Cerebras (2000 tok/s)</span>
+            <span id="cerebras-status" class="s-val">Sozlanmagan</span>
             <span class="s-chevron">›</span>
           </div>
           <div class="s-row" onclick="Settings.openConnector('anthropic')">
@@ -934,7 +940,7 @@
     <div class="sh-handle"></div>
     <div class="sh-title" id="connector-sheet-title">API Kalitlar</div>
     <div id="connector-fields"></div>
-    <button class="sh-btn" onclick="Settings.save()">
+    <button id="connector-save-btn" class="sh-btn" onclick="Settings.save()">
       <svg width="14" height="14" style="margin-right:5px"><use href="#ic-lock"/></svg>
       Xavfsiz saqlash
     </button>
