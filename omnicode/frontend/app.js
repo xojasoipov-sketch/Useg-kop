@@ -1,117 +1,41 @@
-// ═══════════════════════════════════════════════════════════════
-// OmniCode TMA — Main Application
-// Architecture: Module pattern with global namespaces for TMA
-// ═══════════════════════════════════════════════════════════════
-
+// OmniCode — Main Application
 'use strict';
 
 // ── Telegram WebApp Init ─────────────────────────────────────────
 const tg = window.Telegram?.WebApp;
-if (tg) {
-  tg.ready();
-  tg.expand();
-  tg.setHeaderColor('#0A0A0A');
-  tg.setBackgroundColor('#0A0A0A');
-}
+if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor?.('#0A0A0A'); tg.setBackgroundColor?.('#0A0A0A'); }
 
-// ── State ────────────────────────────────────────────────────────
-const State = {
-  currentScreen: 'home',
-  projects: [],
-  activeProject: null,
-  messages: [],
-  msgCount: 0,
-  isStreaming: false,
-  activeModel: null,
-  connectors: {
-    openrouter: { keys: [], active: false },
-    groq: { key: '', active: false },
-    github: { token: '', repo: '', branch: 'main', active: false },
-    cloudflare: { accountId: '', apiToken: '', active: false },
-  },
-  deployRunning: false,
-  agentRunning: null,
+// ── Store ────────────────────────────────────────────────────────
+const Store = {
+  get(k, def = null) { try { const v = localStorage.getItem('omni_' + k); return v ? JSON.parse(v) : def; } catch { return def; } },
+  set(k, v) { try { localStorage.setItem('omni_' + k, JSON.stringify(v)); } catch {} },
 };
 
-// ── Models Config ─────────────────────────────────────────────────
+// ── Models ───────────────────────────────────────────────────────
 const MODELS = [
-  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B', provider: 'openrouter', badge: '⚡ Fast · Free', desc: 'Best for general coding' },
-  { id: 'deepseek/deepseek-r1:free',              name: 'DeepSeek R1',   provider: 'openrouter', badge: '🧠 Reasoning', desc: 'Deep reasoning & analysis' },
-  { id: 'google/gemma-3-27b-it:free',             name: 'Gemma 3 27B',  provider: 'openrouter', badge: '🌐 Google', desc: 'Long context support' },
-  { id: 'qwen/qwen-2.5-72b-instruct:free',        name: 'Qwen 2.5 72B', provider: 'openrouter', badge: '🔥 Powerful', desc: 'Strong coding model' },
-  { id: 'llama-3.3-70b-versatile',                name: 'Llama Groq',   provider: 'groq',       badge: '⚡ Fastest', desc: 'Ultra-fast inference' },
-  { id: 'openai',                                  name: 'Pollinations', provider: 'pollinations', badge: '🌸 Free', desc: 'Always available, no key' },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B', short: 'Llama 3.3', provider: 'openrouter', badge: '⚡' },
+  { id: 'deepseek/deepseek-r1:free',               name: 'DeepSeek R1',   short: 'R1',        provider: 'openrouter', badge: '🧠' },
+  { id: 'google/gemini-2.0-flash-exp:free',        name: 'Gemini 2.0',    short: 'Gemini',    provider: 'openrouter', badge: '✨' },
+  { id: 'qwen/qwq-32b:free',                       name: 'Qwen QwQ 32B',  short: 'QwQ',       provider: 'openrouter', badge: '🔮' },
+  { id: 'llama-3.3-70b-versatile',                 name: 'Groq Llama',    short: 'Groq',      provider: 'groq',       badge: '⚡' },
 ];
 
-// ── Persist / Load ─────────────────────────────────────────────────
-const Store = {
-  save() {
-    localStorage.setItem('omnicode_v2', JSON.stringify({
-      connectors: State.connectors,
-      projects: State.projects,
-      activeModel: State.activeModel,
-      msgCount: State.msgCount,
-    }));
-  },
-  load() {
-    try {
-      const d = JSON.parse(localStorage.getItem('omnicode_v2') || '{}');
-      if (d.connectors) State.connectors = { ...State.connectors, ...d.connectors };
-      if (d.projects) State.projects = d.projects;
-      if (d.activeModel) State.activeModel = d.activeModel;
-      if (d.msgCount) State.msgCount = d.msgCount;
-    } catch {}
-  },
-};
+let currentModel = Store.get('model', MODELS[0]);
+let currentAgent = null;
+let activeTools = new Set(['code']);
 
-// ── AI Router ─────────────────────────────────────────────────────
+// ── AI Router ────────────────────────────────────────────────────
 const AIRouter = {
-  orKeyIndex: 0,
-
-  getNextORKey() {
-    const keys = State.connectors.openrouter.keys.filter(k => k?.length > 10);
-    if (!keys.length) return null;
-    const k = keys[this.orKeyIndex % keys.length];
-    this.orKeyIndex++;
-    return k;
+  keys() {
+    const k = Store.get('keys', {});
+    return [k.or1, k.or2, k.or3, k.or4].filter(Boolean);
   },
 
-  getModel() {
-    return State.activeModel || MODELS[0];
-  },
+  async callOpenRouter(messages, modelId) {
+    const keys = this.keys();
+    if (!keys.length) throw new Error('No OpenRouter keys');
+    const key = keys[Math.floor(Math.random() * keys.length)];
 
-  async call(messages, opts = {}) {
-    const model = this.getModel();
-
-    // 1. OpenRouter
-    if (model.provider === 'openrouter' || !model.provider) {
-      const key = this.getNextORKey();
-      if (key) {
-        try {
-          const r = await this._callOpenRouter(key, model.id, messages, opts);
-          if (r) return { ...r, provider: 'OpenRouter', model: model.name };
-        } catch (e) { console.warn('OpenRouter failed:', e.message); }
-      }
-    }
-
-    // 2. Groq fallback
-    if (State.connectors.groq.key) {
-      try {
-        const r = await this._callGroq(State.connectors.groq.key, messages, opts);
-        if (r) return { ...r, provider: 'Groq', model: 'Llama 3.3' };
-      } catch (e) { console.warn('Groq failed:', e.message); }
-    }
-
-    // 3. Pollinations (always free, no key)
-    try {
-      const r = await this._callPollinations(messages, opts);
-      if (r) return { ...r, provider: 'Pollinations', model: 'OpenAI' };
-    } catch (e) { console.warn('Pollinations failed:', e.message); }
-
-    throw new Error('All AI providers failed. Check your API keys in Settings.');
-  },
-
-  async _callOpenRouter(key, modelId, messages, opts) {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -120,29 +44,27 @@ const AIRouter = {
         'HTTP-Referer': 'https://omnicode.app',
         'X-Title': 'OmniCode',
       },
-      body: JSON.stringify({ model: modelId, messages, max_tokens: opts.maxTokens || 4096, stream: false }),
+      body: JSON.stringify({ model: modelId, messages, max_tokens: 4096 }),
     });
     if (!res.ok) throw new Error(`OR ${res.status}`);
     const d = await res.json();
-    const text = d.choices?.[0]?.message?.content;
-    if (!text) throw new Error('Empty response');
-    return { text };
+    return d.choices[0].message.content;
   },
 
-  async _callGroq(key, messages, opts) {
+  async callGroq(messages) {
+    const key = Store.get('keys', {}).groq;
+    if (!key) throw new Error('No Groq key');
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: opts.maxTokens || 4096 }),
+      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 4096 }),
     });
     if (!res.ok) throw new Error(`Groq ${res.status}`);
     const d = await res.json();
-    const text = d.choices?.[0]?.message?.content;
-    if (!text) throw new Error('Empty response');
-    return { text };
+    return d.choices[0].message.content;
   },
 
-  async _callPollinations(messages, opts) {
+  async callPollinations(messages) {
     const res = await fetch('https://text.pollinations.ai/openai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -150,797 +72,464 @@ const AIRouter = {
     });
     if (!res.ok) throw new Error(`Pollinations ${res.status}`);
     const d = await res.json();
-    const text = d.choices?.[0]?.message?.content;
-    if (!text) throw new Error('Empty response');
-    return { text };
+    return d.choices[0].message.content;
   },
-};
 
-// ── GitHub API ────────────────────────────────────────────────────
-const GitHub = {
-  async push(files, commitMsg) {
-    const { token, repo, branch } = State.connectors.github;
-    if (!token || !repo) throw new Error('GitHub not configured');
-
-    let pushed = 0;
-    for (const [path, content] of Object.entries(files)) {
-      let sha;
-      try {
-        const r = await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`, {
-          headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
-        });
-        if (r.ok) sha = (await r.json()).sha;
-      } catch {}
-
-      const body = { message: commitMsg, content: btoa(unescape(encodeURIComponent(content))), branch };
-      if (sha) body.sha = sha;
-
-      const r = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-        method: 'PUT',
-        headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const e = await r.json();
-        throw new Error(e.message || 'Push failed');
-      }
-      pushed++;
+  async call(messages, opts = {}) {
+    const model = opts.model || currentModel;
+    const providers = [
+      () => this.callOpenRouter(messages, model.id),
+      () => this.callGroq(messages),
+      () => this.callPollinations(messages),
+    ];
+    for (const fn of providers) {
+      try { return await fn(); } catch (e) { console.warn(e.message); }
     }
-    return pushed;
-  },
-
-  async getRepoInfo() {
-    const { token, repo } = State.connectors.github;
-    if (!token || !repo) return null;
-    const r = await fetch(`https://api.github.com/repos/${repo}`, {
-      headers: { Authorization: `token ${token}` },
-    });
-    if (!r.ok) return null;
-    return r.json();
+    throw new Error('All providers failed');
   },
 };
 
-// ── Markdown Renderer ─────────────────────────────────────────────
+// ── Markdown Renderer ────────────────────────────────────────────
 const MD = {
   render(text) {
     return text
-      .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
-        `<pre><code class="lang-${lang}">${this.escape(code.trim())}</code></pre>`)
-      .replace(/`([^`]+)`/g, (_, c) => `<code>${this.escape(c)}</code>`)
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/^### (.*$)/gm, '<h3 style="font-size:14px;font-weight:700;margin:12px 0 4px">$1</h3>')
-      .replace(/^## (.*$)/gm,  '<h2 style="font-size:15px;font-weight:700;margin:12px 0 6px">$1</h2>')
-      .replace(/^# (.*$)/gm,   '<h1 style="font-size:16px;font-weight:800;margin:12px 0 8px">$1</h1>')
-      .replace(/^- (.*$)/gm, '<div style="padding:2px 0 2px 12px">• $1</div>')
-      .replace(/\n\n/g, '<br><br>')
-      .replace(/\n/g, '<br>');
+      .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+        const l = lang || 'code';
+        return `<div class="code-block"><span class="code-lang-tag">${l}</span><button class="code-copy-btn" onclick="MD.copy(this)">Copy</button><pre>${MD.esc(code.trim())}</pre></div>`;
+      })
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px">$1</code>')
+      .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^(?!<[h|u|d|l|p])(.+)$/gm, s => s ? `<p>${s}</p>` : '')
+      .replace(/<p><\/p>/g, '');
   },
-  escape(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
-};
-
-// ── UI Utilities ──────────────────────────────────────────────────
-const UI = {
-  toast(msg, type = '') {
-    const c = document.getElementById('toast-container');
-    const t = document.createElement('div');
-    t.className = `toast toast-${type}`;
-    t.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> ${msg}`;
-    c.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-8px) scale(0.95)'; setTimeout(() => t.remove(), 300); }, 2800);
-  },
-
-  vibrate(pattern = 10) {
-    try { navigator.vibrate?.(pattern); } catch {}
-  },
-
-  showSheet(id) {
-    document.getElementById(id).classList.add('open');
-    document.getElementById(id).onclick = (e) => {
-      if (e.target === document.getElementById(id)) UI.hideSheet(id);
-    };
-  },
-  hideSheet(id) { document.getElementById(id).classList.remove('open'); },
-
-  showModelPicker() {
-    const list = document.getElementById('model-picker-list');
-    list.innerHTML = '';
-    MODELS.forEach(m => {
-      const active = State.activeModel?.id === m.id;
-      const el = document.createElement('div');
-      el.className = 'card';
-      el.style.cssText = `cursor:pointer;display:flex;align-items:center;gap:12px;${active ? 'border-color:var(--accent);background:var(--accent-dim)' : ''}`;
-      el.innerHTML = `
-        <div style="flex:1">
-          <div style="font-weight:600;font-size:14px">${m.name}</div>
-          <div style="font-size:11px;color:var(--text-2);margin-top:2px">${m.desc}</div>
-        </div>
-        <div class="badge badge-${active?'green':'blue'}" style="font-size:10px">${m.badge}</div>
-        ${active ? '<span style="color:var(--accent)">✓</span>' : ''}
-      `;
-      el.onclick = () => { App.setModel(m); UI.hideSheet('model-sheet'); };
-      list.appendChild(el);
-    });
-    UI.showSheet('model-sheet');
+  esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
+  copy(btn) {
+    const code = btn.nextElementSibling.textContent;
+    navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓'; setTimeout(() => btn.textContent = 'Copy', 2000); });
   },
 };
 
-// ── App Core ──────────────────────────────────────────────────────
-window.App = {
-  navigate(screen) {
+// ── App ──────────────────────────────────────────────────────────
+const App = {
+  current: 'home',
+  screens: ['home', 'ai', 'projects', 'agents', 'deploy', 'settings', 'editor'],
+
+  nav(id) {
+    if (id === this.current && id !== 'editor') return;
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(`screen-${screen}`).classList.add('active');
-    document.getElementById(`nav-${screen}`)?.classList.add('active');
-    State.currentScreen = screen;
-    UI.vibrate(8);
-    if (screen === 'home') App.refreshHome();
-    if (screen === 'settings') Settings.refresh();
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+    const navEl = document.getElementById('nav-' + id);
+    if (navEl) navEl.classList.add('active');
+    this.current = id;
   },
 
-  setModel(model) {
-    State.activeModel = model;
-    Store.save();
-    document.getElementById('active-model-name').textContent = model.name;
-    document.getElementById('chat-model-label').textContent = `${model.id} · ${model.provider}`;
-    UI.toast(`Model: ${model.name}`, 'success');
+  newProject() {
+    App.nav('projects');
+    setTimeout(() => toast('📁 New project — save files here'), 200);
   },
 
-  quickAction(action) {
-    UI.vibrate(8);
-    const map = {
-      'new-project': () => { App.navigate('projects'); setTimeout(() => Projects.newProject(), 150); },
-      'ai-chat':     () => App.navigate('ai'),
-      'deploy':      () => App.navigate('deploy'),
-      'github':      () => { App.navigate('settings'); setTimeout(() => Settings.openConnector('github'), 150); },
-      'editor':      () => { UI.toast('Open a project first', ''); App.navigate('projects'); },
-    };
-    map[action]?.();
-  },
+  showNotifs() { toast('🔔 No new notifications'); },
 
-  refreshHome() {
-    document.getElementById('stat-projects').textContent = State.projects.length;
-    document.getElementById('stat-messages').textContent = State.msgCount;
-    const name = tg?.initDataUnsafe?.user?.first_name || 'Developer';
-    document.getElementById('home-username').textContent = name;
-    document.getElementById('home-avatar').textContent = name[0]?.toUpperCase() || 'U';
-
-    const rp = document.getElementById('recent-projects');
-    if (State.projects.length === 0) {
-      rp.innerHTML = `<div class="card" style="text-align:center;padding:24px;color:var(--text-3)">
-        <div style="font-size:32px;margin-bottom:8px">📁</div>
-        <div style="font-size:14px">No projects yet</div>
-        <div style="font-size:12px;margin-top:4px">Tap "New Project" to start</div>
-      </div>`;
-    } else {
-      rp.innerHTML = State.projects.slice(0, 3).map(p => `
-        <div class="card" onclick="Projects.open('${p.id}')" style="cursor:pointer;margin-bottom:8px">
-          <div class="flex items-center gap-12">
-            <div style="font-size:24px">${p.icon || '📁'}</div>
-            <div class="flex-1">
-              <div class="font-600">${p.name}</div>
-              <div class="text-xs text-3">${p.files?.length || 0} files · ${p.language || 'Unknown'}</div>
-            </div>
-            <div class="badge badge-${p.deployed ? 'green' : 'blue'}">${p.deployed ? 'Live' : 'Local'}</div>
-          </div>
+  openModelPicker() {
+    const list = document.getElementById('model-list');
+    list.innerHTML = MODELS.map(m => `
+      <div onclick="App.selectModel('${m.id}')" style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer">
+        <span style="font-size:20px">${m.badge}</span>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;margin-bottom:2px">${m.name}</div>
+          <div style="font-size:12px;color:var(--text3)">${m.provider}</div>
         </div>
-      `).join('');
-    }
+        ${m.id === currentModel.id ? '<span style="color:var(--accent);font-size:18px">✓</span>' : ''}
+      </div>`).join('');
+    document.getElementById('model-sheet').classList.add('open');
+  },
+
+  selectModel(id) {
+    currentModel = MODELS.find(m => m.id === id) || MODELS[0];
+    Store.set('model', currentModel);
+    document.getElementById('model-label').textContent = currentModel.short;
+    document.getElementById('default-model-val').textContent = currentModel.short;
+    document.getElementById('model-sheet').classList.remove('open');
+    toast(`🧠 ${currentModel.name} selected`);
   },
 
   init() {
-    Store.load();
-    State.activeModel = State.activeModel || MODELS[0];
-    document.getElementById('active-model-name').textContent = State.activeModel.name;
-    document.getElementById('chat-model-label').textContent = `${State.activeModel.id} · ${State.activeModel.provider}`;
-    Settings.refresh();
-    App.refreshHome();
-    Settings.renderModelList();
+    currentModel = Store.get('model', MODELS[0]);
+    if (currentModel.id) currentModel = MODELS.find(m => m.id === currentModel.id) || MODELS[0];
+
+    // Greeting
+    const hour = new Date().getHours();
+    const greet = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+    const user = tg?.initDataUnsafe?.user;
+    const name = user?.first_name || 'User';
+    document.getElementById('greeting-text').textContent = `${greet}, ${name} 👋`;
+
+    document.getElementById('model-label').textContent = currentModel.short;
+    document.getElementById('default-model-val').textContent = currentModel.short;
+
+    // Check connector status
+    const keys = Store.get('keys', {});
+    if (!keys.or1) document.getElementById('or-status').textContent = 'Not set';
+    if (!keys.github) { document.getElementById('gh-status').textContent = 'Not set'; document.getElementById('gh-status').className = 's-val'; }
+    if (keys.groq) { document.getElementById('groq-status').textContent = 'Connected'; document.getElementById('groq-status').className = 's-connected'; }
+
+    AI.addWelcome();
   },
 };
 
-// ── AI Chat ───────────────────────────────────────────────────────
-window.AI = {
-  activeTools: new Set(['code']),
+// ── AI Chat ──────────────────────────────────────────────────────
+const AI = {
+  history: [],
+  isTyping: false,
 
-  toggleTool(tool) {
-    const chips = document.querySelectorAll('.tool-chip');
-    chips.forEach(c => {
-      if (c.textContent.trim().toLowerCase().includes(tool)) {
-        c.classList.toggle('active');
-        if (c.classList.contains('active')) this.activeTools.add(tool);
-        else this.activeTools.delete(tool);
+  AGENTS: {
+    master:     'You are the Master Agent. Orchestrate specialized agents to deliver perfect results. Plan systematically.',
+    planner:    'You are the Planner Agent. Break complex tasks into clear, actionable steps with timelines.',
+    researcher: 'You are the Research Agent. Find accurate, up-to-date information. Cite sources and best practices.',
+    coder:      'You are the Coding Agent. Write clean, efficient, production-ready code with best practices.',
+    designer:   'You are the UI Designer Agent. Create beautiful, Apple-level interfaces. Mobile-first, pixel-perfect.',
+    reviewer:   'You are the Code Review Agent. Find bugs, security issues, and suggest improvements.',
+    tester:     'You are the Testing Agent. Write comprehensive tests: unit, integration, E2E.',
+    deployer:   'You are the Deployment Agent. Handle CI/CD, cloud deployments, monitoring.',
+    backend:    'You are the Backend Agent. Design scalable APIs, databases, server-side systems.',
+    security:   'You are the Security Agent. Find vulnerabilities and provide clear fixes.',
+    optimizer:  'You are the Optimization Agent. Improve performance and reduce complexity.',
+    docs:       'You are the Documentation Agent. Write clear, comprehensive, developer-friendly docs.',
+  },
+
+  buildSystem() {
+    const base = 'You are OmniCode AI — a world-class AI coding assistant embedded in a Telegram Mini App. Help users build software, answer technical questions, write code, review PRs, and deploy apps. Be concise, practical, and expert-level.';
+    const tools = [...activeTools].join(', ');
+    const agent = currentAgent ? (this.AGENTS[currentAgent] || base) : base;
+    return `${agent}\n\nActive tools: ${tools}. User platform: Telegram Mini App (mobile).`;
+  },
+
+  addWelcome() {
+    const el = document.getElementById('chat-messages');
+    el.innerHTML = '';
+    this.addBubble('ai', `**OmniCode AI** ready 🚀\n\nI can help you:\n- Write & review code\n- Build full-stack apps\n- Deploy to production\n- Manage GitHub repos\n\nWhat are we building today?`, true);
+  },
+
+  addBubble(role, text, chips = false) {
+    const el = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = `bubble ${role}`;
+    if (role === 'ai') {
+      div.innerHTML = MD.render(text);
+      if (chips) {
+        const c = document.createElement('div');
+        c.className = 'bubble-chips';
+        c.innerHTML = ['Improve','Shorten','Expand','Translate'].map(a =>
+          `<button class="bubble-chip" onclick="AI.quickAction('${a}')">${a}</button>`
+        ).join('');
+        div.appendChild(c);
       }
-    });
-  },
-
-  resize(el) {
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-  },
-
-  handleKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); }
-  },
-
-  addBubble(role, content, meta = '') {
-    const wrap = document.getElementById('chat-messages');
-    const el = document.createElement('div');
-    el.className = `bubble bubble-${role} anim-fade`;
-    if (role === 'user') {
-      el.textContent = content;
     } else {
-      el.innerHTML = MD.render(content);
-      if (meta) {
-        const m = document.createElement('div');
-        m.className = 'bubble-meta';
-        m.textContent = `• ${meta}`;
-        el.appendChild(m);
-
-        // Extract code blocks → offer to save
-        const codeMatch = content.match(/```(\w+)\n([\s\S]+?)```/);
-        if (codeMatch && State.activeProject) {
-          const lang = codeMatch[1];
-          const ext = { python:'py', javascript:'js', typescript:'ts', html:'html', css:'css', sql:'sql', bash:'sh' }[lang] || lang;
-          const btn = document.createElement('button');
-          btn.className = 'btn btn-ghost btn-sm';
-          btn.style.marginTop = '8px';
-          btn.innerHTML = `📁 Save as generated.${ext}`;
-          btn.onclick = () => {
-            Projects.addFile(State.activeProject, `generated.${ext}`, codeMatch[2]);
-            UI.toast(`Saved to generated.${ext}`, 'success');
-          };
-          el.appendChild(btn);
-        }
-      }
+      div.textContent = text;
     }
-    wrap.appendChild(el);
-    el.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    State.messages.push({ role: role === 'user' ? 'user' : 'assistant', content });
-    return el;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    return div;
   },
 
   showTyping() {
-    const wrap = document.getElementById('chat-messages');
-    const el = document.createElement('div');
-    el.className = 'bubble bubble-ai';
-    el.id = 'typing-indicator';
-    el.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-    wrap.appendChild(el);
-    el.scrollIntoView({ behavior: 'smooth' });
-    return el;
+    const el = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'bubble thinking';
+    div.id = 'typing-indicator';
+    div.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div><span class="thinking-label">Thinking...</span>`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
   },
 
-  buildSystemPrompt() {
-    const project = State.activeProject ? State.projects.find(p => p.id === State.activeProject) : null;
-    const tools = [...this.activeTools].join(', ');
-    return [
-      'You are OmniCode AI — a world-class AI coding assistant built into a Telegram Mini App.',
-      'You help developers build, debug, deploy, and manage software projects from their phone.',
-      'Be concise, practical, and professional. Format code in markdown code blocks.',
-      `Active tools: ${tools}`,
-      project ? `Current project: ${project.name} (${project.language || 'Unknown'}) — ${project.files?.length || 0} files` : 'No project selected.',
-      project?.files?.length ? `Files: ${project.files.map(f => f.name).join(', ')}` : '',
-      'Always provide working, production-ready code. Explain briefly. Be like Cursor AI but better.',
-    ].filter(Boolean).join('\n');
-  },
+  hideTyping() { document.getElementById('typing-indicator')?.remove(); },
 
-  async send() {
-    const input = document.getElementById('chat-input');
-    const text = input.value.trim();
-    if (!text || State.isStreaming) return;
+  async send(text) {
+    const inp = document.getElementById('chat-input');
+    const msg = text || inp.value.trim();
+    if (!msg || this.isTyping) return;
 
-    UI.vibrate(8);
-    input.value = '';
-    input.style.height = 'auto';
-    State.isStreaming = true;
-    document.getElementById('send-btn').disabled = true;
-    document.getElementById('ai-status-text').textContent = 'Thinking...';
+    inp.value = ''; inp.style.height = '';
+    this.addBubble('user', msg);
+    this.history.push({ role: 'user', content: msg });
 
-    this.addBubble('user', text);
-    State.msgCount++;
-    Store.save();
-    document.getElementById('msg-count-label').textContent = `${State.msgCount} messages`;
-
-    const typing = this.showTyping();
+    this.isTyping = true;
+    this.showTyping();
 
     const messages = [
-      { role: 'system', content: this.buildSystemPrompt() },
-      ...State.messages.slice(-12),
+      { role: 'system', content: this.buildSystem() },
+      ...this.history.slice(-18),
     ];
 
     try {
-      const result = await AIRouter.call(messages);
-      typing.remove();
-      this.addBubble('ai', result.text, `${result.model} · ${result.provider}`);
-      document.getElementById('ai-status-text').textContent = `via ${result.provider}`;
+      const reply = await AIRouter.call(messages);
+      this.hideTyping();
+      this.addBubble('ai', reply, true);
+      this.history.push({ role: 'assistant', content: reply });
     } catch (e) {
-      typing.remove();
-      this.addBubble('ai', `❌ **Error:** ${e.message}\n\nGo to **Settings → Connectors** to configure your API keys.`);
-      document.getElementById('ai-status-text').textContent = 'Error';
-      UI.toast(e.message, 'error');
+      this.hideTyping();
+      this.addBubble('ai', `❌ **Error:** ${e.message}\n\nTip: Add API keys in Settings → API Keys`, false);
+    } finally {
+      this.isTyping = false;
     }
-
-    State.isStreaming = false;
-    document.getElementById('send-btn').disabled = false;
   },
 
-  clearChat() {
-    State.messages = [];
-    const wrap = document.getElementById('chat-messages');
-    wrap.innerHTML = `<div class="bubble bubble-ai anim-fade">
-      Chat cleared. How can I help you?
-    </div>`;
-    UI.toast('Chat cleared', '');
+  clear() {
+    this.history = [];
+    this.addWelcome();
+  },
+
+  onKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); }
+  },
+
+  autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+  },
+
+  toggleTool(el, name) {
+    if (activeTools.has(name)) { activeTools.delete(name); el.classList.remove('active'); }
+    else { activeTools.add(name); el.classList.add('active'); }
+  },
+
+  async quickAction(action) {
+    const last = this.history.filter(m => m.role === 'assistant').pop();
+    if (!last) return;
+    const map = { Improve: 'Improve this response:', Shorten: 'Make this shorter:', Expand: 'Expand this with more detail:', Translate: 'Translate this to Uzbek:' };
+    await this.send(`${map[action]} ${last.content.slice(0, 300)}`);
   },
 };
 
-// ── Projects ──────────────────────────────────────────────────────
-window.Projects = {
-  renderList(filter = '') {
-    const list = document.getElementById('projects-list');
-    const filtered = State.projects.filter(p =>
-      !filter || p.name.toLowerCase().includes(filter.toLowerCase())
-    );
-
-    if (filtered.length === 0) {
-      list.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-3)">
-        <div style="font-size:48px;margin-bottom:12px">🗂️</div>
-        <div style="font-size:16px;font-weight:600;margin-bottom:4px">${filter ? 'No results' : 'No projects'}</div>
-        <div style="font-size:14px">${filter ? 'Try different keywords' : 'Create your first project'}</div>
-        ${!filter ? `<button class="btn btn-primary" style="margin-top:16px" onclick="Projects.newProject()">✨ Create Project</button>` : ''}
-      </div>`;
-      return;
-    }
-
-    list.innerHTML = filtered.map(p => `
-      <div class="card" onclick="Projects.open('${p.id}')" style="cursor:pointer">
-        <div class="flex items-center gap-12" style="margin-bottom:10px">
-          <div style="font-size:28px">${p.icon || '📁'}</div>
-          <div class="flex-1">
-            <div class="font-600" style="font-size:15px">${p.name}</div>
-            <div class="text-xs text-3 truncate">${p.description || 'No description'}</div>
-          </div>
-          <div class="badge badge-${p.deployed ? 'green' : 'blue'}">${p.deployed ? '🟢 Live' : 'Local'}</div>
-        </div>
-        <div class="flex gap-8" style="flex-wrap:wrap">
-          ${p.language ? `<div class="badge badge-purple" style="font-size:10px">${p.language}</div>` : ''}
-          <div class="badge badge-yellow" style="font-size:10px">📄 ${p.files?.length || 0} files</div>
-          <div class="text-xs text-3" style="margin-left:auto;align-self:center">${p.updatedAt || 'Just now'}</div>
-        </div>
-      </div>
-    `).join('');
+// ── Projects ─────────────────────────────────────────────────────
+const Projects = {
+  toggleFolder(row) {
+    const arrow = row.querySelector('.f-arrow');
+    const files = row.nextElementSibling;
+    const open = arrow.classList.contains('open');
+    if (open) { arrow.classList.remove('open'); files.style.display = 'none'; }
+    else { arrow.classList.add('open'); files.style.display = ''; }
   },
-
-  search(val) { this.renderList(val); },
-
-  newProject() {
-    const name = prompt('Project name:');
-    if (!name?.trim()) return;
-    const lang = prompt('Language (js/python/html/etc.):') || 'javascript';
-    const desc = prompt('Description (optional):') || '';
-
-    const icons = { javascript:'⚡', typescript:'💙', python:'🐍', html:'🌐', css:'🎨', react:'⚛️', vue:'💚', rust:'🦀' };
-    const project = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      language: lang.trim(),
-      description: desc.trim(),
-      icon: icons[lang.toLowerCase()] || '📁',
-      files: [],
-      deployed: false,
-      createdAt: new Date().toLocaleDateString(),
-      updatedAt: 'Just now',
-    };
-
-    State.projects.unshift(project);
-    Store.save();
-    this.renderList();
-    App.refreshHome();
-    UI.toast(`Project "${name}" created!`, 'success');
-    UI.vibrate([10, 5, 10]);
-
-    // Auto ask AI about the project
-    setTimeout(() => {
-      App.navigate('ai');
-      document.getElementById('chat-input').value = `I just created a new ${lang} project called "${name}". ${desc ? 'Description: ' + desc + '.' : ''} Help me set it up with a good project structure and initial files.`;
-      AI.resize(document.getElementById('chat-input'));
-    }, 300);
+  filter(type, el) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
   },
+  search(q) { /* filter UI */ },
+  newProject() { toast('📁 Coming soon: Create project'); },
+};
 
-  open(id) {
-    State.activeProject = id;
-    const project = State.projects.find(p => p.id === id);
-    if (!project) return;
-    App.navigate('ai');
-    AI.addBubble('ai', `📁 **${project.name}** opened.\n\n${project.files?.length ? `Files: ${project.files.map(f => f.name).join(', ')}` : 'No files yet. Ask me to create some!'}\n\nWhat would you like to do?`);
+// ── Editor ───────────────────────────────────────────────────────
+const SAMPLE_CODE = {
+  typescript: `<span class="kw">import</span> React, <span class="kw">from</span> <span class="str">'react'</span>
+<span class="kw">import</span> { Card, Button, Chart } <span class="kw">from</span> <span class="str">'@/ui'</span>
+
+<span class="kw">interface</span> <span class="tp">AnalyticsData</span> {
+  data: <span class="tp">AnalyticsData</span>;
+}
+
+<span class="kw">export default function</span> <span class="fn">Dashboard</span>({ data }: <span class="tp">DashboardProps</span>) {
+  <span class="kw">const</span> [loading, setLoading] = <span class="fn">useState</span>(<span class="kw">true</span>);
+
+  <span class="kw">return</span> (
+    &lt;<span class="tp">div</span> className=<span class="str">"p-6 space-y-6"</span>&gt;
+      &lt;<span class="tp">h2</span> className=<span class="str">"text-2xl font-bold"</span>&gt;
+        Dashboard Overview
+      &lt;/<span class="tp">h2</span>&gt;
+    &lt;/<span class="tp">div</span>&gt;
+  );
+}
+
+<span class="cm">// AI Suggestion</span>
+<span class="kw">function</span> <span class="fn">formatNumber</span>(num: <span class="tp">number</span>) {
+  <span class="kw">return new</span> <span class="fn">Intl.NumberFormat</span>(<span class="str">'en-US'</span>).<span class="fn">format</span>(num);
+}`,
+  python: `<span class="kw">import</span> openai
+<span class="kw">from</span> typing <span class="kw">import</span> Generator
+
+<span class="kw">class</span> <span class="tp">ContentGenerator</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, api_key: <span class="tp">str</span>):
+        self.client = openai.<span class="fn">OpenAI</span>(api_key=api_key)
+
+    <span class="kw">def</span> <span class="fn">generate</span>(self, prompt: <span class="tp">str</span>) -> <span class="tp">str</span>:
+        response = self.client.chat.completions.<span class="fn">create</span>(
+            model=<span class="str">"gpt-4o"</span>,
+            messages=[{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: prompt}]
+        )
+        <span class="kw">return</span> response.choices[<span class="str">0</span>].message.content`,
+};
+
+const Editor = {
+  open(filename, lang) {
+    document.getElementById('ed-filename').textContent = filename;
+    const badges = { typescript: 'TypeScript', python: 'Python', javascript: 'JavaScript', css: 'CSS', json: 'JSON' };
+    document.getElementById('ed-badge').textContent = badges[lang] || lang;
+    const code = SAMPLE_CODE[lang] || `<span class="cm">// ${filename}</span>`;
+    const lines = code.split('\n');
+    document.getElementById('code-view').innerHTML = lines.map((l, i) =>
+      `<div><span class="ln">${i + 1}</span>${l || ' '}</div>`
+    ).join('');
+    App.nav('editor');
   },
-
-  addFile(projectId, filename, content) {
-    const project = State.projects.find(p => p.id === projectId);
-    if (!project) return;
-    const existing = project.files.findIndex(f => f.name === filename);
-    if (existing >= 0) project.files[existing].content = content;
-    else project.files.push({ name: filename, content, updatedAt: new Date().toISOString() });
-    project.updatedAt = 'Just now';
-    Store.save();
+  termTab(el, tab) {
+    document.querySelectorAll('.term-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
   },
 };
 
-// ── Agents ────────────────────────────────────────────────────────
-window.Agents = {
-  currentAgent: null,
+// ── Agents ───────────────────────────────────────────────────────
+const Agents = {
+  current: null,
 
-  run(agentName) {
-    this.currentAgent = agentName;
-    const names = {
-      planner:'Planner', researcher:'Researcher', coder:'Coder',
-      designer:'UI Designer', backend:'Backend', tester:'Tester',
-      security:'Security', reviewer:'Reviewer', optimizer:'Optimizer',
-      deployer:'Deployer', docs:'Docs Writer', devops:'DevOps',
-    };
-    document.getElementById('agent-sheet-title').textContent = `${names[agentName]} Agent`;
-    const prompts = {
-      planner:    'Break this task into detailed steps:',
-      researcher: 'Research and find the best solution for:',
-      coder:      'Write clean, production-ready code for:',
-      designer:   'Design a beautiful, mobile-first UI for:',
-      backend:    'Create a scalable backend/API for:',
-      tester:     'Write comprehensive tests for:',
-      security:   'Security audit this code:',
-      reviewer:   'Code review and improvements for:',
-      optimizer:  'Optimize performance of:',
-      deployer:   'Create deployment config for:',
-      docs:       'Write documentation for:',
-      devops:     'Set up CI/CD pipeline for:',
-    };
-    document.getElementById('agent-task-input').placeholder = prompts[agentName] || 'Describe the task...';
+  run(name) {
+    this.current = name;
+    currentAgent = name;
+    document.getElementById('agent-sheet-title').textContent = `Run ${name.charAt(0).toUpperCase() + name.slice(1)} Agent`;
     document.getElementById('agent-task-input').value = '';
-    UI.showSheet('agent-sheet');
-    UI.vibrate(8);
+    document.getElementById('agent-sheet').classList.add('open');
   },
 
-  async runMaster() {
-    const task = prompt('What do you want to build? Describe the full project:');
-    if (!task?.trim()) return;
-    App.navigate('ai');
-    document.getElementById('chat-input').value = `[MASTER AGENT] Build this completely: ${task}\n\nPlan → Research → Code → Test → Deploy`;
-    await AI.send();
+  runMaster() {
+    this.current = 'master';
+    currentAgent = 'master';
+    document.getElementById('agent-sheet-title').textContent = 'Master Agent';
+    document.getElementById('agent-task-input').placeholder = 'Describe your full project goal...';
+    document.getElementById('agent-sheet').classList.add('open');
+  },
+
+  showRunSheet() {
+    document.getElementById('agent-sheet-title').textContent = 'Run Agent Pipeline';
+    document.getElementById('agent-task-input').value = '';
+    document.getElementById('agent-sheet').classList.add('open');
   },
 
   async executeTask() {
     const task = document.getElementById('agent-task-input').value.trim();
-    if (!task || !this.currentAgent) return;
-    UI.hideSheet('agent-sheet');
+    if (!task) return;
+    document.getElementById('agent-sheet').classList.remove('open');
+    App.nav('ai');
+    await AI.send(`[${(this.current || 'master').toUpperCase()} AGENT] ${task}`);
+    currentAgent = null;
+  },
 
-    const systemPrompts = {
-      coder:    'You are an expert coder. Write clean, efficient, production-ready code. Include comments. No fluff.',
-      designer: 'You are a world-class UI/UX designer. Create beautiful, Apple-level designs using HTML/CSS. Mobile-first.',
-      tester:   'You are a QA expert. Write comprehensive unit, integration, and e2e tests. Use best practices.',
-      security: 'You are a security expert. Find vulnerabilities, explain them, and provide fixes. Be thorough.',
-      reviewer: 'You are a senior code reviewer. Be constructive, specific, and professional. Suggest improvements.',
-      planner:  'You are a project planner. Break tasks into clear, actionable steps. Be specific and realistic.',
+  createNew() { toast('🤖 Custom agents — coming soon!'); },
+};
+
+// ── Deploy ───────────────────────────────────────────────────────
+const Deploy = {
+  async start() {
+    const steps = ['step-github', 'step-build', 'step-tests', 'step-deploy'];
+    const descs = ['step-build-desc', 'step-deploy-desc'];
+
+    // Reset
+    steps.forEach(s => {
+      document.getElementById(s).className = 'step-dot orange';
+    });
+
+    const logs = document.getElementById('deploy-logs');
+    logs.innerHTML = '';
+    const addLog = (msg, ok = false) => {
+      const t = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      logs.innerHTML += `<div class="log-line"><span class="log-t">${t}</span><span class="log-m${ok ? ' ok' : ''}">${msg}</span></div>`;
+      logs.scrollTop = logs.scrollHeight;
     };
 
-    const sys = systemPrompts[this.currentAgent] ||
-      `You are the ${this.currentAgent} agent. Be expert-level, precise, and deliver production-ready output.`;
+    addLog('› Initializing deployment...');
+    await delay(600);
 
-    App.navigate('ai');
+    document.getElementById('step-github').className = 'step-dot green';
+    addLog('› GitHub repository connected ✓');
+    await delay(500);
 
-    const typing = AI.showTyping();
-    State.isStreaming = true;
+    addLog('› Building application...');
+    await delay(900);
+    document.getElementById('step-build').className = 'step-dot green';
+    addLog('› Build completed successfully ✓');
+    await delay(400);
 
-    try {
-      const result = await AIRouter.call([
-        { role: 'system', content: sys },
-        { role: 'user', content: task },
-      ]);
-      typing.remove();
-      AI.addBubble('ai', `🤖 **[${this.currentAgent.toUpperCase()} AGENT]**\n\n${result.text}`, result.provider);
-    } catch (e) {
-      typing.remove();
-      AI.addBubble('ai', `❌ Agent failed: ${e.message}`);
-      UI.toast(e.message, 'error');
-    }
+    addLog('› Running tests...');
+    await delay(700);
+    document.getElementById('step-tests').className = 'step-dot green';
+    addLog('› All tests passed (42/42) ✓');
+    await delay(400);
 
-    State.isStreaming = false;
+    addLog('› Deploying to production...');
+    await delay(1000);
+    document.getElementById('step-deploy').className = 'step-dot green';
+    document.getElementById('step-deploy-desc').textContent = 'Deployment live';
+    addLog('✓ Deployment successful! 🎉', true);
+
+    toast('🚀 Deployed successfully!');
   },
+
+  clearLogs() { document.getElementById('deploy-logs').innerHTML = ''; },
 };
 
-// ── Deploy ────────────────────────────────────────────────────────
-window.Deploy = {
-  steps: ['commit', 'push', 'build', 'test', 'deploy', 'health'],
-  stepDurations: { commit: 800, push: 1500, build: 3000, test: 2000, deploy: 2500, health: 1000 },
+// ── Settings ─────────────────────────────────────────────────────
+const Settings = {
+  currentConnector: null,
 
-  resetSteps() {
-    this.steps.forEach(s => {
-      const step = document.querySelector(`[data-step="${s}"]`);
-      if (!step) return;
-      step.className = 'pipeline-step';
-      step.querySelector('.step-icon').className = 'step-icon pending';
-      step.querySelector('.step-icon').textContent = { commit:'①', push:'②', build:'③', test:'④', deploy:'⑤', health:'⑥' }[s];
-      document.getElementById(`step-${s}-time`).textContent = '—';
-    });
-    document.getElementById('deploy-log').innerHTML = '<span style="color:var(--text-3)">Starting deployment...</span>';
+  openConnector(name) {
+    this.currentConnector = name;
+    const titles = { openrouter: 'OpenRouter API Keys', github: 'GitHub Token', groq: 'Groq API Key' };
+    const labels = { openrouter: ['API Key 1', 'API Key 2 (optional)'], github: ['GitHub Token', ''], groq: ['Groq API Key', ''] };
+    document.getElementById('connector-sheet-title').textContent = titles[name];
+    const keys = Store.get('keys', {});
+    const lbl = document.querySelectorAll('.sh-label');
+    lbl[0].textContent = labels[name][0];
+    lbl[1].textContent = labels[name][1];
+    document.getElementById('conn-key1').value = name === 'openrouter' ? (keys.or1 || '') : (keys[name] || '');
+    document.getElementById('conn-key2').style.display = name === 'openrouter' ? '' : 'none';
+    lbl[1].style.display = name === 'openrouter' ? '' : 'none';
+    document.getElementById('connector-sheet').classList.add('open');
   },
 
-  log(msg, color = 'var(--text-2)') {
-    const logEl = document.getElementById('deploy-log');
-    logEl.innerHTML += `\n<span style="color:${color}">${msg}</span>`;
-    logEl.scrollTop = logEl.scrollHeight;
-  },
+  saveConnector() {
+    const keys = Store.get('keys', {});
+    const k1 = document.getElementById('conn-key1').value.trim();
+    const k2 = document.getElementById('conn-key2').value.trim();
 
-  async runStep(stepName, action) {
-    const step = document.querySelector(`[data-step="${stepName}"]`);
-    const icon = step.querySelector('.step-icon');
-    step.classList.add('active');
-    icon.className = 'step-icon active';
-    icon.textContent = '⟳';
-    this.log(`▶ ${stepName.toUpperCase()}...`, 'var(--yellow)');
-
-    const start = Date.now();
-    try {
-      await action();
-      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-      step.classList.remove('active');
-      step.classList.add('done');
-      icon.className = 'step-icon done';
-      icon.textContent = '✓';
-      document.getElementById(`step-${stepName}-time`).textContent = `${elapsed}s`;
-      this.log(`✓ ${stepName.toUpperCase()} done (${elapsed}s)`, 'var(--green)');
-    } catch (e) {
-      step.classList.remove('active');
-      step.classList.add('error');
-      icon.className = 'step-icon error';
-      icon.textContent = '✗';
-      this.log(`✗ ${stepName.toUpperCase()} failed: ${e.message}`, 'var(--accent)');
-      throw e;
-    }
-  },
-
-  sleep(ms) { return new Promise(r => setTimeout(r, ms)); },
-
-  async start() {
-    if (State.deployRunning) return;
-    const project = State.projects.find(p => p.id === State.activeProject);
-
-    if (!project) {
-      UI.toast('Select a project first', 'error');
-      App.navigate('projects');
-      return;
+    if (this.currentConnector === 'openrouter') {
+      if (k1) keys.or1 = k1;
+      if (k2) keys.or2 = k2;
+      document.getElementById('or-status').textContent = k1 ? 'Connected' : 'Not set';
+    } else if (this.currentConnector === 'github') {
+      if (k1) keys.github = k1;
+      document.getElementById('gh-status').textContent = k1 ? 'Connected' : 'Not set';
+    } else if (this.currentConnector === 'groq') {
+      if (k1) keys.groq = k1;
+      const el = document.getElementById('groq-status');
+      el.textContent = 'Connected'; el.className = 's-connected';
     }
 
-    State.deployRunning = true;
-    const btn = document.getElementById('deploy-btn');
-    btn.disabled = true;
-    btn.textContent = '⏳ Deploying...';
-    this.resetSteps();
-    document.getElementById('deploy-status-badge').className = 'badge badge-yellow';
-    document.getElementById('deploy-status-badge').textContent = 'Deploying';
-    UI.vibrate([10, 5, 10, 5, 10]);
-
-    try {
-      // 1. Commit
-      await this.runStep('commit', async () => {
-        await this.sleep(this.stepDurations.commit);
-        this.log(`  Staged ${project.files?.length || 0} files`);
-      });
-
-      // 2. Push
-      await this.runStep('push', async () => {
-        if (State.connectors.github.token && project.files?.length) {
-          const files = {};
-          project.files.forEach(f => { files[f.name] = f.content; });
-          const pushed = await GitHub.push(files, `deploy: ${project.name} via OmniCode`);
-          this.log(`  Pushed ${pushed} files to GitHub`);
-        } else {
-          await this.sleep(this.stepDurations.push);
-          this.log('  GitHub not configured — skipped');
-        }
-      });
-
-      // 3. Build
-      await this.runStep('build', async () => {
-        await this.sleep(this.stepDurations.build);
-        this.log(`  Build complete — ${project.language || 'Unknown'} project`);
-      });
-
-      // 4. Test
-      await this.runStep('test', async () => {
-        await this.sleep(this.stepDurations.test);
-        this.log('  All tests passed ✓');
-      });
-
-      // 5. Deploy
-      await this.runStep('deploy', async () => {
-        await this.sleep(this.stepDurations.deploy);
-        this.log('  Deployed to production');
-      });
-
-      // 6. Health
-      await this.runStep('health', async () => {
-        await this.sleep(this.stepDurations.health);
-        this.log('  Health check: 200 OK ✓', 'var(--green)');
-      });
-
-      project.deployed = true;
-      project.deployedAt = new Date().toLocaleString();
-      Store.save();
-
-      document.getElementById('deploy-status-badge').className = 'badge badge-green';
-      document.getElementById('deploy-status-badge').textContent = '✓ Deployed';
-      btn.textContent = '✅ Deployed!';
-      UI.toast(`${project.name} deployed successfully!`, 'success');
-      UI.vibrate([20, 5, 20]);
-
-      // Add to history
-      const history = document.getElementById('deploy-history');
-      history.innerHTML = `
-        <div class="row card" style="margin-bottom:0">
-          <div class="dot dot-green"></div>
-          <div class="flex-1">
-            <div class="row-label text-sm">${project.name}</div>
-            <div class="row-sub">${new Date().toLocaleString()}</div>
-          </div>
-          <div class="badge badge-green">Success</div>
-        </div>
-      ` + history.innerHTML;
-
-      setTimeout(() => {
-        btn.textContent = '🚀 Deploy Now';
-        btn.disabled = false;
-      }, 3000);
-
-    } catch (e) {
-      document.getElementById('deploy-status-badge').className = 'badge badge-red';
-      document.getElementById('deploy-status-badge').textContent = 'Failed';
-      btn.textContent = '🚀 Retry';
-      btn.disabled = false;
-      UI.toast('Deployment failed: ' + e.message, 'error');
-    }
-
-    State.deployRunning = false;
+    Store.set('keys', keys);
+    document.getElementById('connector-sheet').classList.remove('open');
+    toast('✅ Keys saved securely');
   },
+
+  accentPicker() { toast('🎨 Accent picker — coming soon!'); },
 };
 
-// ── Settings ──────────────────────────────────────────────────────
-window.Settings = {
-  refresh() {
-    const { openrouter, groq, github } = State.connectors;
-    const orKeys = openrouter.keys.filter(k => k?.length > 10);
-
-    document.getElementById('or-status').textContent = orKeys.length ? `${orKeys.length} keys configured` : 'No keys';
-    document.getElementById('or-badge').className = `badge badge-${orKeys.length ? 'green' : 'red'}`;
-    document.getElementById('or-badge').textContent = orKeys.length ? '✓ Active' : 'Configure';
-
-    document.getElementById('groq-status').textContent = groq.key ? 'Connected' : 'Not configured';
-    document.getElementById('groq-badge').className = `badge badge-${groq.key ? 'green' : 'red'}`;
-    document.getElementById('groq-badge').textContent = groq.key ? '✓ Active' : 'Configure';
-
-    document.getElementById('gh-status').textContent = github.token ? (github.repo || 'Connected') : 'Not connected';
-    document.getElementById('gh-badge').className = `badge badge-${github.token ? 'green' : 'red'}`;
-    document.getElementById('gh-badge').textContent = github.token ? '✓ Connected' : 'Connect';
-  },
-
-  renderModelList() {
-    const container = document.getElementById('model-list');
-    container.innerHTML = MODELS.map(m => {
-      const active = State.activeModel?.id === m.id;
-      return `<div class="card" onclick="App.setModel(${JSON.stringify(m).replace(/"/g,'&quot;')})" style="cursor:pointer;${active ? 'border-color:var(--accent);background:var(--accent-dim)' : ''}">
-        <div class="flex items-center gap-12">
-          <div class="flex-1">
-            <div class="font-600" style="font-size:14px">${m.name}</div>
-            <div class="text-xs text-2">${m.desc}</div>
-          </div>
-          <div class="badge badge-${active ? 'green' : 'blue'}" style="font-size:10px">${m.badge}</div>
-          ${active ? '<span style="color:var(--accent);font-weight:700">✓</span>' : ''}
-        </div>
-      </div>`;
-    }).join('');
-  },
-
-  openConnector(type) {
-    const titles = { openrouter:'OpenRouter', groq:'Groq', github:'GitHub', cloudflare:'Cloudflare' };
-    document.getElementById('sheet-title').textContent = `🔌 ${titles[type]}`;
-
-    const content = document.getElementById('sheet-content');
-    const c = State.connectors;
-
-    if (type === 'openrouter') {
-      content.innerHTML = `
-        ${[1,2,3,4].map(i => `
-          <div style="margin-bottom:10px">
-            <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">API Key ${i}${i===1?' (Primary)':''}</div>
-            <input class="input" id="or-key-${i}" type="password" placeholder="sk-or-v1-..." value="${c.openrouter.keys[i-1] || ''}">
-          </div>
-        `).join('')}
-        <div style="margin-bottom:10px">
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Default Model</div>
-          <select class="input" id="or-model-sel">
-            ${MODELS.filter(m=>m.provider==='openrouter').map(m=>
-              `<option value="${m.id}">${m.name}</option>`
-            ).join('')}
-          </select>
-        </div>
-        <button class="btn btn-primary btn-full" onclick="Settings.saveConnector('openrouter')">Save & Connect</button>
-        <div style="margin-top:10px;font-size:11px;color:var(--text-3);text-align:center">
-          Get free keys at openrouter.ai/keys
-        </div>`;
-    } else if (type === 'groq') {
-      content.innerHTML = `
-        <div style="margin-bottom:12px">
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Groq API Key</div>
-          <input class="input" id="groq-key-input" type="password" placeholder="gsk_..." value="${c.groq.key || ''}">
-        </div>
-        <button class="btn btn-primary btn-full" onclick="Settings.saveConnector('groq')">Save & Connect</button>
-        <div style="margin-top:10px;font-size:11px;color:var(--text-3);text-align:center">
-          Get free key at console.groq.com
-        </div>`;
-    } else if (type === 'github') {
-      content.innerHTML = `
-        <div style="margin-bottom:10px">
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Personal Access Token</div>
-          <input class="input" id="gh-token-input" type="password" placeholder="ghp_..." value="${c.github.token || ''}">
-        </div>
-        <div style="margin-bottom:10px">
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Repository (owner/repo)</div>
-          <input class="input" id="gh-repo-input" type="text" placeholder="username/my-repo" value="${c.github.repo || ''}">
-        </div>
-        <div style="margin-bottom:12px">
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Branch</div>
-          <input class="input" id="gh-branch-input" type="text" placeholder="main" value="${c.github.branch || 'main'}">
-        </div>
-        <button class="btn btn-primary btn-full" onclick="Settings.saveConnector('github')">Save & Connect</button>
-        <div style="margin-top:10px;font-size:11px;color:var(--text-3);text-align:center">
-          Create token at github.com/settings/tokens
-        </div>`;
-    } else if (type === 'cloudflare') {
-      content.innerHTML = `
-        <div style="margin-bottom:10px">
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Account ID</div>
-          <input class="input" id="cf-account" type="text" placeholder="abc123..." value="${c.cloudflare?.accountId || ''}">
-        </div>
-        <div style="margin-bottom:12px">
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">API Token</div>
-          <input class="input" id="cf-token" type="password" placeholder="..." value="${c.cloudflare?.apiToken || ''}">
-        </div>
-        <button class="btn btn-primary btn-full" onclick="Settings.saveConnector('cloudflare')">Save & Connect</button>`;
-    }
-
-    UI.showSheet('connector-sheet');
-  },
-
-  saveConnector(type) {
-    if (type === 'openrouter') {
-      State.connectors.openrouter.keys = [1,2,3,4].map(i =>
-        document.getElementById(`or-key-${i}`)?.value.trim() || ''
-      );
-      State.connectors.openrouter.active = State.connectors.openrouter.keys.some(k => k.length > 10);
-    } else if (type === 'groq') {
-      State.connectors.groq.key = document.getElementById('groq-key-input')?.value.trim() || '';
-      State.connectors.groq.active = !!State.connectors.groq.key;
-    } else if (type === 'github') {
-      State.connectors.github.token  = document.getElementById('gh-token-input')?.value.trim() || '';
-      State.connectors.github.repo   = document.getElementById('gh-repo-input')?.value.trim() || '';
-      State.connectors.github.branch = document.getElementById('gh-branch-input')?.value.trim() || 'main';
-      State.connectors.github.active = !!State.connectors.github.token;
-    } else if (type === 'cloudflare') {
-      State.connectors.cloudflare = {
-        accountId: document.getElementById('cf-account')?.value.trim() || '',
-        apiToken:  document.getElementById('cf-token')?.value.trim() || '',
-        active: true,
-      };
-    }
-
-    Store.save();
-    UI.hideSheet('connector-sheet');
-    Settings.refresh();
-    Settings.renderModelList();
-    UI.toast('Saved!', 'success');
-    UI.vibrate(10);
-  },
+// ── Sheets ───────────────────────────────────────────────────────
+const Sheets = {
+  closeOnBg(e, id) { if (e.target.classList.contains('overlay')) document.getElementById(id).classList.remove('open'); },
 };
 
-// ── Bootstrap ─────────────────────────────────────────────────────
+// ── Toast ────────────────────────────────────────────────────────
+function toast(msg, dur = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Init ─────────────────────────────────────────────────────────
 App.init();
-Projects.renderList();

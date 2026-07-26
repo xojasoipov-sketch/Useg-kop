@@ -2,587 +2,725 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0A0A0A">
-<title>OmniCode — AI Coding Platform</title>
-<link rel="stylesheet" href="styles/main.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>OmniCode</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
 
-<div id="app">
+<!-- ═══ HOME ═══════════════════════════════════════════════════ -->
+<div id="home" class="screen active">
+  <div class="scroll-area">
 
-  <!-- ══ HOME SCREEN ══════════════════════════════════════════ -->
-  <div class="screen active" id="screen-home">
-    <div class="scroll">
-
-      <!-- Hero -->
-      <div style="padding:16px 16px 8px">
-        <div class="flex items-center justify-between mb-16">
-          <div>
-            <div style="font-size:22px;font-weight:700">Good morning 👋</div>
-            <div class="text-2 text-sm" id="home-username">Developer</div>
-          </div>
-          <div class="avatar" id="home-avatar">U</div>
-        </div>
-
-        <!-- AI Status Bar -->
-        <div class="card" style="margin-bottom:10px">
-          <div class="flex items-center justify-between mb-8">
-            <div class="flex items-center gap-8">
-              <div class="dot dot-green dot-pulse"></div>
-              <span class="font-600" style="font-size:14px">AI Ready</span>
-            </div>
-            <div id="active-model-pill" class="model-pill">
-              <span>⚡</span>
-              <span id="active-model-name">Llama 3.3</span>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M2 4L5 7L8 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </div>
-          </div>
-          <div class="flex gap-8">
-            <div class="badge badge-green">4 Providers</div>
-            <div class="badge badge-blue">OpenRouter</div>
-            <div class="badge badge-purple">Groq</div>
-          </div>
-        </div>
-
-        <!-- Stats -->
-        <div class="stats-grid" style="padding:0;margin-bottom:10px">
-          <div class="stat-card">
-            <div class="stat-label">Projects</div>
-            <div class="stat-value" id="stat-projects">0</div>
-            <div class="stat-sub">Active</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">AI Messages</div>
-            <div class="stat-value" id="stat-messages">0</div>
-            <div class="stat-sub">This session</div>
-          </div>
-        </div>
+    <!-- Top greeting -->
+    <div class="home-top">
+      <div class="home-greeting">
+        <h2 id="greeting-text">Good Morning, User 👋</h2>
+        <p>Your AI workspace is ready to boost your productivity.</p>
       </div>
-
-      <!-- Quick Actions -->
-      <div class="section">
-        <div class="section-title">Quick Actions</div>
-      </div>
-      <div class="quick-actions" style="margin-bottom:16px">
-        <button class="quick-btn" onclick="App.quickAction('new-project')">
-          <div class="quick-btn-icon">✨</div>
-          <div class="quick-btn-label">New Project</div>
-        </button>
-        <button class="quick-btn" onclick="App.quickAction('ai-chat')">
-          <div class="quick-btn-icon">💬</div>
-          <div class="quick-btn-label">Ask AI</div>
-        </button>
-        <button class="quick-btn" onclick="App.quickAction('deploy')">
-          <div class="quick-btn-icon">🚀</div>
-          <div class="quick-btn-label">Deploy</div>
-        </button>
-        <button class="quick-btn" onclick="App.quickAction('github')">
-          <div class="quick-btn-icon">🐙</div>
-          <div class="quick-btn-label">GitHub</div>
-        </button>
-        <button class="quick-btn" onclick="App.quickAction('editor')">
-          <div class="quick-btn-icon">📝</div>
-          <div class="quick-btn-label">Editor</div>
-        </button>
-      </div>
-
-      <!-- Recent Projects -->
-      <div class="section">
-        <div class="section-title">Recent Projects</div>
-        <div id="recent-projects">
-          <div class="card" style="text-align:center;padding:24px;color:var(--text-3)">
-            <div style="font-size:32px;margin-bottom:8px">📁</div>
-            <div style="font-size:14px">No projects yet</div>
-            <div style="font-size:12px;margin-top:4px">Tap "New Project" to start</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Activity -->
-      <div class="section" style="margin-top:8px">
-        <div class="section-title">Activity</div>
-        <div id="activity-list" style="display:flex;flex-direction:column;gap:1px">
-          <div class="row" style="opacity:0.5">
-            <span style="font-size:20px">🤖</span>
-            <div>
-              <div class="row-label" style="font-size:14px">No recent activity</div>
-              <div class="row-sub">Start by creating a project</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      <button class="notif-btn" onclick="App.showNotifs()">🔔</button>
     </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Today's Usage</div>
+        <div class="stat-row">
+          <div class="stat-value" id="usage-pct">78%</div>
+          <div class="stat-badge red">📊</div>
+        </div>
+        <div class="stat-progress"><div class="stat-bar" id="usage-bar" style="width:78%"></div></div>
+        <div class="stat-sub">4% of daily limit</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Credits</div>
+        <div class="stat-row">
+          <div class="stat-value" id="credits-val">∞</div>
+          <div class="stat-badge green">💎</div>
+        </div>
+        <div class="stat-progress"><div class="stat-bar" style="width:100%;background:var(--green)"></div></div>
+        <div class="stat-sub">Free providers active</div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-section">
+      <div class="section-head" style="margin-bottom:12px">
+        <span class="section-title">Quick Actions</span>
+      </div>
+      <div class="qa-grid">
+        <div class="qa-item" onclick="App.nav('ai')">
+          <div class="qa-icon red">💬</div>
+          <span class="qa-label">AI Chat</span>
+        </div>
+        <div class="qa-item" onclick="App.newProject()">
+          <div class="qa-icon blue">➕</div>
+          <span class="qa-label">New Project</span>
+        </div>
+        <div class="qa-item" onclick="App.nav('agents')">
+          <div class="qa-icon purple">🤖</div>
+          <span class="qa-label">AI Agents</span>
+        </div>
+        <div class="qa-item" onclick="App.nav('deploy')">
+          <div class="qa-icon green">🚀</div>
+          <span class="qa-label">Deploy</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="analytics-section">
+      <div class="section-head">
+        <span class="section-title">Analytics</span>
+      </div>
+      <div class="analytics-grid">
+        <div class="an-card">
+          <div class="an-label">Token Usage</div>
+          <div class="an-value">24.5K</div>
+          <div class="an-meta">
+            <span class="an-change up">+11%</span>
+            <span class="an-period">vs yesterday</span>
+          </div>
+          <div class="mini-chart">
+            <div class="bar h25"></div><div class="bar h40"></div><div class="bar h25"></div>
+            <div class="bar h55"></div><div class="bar h70"></div><div class="bar h55"></div>
+            <div class="bar h85"></div><div class="bar h100"></div>
+          </div>
+        </div>
+        <div class="an-card">
+          <div class="an-label">Requests</div>
+          <div class="an-value">142</div>
+          <div class="an-meta">
+            <span class="an-change up">+8.1%</span>
+            <span class="an-period">vs yesterday</span>
+          </div>
+          <div class="mini-chart">
+            <div class="bar h10"></div><div class="bar h40"></div><div class="bar h55"></div>
+            <div class="bar h70"></div><div class="bar h40"></div><div class="bar h85"></div>
+            <div class="bar h70"></div><div class="bar h100"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Projects -->
+    <div class="recent-section">
+      <div class="section-head">
+        <span class="section-title">Recent Projects</span>
+        <span class="section-link" onclick="App.nav('projects')">View All</span>
+      </div>
+      <div id="home-projects">
+        <div class="project-item" onclick="App.nav('projects')">
+          <div class="project-dot blue">📊</div>
+          <div style="flex:1">
+            <div class="project-name">SMM Dashboard</div>
+            <div class="project-time">Updated 2m ago</div>
+          </div>
+          <div class="project-more">⋯</div>
+        </div>
+        <div class="project-item" onclick="App.nav('projects')">
+          <div class="project-dot green">🤖</div>
+          <div style="flex:1">
+            <div class="project-name">AI Content Generator</div>
+            <div class="project-time">Updated 1h ago</div>
+          </div>
+          <div class="project-more">⋯</div>
+        </div>
+        <div class="project-item" onclick="App.nav('projects')">
+          <div class="project-dot orange">📈</div>
+          <div style="flex:1">
+            <div class="project-name">TG Growth Tool</div>
+            <div class="project-time">Updated 1d ago</div>
+          </div>
+          <div class="project-more">⋯</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Running Tasks -->
+    <div class="running-section">
+      <div class="section-head">
+        <span class="section-title">Running Tasks</span>
+      </div>
+      <div class="task-card">
+        <div class="task-head">
+          <div class="task-dot"></div>
+          <span class="task-name">AI Content Generation</span>
+          <span class="task-pct">65%</span>
+        </div>
+        <div class="task-bar-wrap"><div class="task-bar" style="width:65%"></div></div>
+        <div class="task-status">In Progress</div>
+      </div>
+    </div>
+
+    <!-- Connectors -->
+    <div class="connectors-section">
+      <div class="connector-row">
+        <div class="connector-chip">
+          <span class="connector-icon">🔄</span>
+          <div class="connector-info">
+            <div class="connector-name">GitHub</div>
+            <div class="connector-status">Connected</div>
+          </div>
+          <div class="status-dot green"></div>
+        </div>
+        <div class="connector-chip">
+          <span class="connector-icon">🧠</span>
+          <div class="connector-info">
+            <div class="connector-name">OpenRouter AI</div>
+            <div class="connector-status">All Systems Operational</div>
+          </div>
+          <div class="status-dot green"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ AI CHAT ══════════════════════════════════════════════════ -->
+<div id="ai" class="screen">
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <span class="chat-menu" onclick="App.nav('home')">☰</span>
+      <span class="chat-title">AI Chat</span>
+    </div>
+    <span class="chat-edit" onclick="AI.clear()">✏️</span>
   </div>
 
-  <!-- ══ AI CHAT SCREEN ════════════════════════════════════════ -->
-  <div class="screen" id="screen-ai">
+  <div id="chat-messages" class="chat-messages"></div>
 
-    <!-- Header -->
-    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
-      <div style="flex:1">
-        <div class="header-title" style="font-size:17px">AI Assistant</div>
-        <div id="ai-status-text" class="text-sm text-2">Ready</div>
-      </div>
-      <button class="btn-icon" onclick="AI.clearChat()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
-        </svg>
-      </button>
-      <button class="btn-icon" onclick="UI.showModelPicker()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
-        </svg>
-      </button>
-    </div>
+  <div class="chat-tools-bar">
+    <div class="tool-chip active" onclick="AI.toggleTool(this,'code')">⚡ Code</div>
+    <div class="tool-chip" onclick="AI.toggleTool(this,'files')">📁 Files</div>
+    <div class="tool-chip" onclick="AI.toggleTool(this,'github')">🐙 GitHub</div>
+    <div class="tool-chip" onclick="AI.toggleTool(this,'deploy')">🚀 Deploy</div>
+    <div class="tool-chip" onclick="AI.toggleTool(this,'search')">🔍 Search</div>
+    <div class="tool-chip" onclick="App.openModelPicker()">🧠 <span id="model-label">Llama 3.3</span></div>
+  </div>
 
-    <!-- Model indicator -->
-    <div style="padding:6px 12px;background:var(--bg-1);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
-      <div class="dot dot-green"></div>
-      <span class="text-xs text-2" id="chat-model-label">meta-llama/llama-3.3-70b-instruct:free · OpenRouter</span>
-      <div style="flex:1"></div>
-      <span class="text-xs" id="msg-count-label" style="color:var(--text-3)">0 messages</span>
-    </div>
-
-    <!-- Tool chips -->
-    <div class="chat-toolbar">
-      <div class="tool-chip active" onclick="AI.toggleTool('code')">
-        <span>⚡</span><span>Code</span>
-      </div>
-      <div class="tool-chip" onclick="AI.toggleTool('files')">
-        <span>📁</span><span>Files</span>
-      </div>
-      <div class="tool-chip" onclick="AI.toggleTool('github')">
-        <span>🐙</span><span>GitHub</span>
-      </div>
-      <div class="tool-chip" onclick="AI.toggleTool('deploy')">
-        <span>🚀</span><span>Deploy</span>
-      </div>
-      <div class="tool-chip" onclick="AI.toggleTool('web')">
-        <span>🌐</span><span>Search</span>
-      </div>
-    </div>
-
-    <!-- Messages -->
-    <div class="chat-wrap" id="chat-messages">
-      <div class="bubble bubble-ai anim-fade">
-        👋 <strong>OmniCode AI</strong> — your personal AI coding platform.<br><br>
-        I can help you:<br>
-        • Write, debug &amp; review code<br>
-        • Create and manage projects<br>
-        • Push to GitHub automatically<br>
-        • Deploy your apps<br>
-        • Run multi-agent workflows<br><br>
-        What are you building today?
-        <div class="bubble-meta">OmniCode · Llama 3.3 70B</div>
-      </div>
-    </div>
-
-    <!-- Input -->
+  <div class="chat-bottom">
     <div class="chat-input-wrap">
-      <textarea
-        class="chat-textarea"
-        id="chat-input"
-        placeholder="Ask anything..."
-        rows="1"
-        onkeydown="AI.handleKey(event)"
-        oninput="AI.resize(this)"
-      ></textarea>
-      <button class="send-btn" id="send-btn" onclick="AI.send()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-          <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"/>
-        </svg>
-      </button>
+      <textarea id="chat-input" class="chat-input" placeholder="Ask anything..." rows="1"
+        onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
+      <button class="input-btn mic">🎤</button>
+      <button class="input-btn send" onclick="AI.send()">▶</button>
     </div>
   </div>
+</div>
 
-  <!-- ══ PROJECTS SCREEN ════════════════════════════════════════ -->
-  <div class="screen" id="screen-projects">
-    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
-      <div class="header-title">Projects</div>
-      <button class="btn btn-primary btn-sm" onclick="Projects.newProject()">
-        + New
-      </button>
+<!-- ═══ PROJECTS ════════════════════════════════════════════════ -->
+<div id="projects" class="screen">
+  <div class="chat-header">
+    <span class="chat-title">Projects</span>
+    <button class="notif-btn" onclick="Projects.newProject()">+</button>
+  </div>
+  <div class="scroll-area">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search projects..." oninput="Projects.search(this.value)">
+    </div>
+    <div class="filter-tabs">
+      <div class="filter-tab active" onclick="Projects.filter('all',this)">All</div>
+      <div class="filter-tab" onclick="Projects.filter('recent',this)">Recent</div>
+      <div class="filter-tab" onclick="Projects.filter('starred',this)">Starred</div>
     </div>
 
-    <!-- Search -->
-    <div style="padding:10px 16px;background:var(--bg-1);border-bottom:1px solid var(--border)">
-      <input class="input" placeholder="🔍  Search projects..." oninput="Projects.search(this.value)" style="border-radius:20px;padding:9px 14px">
-    </div>
-
-    <div class="scroll" id="projects-scroll">
-      <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px" id="projects-list">
-        <!-- Populated by JS -->
-        <div style="text-align:center;padding:40px;color:var(--text-3)">
-          <div style="font-size:48px;margin-bottom:12px">🗂️</div>
-          <div style="font-size:16px;font-weight:600;margin-bottom:4px">No projects</div>
-          <div style="font-size:14px">Create your first project to get started</div>
-          <button class="btn btn-primary" style="margin-top:16px" onclick="Projects.newProject()">
-            ✨ Create Project
-          </button>
+    <div id="projects-tree">
+      <!-- SMM Tools -->
+      <div class="folder-block">
+        <div class="folder-row" onclick="Projects.toggleFolder(this)">
+          <span class="f-arrow open">▶</span>
+          <span class="f-icon">📁</span>
+          <span class="f-name">SMM Tools</span>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ AGENTS SCREEN ══════════════════════════════════════════ -->
-  <div class="screen" id="screen-agents">
-    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
-      <div class="header-title">AI Agents</div>
-      <div class="badge badge-green">
-        <div class="dot dot-green"></div>
-        Ready
-      </div>
-    </div>
-
-    <!-- Master Agent -->
-    <div style="padding:12px 16px">
-      <div class="card" style="background:linear-gradient(135deg,rgba(255,77,79,0.1),rgba(168,85,247,0.1));border-color:rgba(255,77,79,0.2)">
-        <div class="flex items-center gap-12 mb-8">
-          <div style="font-size:32px">🧠</div>
-          <div class="flex-1">
-            <div class="font-700" style="font-size:16px">Master Agent</div>
-            <div class="text-2 text-sm">Orchestrates all agents</div>
+        <div class="folder-files">
+          <div class="file-row" onclick="Editor.open('dashboard.tsx','typescript')">
+            <span class="fi-icon">📄</span>
+            <span class="fi-name">dashboard.tsx</span>
+            <span class="fi-badge M">M</span>
           </div>
-          <div class="badge badge-green">Active</div>
+          <div class="file-row">
+            <span class="fi-icon">🐍</span>
+            <span class="fi-name">analytics.py</span>
+            <span class="fi-badge M">M</span>
+          </div>
+          <div class="file-row">
+            <span class="fi-icon">🎨</span>
+            <span class="fi-name">styles.css</span>
+            <span class="fi-badge U">U</span>
+          </div>
+          <div class="file-row">
+            <span class="fi-icon">⚙️</span>
+            <span class="fi-name">config.json</span>
+            <span class="fi-badge A">A</span>
+          </div>
         </div>
-        <button class="btn btn-primary btn-sm w-full" onclick="Agents.runMaster()">
-          ▶ Run Task
-        </button>
+      </div>
+
+      <!-- AI Content Generator -->
+      <div class="folder-block">
+        <div class="folder-row" onclick="Projects.toggleFolder(this)">
+          <span class="f-arrow open">▶</span>
+          <span class="f-icon">📁</span>
+          <span class="f-name">AI Content Generator</span>
+        </div>
+        <div class="folder-files">
+          <div class="file-row" onclick="Editor.open('generator.py','python')">
+            <span class="fi-icon">🐍</span>
+            <span class="fi-name">generator.py</span>
+            <span class="fi-badge A">A</span>
+          </div>
+          <div class="file-row">
+            <span class="fi-icon">📁</span>
+            <span class="fi-name">templates/</span>
+            <span class="fi-badge A">A</span>
+          </div>
+          <div class="file-row">
+            <span class="fi-icon">🔧</span>
+            <span class="fi-name">utils.py</span>
+            <span class="fi-badge A">A</span>
+          </div>
+          <div class="file-row">
+            <span class="fi-icon">📖</span>
+            <span class="fi-name">README.md</span>
+            <span class="fi-badge A">A</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TG Growth Tool -->
+      <div class="folder-block">
+        <div class="folder-row" onclick="Projects.toggleFolder(this)">
+          <span class="f-arrow open">▶</span>
+          <span class="f-icon">📁</span>
+          <span class="f-name">TG Growth Tool</span>
+        </div>
+        <div class="folder-files">
+          <div class="file-row">
+            <span class="fi-icon">🐍</span>
+            <span class="fi-name">bot.py</span>
+            <span class="fi-badge A">A</span>
+          </div>
+          <div class="file-row">
+            <span class="fi-icon">🗄️</span>
+            <span class="fi-name">database.db</span>
+            <span class="fi-badge A">A</span>
+          </div>
+          <div class="file-row">
+            <span class="fi-icon">📁</span>
+            <span class="fi-name">handlers/</span>
+            <span class="fi-badge A">A</span>
+          </div>
+          <div class="file-row">
+            <span class="fi-icon">📝</span>
+            <span class="fi-name">requirements.txt</span>
+            <span class="fi-badge A">A</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="scroll">
-      <div class="section">
-        <div class="section-title">Specialist Agents</div>
+    <!-- Recent Files -->
+    <div class="recent-files-section">
+      <div class="section-head">
+        <span class="section-title">Recent Files</span>
+        <span class="section-link">View All</span>
       </div>
-      <div class="agent-grid">
+      <div class="rf-item" onclick="Editor.open('dashboard.tsx','typescript')">
+        <div class="rf-thumb blue">📄</div>
+        <div style="flex:1">
+          <div class="rf-file-name">dashboard.tsx</div>
+          <div class="rf-meta">SMM Tools • 2m ago</div>
+        </div>
+        <div class="rf-dot green"></div>
+      </div>
+      <div class="rf-item" onclick="Editor.open('generator.py','python')">
+        <div class="rf-thumb green">🐍</div>
+        <div style="flex:1">
+          <div class="rf-file-name">generator.py</div>
+          <div class="rf-meta">AI Content Generator • 1h ago</div>
+        </div>
+        <div class="rf-dot green"></div>
+      </div>
+      <div class="rf-item">
+        <div class="rf-thumb orange">🐍</div>
+        <div style="flex:1">
+          <div class="rf-file-name">bot.py</div>
+          <div class="rf-meta">TG Growth Tool • 3h ago</div>
+        </div>
+        <div class="rf-dot green"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CODE EDITOR ══════════════════════════════════════════════ -->
+<div id="editor" class="screen">
+  <div class="editor-header">
+    <span class="ed-back" onclick="App.nav('projects')">‹</span>
+    <span class="ed-filename" id="ed-filename">dashboard.tsx</span>
+    <span class="ed-badge" id="ed-badge">TypeScript</span>
+    <span class="ed-w">W</span>
+    <span class="ed-more">⋯</span>
+  </div>
+  <div class="code-view" id="code-view"></div>
+  <div class="terminal-panel">
+    <div class="term-tabs">
+      <div class="term-tab active" onclick="Editor.termTab(this,'terminal')">Terminal</div>
+      <div class="term-tab" onclick="Editor.termTab(this,'problems')">Problems <span class="err-badge">3</span></div>
+      <div class="term-tab" onclick="Editor.termTab(this,'output')">Output</div>
+      <div class="term-tab" onclick="Editor.termTab(this,'git')">Git</div>
+    </div>
+    <div class="term-body" id="term-body">
+      <div><span class="t-prompt">$ </span><span class="t-cmd">npm run dev</span></div>
+      <div><span class="t-out">vite v5.0.0</span> <span class="t-dim">ready in 320ms</span></div>
+      <div class="t-dim"> </div>
+      <div><span class="t-dim">  ➜  Local: </span><span class="t-link">http://localhost:5173/</span></div>
+      <div><span class="t-dim">  ➜  Network: use </span><span class="t-cmd">--host</span><span class="t-dim"> to expose</span></div>
+      <div><span class="t-out">  ✓ Compiled successfully in 320ms</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AGENTS ══════════════════════════════════════════════════ -->
+<div id="agents" class="screen">
+  <div class="chat-header">
+    <span class="chat-title">AI Agents</span>
+    <span class="chat-edit" onclick="Agents.showRunSheet()">▶</span>
+  </div>
+  <div class="scroll-area">
+    <div class="agents-page">
+
+      <!-- Master Agent -->
+      <div class="master-card" onclick="Agents.runMaster()">
+        <div class="master-left">
+          <h3>Master Agent</h3>
+          <p>Orchestrates all agents</p>
+          <span class="master-badge">● Active</span>
+        </div>
+        <div class="orb master-orb"></div>
+      </div>
+
+      <!-- Agent Grid -->
+      <div class="agents-grid">
         <div class="agent-card" onclick="Agents.run('planner')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">📋</div>
-          <div class="agent-name">Planner</div>
-          <div class="agent-desc">Breaks tasks into steps</div>
+          <div class="ac-top">
+            <div class="ac-icon orange">♦</div>
+            <div class="ac-sdot green"></div>
+          </div>
+          <div class="ac-name">Planner</div>
+          <div class="ac-desc">Strategic planning & roadmap</div>
+          <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('researcher')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">🔍</div>
-          <div class="agent-name">Researcher</div>
-          <div class="agent-desc">Finds docs &amp; solutions</div>
+          <div class="ac-top">
+            <div class="ac-icon blue">🔍</div>
+            <div class="ac-sdot green"></div>
+          </div>
+          <div class="ac-name">Researcher</div>
+          <div class="ac-desc">Web research & analysis</div>
+          <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('coder')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">💻</div>
-          <div class="agent-name">Coder</div>
-          <div class="agent-desc">Writes &amp; edits code</div>
+          <div class="ac-top">
+            <div class="ac-icon green">⟨⟩</div>
+            <div class="ac-sdot green"></div>
+          </div>
+          <div class="ac-name">Coder</div>
+          <div class="ac-desc">Write clean & efficient code</div>
+          <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('designer')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">🎨</div>
-          <div class="agent-name">UI Designer</div>
-          <div class="agent-desc">Creates beautiful UIs</div>
-        </div>
-        <div class="agent-card" onclick="Agents.run('backend')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">🔧</div>
-          <div class="agent-name">Backend</div>
-          <div class="agent-desc">APIs &amp; databases</div>
-        </div>
-        <div class="agent-card" onclick="Agents.run('tester')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">🧪</div>
-          <div class="agent-name">Tester</div>
-          <div class="agent-desc">Writes &amp; runs tests</div>
-        </div>
-        <div class="agent-card" onclick="Agents.run('security')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">🔒</div>
-          <div class="agent-name">Security</div>
-          <div class="agent-desc">Audits for vulns</div>
+          <div class="ac-top">
+            <div class="ac-icon purple">✏️</div>
+            <div class="ac-sdot green"></div>
+          </div>
+          <div class="ac-name">Designer</div>
+          <div class="ac-desc">UI/UX & visual design</div>
+          <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('reviewer')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">✅</div>
-          <div class="agent-name">Reviewer</div>
-          <div class="agent-desc">Code quality check</div>
+          <div class="ac-top">
+            <div class="ac-icon red">🔎</div>
+            <div class="ac-sdot green"></div>
+          </div>
+          <div class="ac-name">Reviewer</div>
+          <div class="ac-desc">Code review & quality</div>
+          <span class="ac-badge active">Active</span>
         </div>
-        <div class="agent-card" onclick="Agents.run('optimizer')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">⚡</div>
-          <div class="agent-name">Optimizer</div>
-          <div class="agent-desc">Performance tuning</div>
+        <div class="agent-card" onclick="Agents.run('tester')">
+          <div class="ac-top">
+            <div class="ac-icon yellow">👁</div>
+            <div class="ac-sdot green"></div>
+          </div>
+          <div class="ac-name">Tester</div>
+          <div class="ac-desc">Testing & QA automation</div>
+          <span class="ac-badge active">Active</span>
         </div>
         <div class="agent-card" onclick="Agents.run('deployer')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">🚀</div>
-          <div class="agent-name">Deployer</div>
-          <div class="agent-desc">Handles deployments</div>
+          <div class="ac-top">
+            <div class="ac-icon blue">🚀</div>
+            <div class="ac-sdot green"></div>
+          </div>
+          <div class="ac-name">Deployment</div>
+          <div class="ac-desc">Deploy & monitor applications</div>
+          <span class="ac-badge active">Active</span>
         </div>
-        <div class="agent-card" onclick="Agents.run('docs')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">📝</div>
-          <div class="agent-name">Docs Writer</div>
-          <div class="agent-desc">Documentation</div>
-        </div>
-        <div class="agent-card" onclick="Agents.run('devops')">
-          <div class="agent-status idle">Idle</div>
-          <div class="agent-icon">🛠️</div>
-          <div class="agent-name">DevOps</div>
-          <div class="agent-desc">CI/CD pipelines</div>
+        <div class="new-agent" onclick="Agents.createNew()">
+          <div class="new-plus">+</div>
+          <div class="new-label">New Agent</div>
+          <div class="new-sub">Create custom AI agent</div>
         </div>
       </div>
-      <div style="height:16px"></div>
     </div>
   </div>
-
-  <!-- ══ DEPLOY SCREEN ══════════════════════════════════════════ -->
-  <div class="screen" id="screen-deploy">
-    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
-      <div class="header-title">Deploy</div>
-      <div id="deploy-status-badge" class="badge badge-green">Ready</div>
-    </div>
-
-    <div class="scroll">
-
-      <!-- Deploy Button -->
-      <div class="deploy-btn-wrap">
-        <button class="deploy-btn" id="deploy-btn" onclick="Deploy.start()">
-          🚀 Deploy Now
-        </button>
-      </div>
-
-      <!-- Pipeline -->
-      <div class="section">
-        <div class="section-title">Pipeline</div>
-      </div>
-      <div class="pipeline-steps" id="pipeline-steps">
-        <div class="pipeline-step" data-step="commit">
-          <div class="step-icon pending">①</div>
-          <div>
-            <div class="step-label">Git Commit</div>
-            <div class="text-xs text-3">Stage &amp; commit changes</div>
-          </div>
-          <div class="step-time" id="step-commit-time">—</div>
-        </div>
-        <div class="pipeline-step" data-step="push">
-          <div class="step-icon pending">②</div>
-          <div>
-            <div class="step-label">Push to GitHub</div>
-            <div class="text-xs text-3">Sync remote repository</div>
-          </div>
-          <div class="step-time" id="step-push-time">—</div>
-        </div>
-        <div class="pipeline-step" data-step="build">
-          <div class="step-icon pending">③</div>
-          <div>
-            <div class="step-label">Build</div>
-            <div class="text-xs text-3">Compile &amp; bundle</div>
-          </div>
-          <div class="step-time" id="step-build-time">—</div>
-        </div>
-        <div class="pipeline-step" data-step="test">
-          <div class="step-icon pending">④</div>
-          <div>
-            <div class="step-label">Run Tests</div>
-            <div class="text-xs text-3">Automated test suite</div>
-          </div>
-          <div class="step-time" id="step-test-time">—</div>
-        </div>
-        <div class="pipeline-step" data-step="deploy">
-          <div class="step-icon pending">⑤</div>
-          <div>
-            <div class="step-label">Deploy</div>
-            <div class="text-xs text-3">Push to production</div>
-          </div>
-          <div class="step-time" id="step-deploy-time">—</div>
-        </div>
-        <div class="pipeline-step" data-step="health">
-          <div class="step-icon pending">⑥</div>
-          <div>
-            <div class="step-label">Health Check</div>
-            <div class="text-xs text-3">Verify deployment</div>
-          </div>
-          <div class="step-time" id="step-health-time">—</div>
-        </div>
-      </div>
-
-      <!-- Deploy Log -->
-      <div class="section" style="margin-top:16px">
-        <div class="section-title">Deploy Log</div>
-        <div id="deploy-log" style="background:var(--bg-1);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px;font-family:var(--mono);font-size:12px;color:var(--text-2);min-height:80px;line-height:1.8">
-          <span style="color:var(--text-3)">Waiting for deployment...</span>
-        </div>
-      </div>
-
-      <!-- Deploy History -->
-      <div class="section" style="margin-top:16px">
-        <div class="section-title">History</div>
-        <div style="display:flex;flex-direction:column;gap:1px" id="deploy-history">
-          <div class="row" style="opacity:0.5">
-            <span style="font-size:18px">📭</span>
-            <div class="row-label text-sm">No deployments yet</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ══ SETTINGS SCREEN ════════════════════════════════════════ -->
-  <div class="screen" id="screen-settings">
-    <div class="header" style="background:var(--bg-1);border-bottom:1px solid var(--border)">
-      <div class="header-title">Settings</div>
-    </div>
-    <div class="scroll">
-
-      <!-- AI Connectors -->
-      <div class="section" style="margin-top:12px">
-        <div class="section-title">AI Connectors</div>
-        <div style="display:flex;flex-direction:column;gap:1px">
-          <div class="row card" style="border-radius:var(--r-lg) var(--r-lg) 0 0;border-bottom:none;margin:0;border-radius:0" onclick="Settings.openConnector('openrouter')">
-            <span style="font-size:20px">🤖</span>
-            <div class="flex-1">
-              <div class="row-label">OpenRouter</div>
-              <div class="row-sub" id="or-status">4 keys configured</div>
-            </div>
-            <div id="or-badge" class="badge badge-green">✓ Active</div>
-          </div>
-          <div class="row card" style="border-radius:0;border-top:none;border-bottom:none;margin:0" onclick="Settings.openConnector('groq')">
-            <span style="font-size:20px">⚡</span>
-            <div class="flex-1">
-              <div class="row-label">Groq</div>
-              <div class="row-sub" id="groq-status">Not configured</div>
-            </div>
-            <div id="groq-badge" class="badge badge-red">Configure</div>
-          </div>
-          <div class="row card" style="border-radius:0;border-top:none;border-bottom:none;margin:0" onclick="Settings.openConnector('github')">
-            <span style="font-size:20px">🐙</span>
-            <div class="flex-1">
-              <div class="row-label">GitHub</div>
-              <div class="row-sub" id="gh-status">Not connected</div>
-            </div>
-            <div id="gh-badge" class="badge badge-red">Connect</div>
-          </div>
-          <div class="row card" style="border-radius:0 0 var(--r-lg) var(--r-lg);border-top:none;margin:0" onclick="Settings.openConnector('cloudflare')">
-            <span style="font-size:20px">🌐</span>
-            <div class="flex-1">
-              <div class="row-label">Cloudflare</div>
-              <div class="row-sub">Workers &amp; R2</div>
-            </div>
-            <div class="badge badge-red">Configure</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- AI Model -->
-      <div class="section" style="margin-top:16px">
-        <div class="section-title">Default Model</div>
-        <div style="display:flex;flex-direction:column;gap:8px" id="model-list">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-
-      <!-- About -->
-      <div class="section" style="margin-top:16px">
-        <div class="section-title">About</div>
-        <div class="card">
-          <div class="flex items-center gap-12">
-            <div style="font-size:36px">⚡</div>
-            <div>
-              <div class="font-700" style="font-size:16px">OmniCode</div>
-              <div class="text-2 text-sm">v1.0.0 · Mobile AI Platform</div>
-              <div class="text-3 text-xs" style="margin-top:4px">Cursor × Claude × Telegram</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style="height:20px"></div>
-    </div>
-  </div>
-
-  <!-- ══ BOTTOM NAV ═════════════════════════════════════════════ -->
-  <nav class="nav">
-    <div class="nav-item active" id="nav-home" onclick="App.navigate('home')">
-      <div class="nav-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-      </div>
-      <span>Home</span>
-    </div>
-    <div class="nav-item" id="nav-ai" onclick="App.navigate('ai')">
-      <div class="nav-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-      </div>
-      <span>AI</span>
-    </div>
-    <div class="nav-item accent" id="nav-projects" onclick="App.navigate('projects')">
-      <div class="nav-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        </svg>
-      </div>
-      <span>Projects</span>
-    </div>
-    <div class="nav-item" id="nav-agents" onclick="App.navigate('agents')">
-      <div class="nav-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><circle cx="16" cy="10" r="2"/><path d="M12 10v4M8 20h8"/>
-        </svg>
-      </div>
-      <span>Agents</span>
-    </div>
-    <div class="nav-item" id="nav-settings" onclick="App.navigate('settings')">
-      <div class="nav-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-      </div>
-      <span>Settings</span>
-    </div>
-  </nav>
-
 </div>
 
-<!-- ══ SHEETS / MODALS ════════════════════════════════════════════ -->
+<!-- ═══ DEPLOY ══════════════════════════════════════════════════ -->
+<div id="deploy" class="screen">
+  <div class="chat-header">
+    <span class="chat-title">Deploy</span>
+    <span class="ed-more">⋯</span>
+  </div>
+  <div class="scroll-area">
 
+    <div class="deploy-hero">
+      <div class="orb deploy-orb"></div>
+      <button class="deploy-btn" onclick="Deploy.start()">
+        ▶ Deploy Now
+      </button>
+      <div class="deploy-sub-text">Production Deployment</div>
+    </div>
+
+    <!-- Status Steps -->
+    <div class="deploy-status">
+      <div class="step-row">
+        <div class="step-ico blue">🐙</div>
+        <div class="step-inf">
+          <div class="step-n">GitHub</div>
+          <div class="step-d">Repository connected</div>
+        </div>
+        <div class="step-dot green" id="step-github"></div>
+      </div>
+      <div class="step-row">
+        <div class="step-ico green">🔨</div>
+        <div class="step-inf">
+          <div class="step-n">Build</div>
+          <div class="step-d" id="step-build-desc">Build completed</div>
+        </div>
+        <div class="step-dot green" id="step-build"></div>
+      </div>
+      <div class="step-row">
+        <div class="step-ico purple">✅</div>
+        <div class="step-inf">
+          <div class="step-n">Tests</div>
+          <div class="step-d">All tests passed</div>
+        </div>
+        <div class="step-dot green" id="step-tests"></div>
+      </div>
+      <div class="step-row">
+        <div class="step-ico orange">🚀</div>
+        <div class="step-inf">
+          <div class="step-n">Deploy</div>
+          <div class="step-d" id="step-deploy-desc">Ready to deploy</div>
+        </div>
+        <div class="step-dot orange" id="step-deploy"></div>
+      </div>
+    </div>
+
+    <!-- Live Logs -->
+    <div class="logs-section">
+      <div class="section-head">
+        <span class="section-title">Live Logs</span>
+        <span class="section-link" onclick="Deploy.clearLogs()">View All</span>
+      </div>
+      <div class="logs-box" id="deploy-logs">
+        <div class="log-line"><span class="log-t">9:41:02</span><span class="log-m">› Preparing deployment...</span></div>
+        <div class="log-line"><span class="log-t">9:41:04</span><span class="log-m">› Building application...</span></div>
+        <div class="log-line"><span class="log-t">9:41:08</span><span class="log-m">› Running tests...</span></div>
+        <div class="log-line"><span class="log-t">9:41:12</span><span class="log-m">› Deploying to production...</span></div>
+        <div class="log-line"><span class="log-t">9:41:15</span><span class="log-m ok">✓ Deployment successful!</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SETTINGS ════════════════════════════════════════════════ -->
+<div id="settings" class="screen">
+  <div class="chat-header">
+    <span class="chat-title">Settings</span>
+  </div>
+  <div class="scroll-area settings-wrap">
+
+    <div class="s-section">
+      <div class="s-section-title">API Keys</div>
+      <div class="s-group">
+        <div class="s-row" onclick="Settings.openConnector('openrouter')">
+          <div class="s-ico red">🔄</div>
+          <span class="s-label">OpenRouter</span>
+          <span class="s-connected" id="or-status">Connected</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row" onclick="Settings.openConnector('github')">
+          <div class="s-ico gray">🐙</div>
+          <span class="s-label">GitHub</span>
+          <span class="s-connected" id="gh-status">Connected</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row" onclick="Settings.openConnector('groq')">
+          <div class="s-ico blue">⚡</div>
+          <span class="s-label">Groq</span>
+          <span id="groq-status" class="s-val">Not set</span>
+          <span class="s-chevron">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-title">Appearance</div>
+      <div class="s-group">
+        <div class="s-row">
+          <div class="s-ico gray">🌙</div>
+          <span class="s-label">Theme</span>
+          <span class="s-val">Dark</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row" onclick="Settings.accentPicker()">
+          <div class="s-ico red">🎨</div>
+          <span class="s-label">Accent Color</span>
+          <span class="s-val">Red</span>
+          <span class="s-chevron">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-title">Preferences</div>
+      <div class="s-group">
+        <div class="s-row">
+          <div class="s-ico blue">🌐</div>
+          <span class="s-label">Language</span>
+          <span class="s-val">English</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row">
+          <div class="s-ico purple">🔔</div>
+          <span class="s-label">Notifications</span>
+          <span class="s-val">Enabled</span>
+          <span class="s-chevron">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-title">AI Configuration</div>
+      <div class="s-group">
+        <div class="s-row" onclick="App.openModelPicker()">
+          <div class="s-ico green">🧠</div>
+          <span class="s-label">Default Model</span>
+          <span class="s-val" id="default-model-val">Llama 3.3</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row">
+          <div class="s-ico orange">📊</div>
+          <span class="s-label">Max Tokens</span>
+          <span class="s-val">4000</span>
+          <span class="s-chevron">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="s-section">
+      <div class="s-section-title">Privacy & Security</div>
+      <div class="s-group">
+        <div class="s-row">
+          <div class="s-ico gray">🧠</div>
+          <span class="s-label">Memory</span>
+          <span class="s-val">Enabled</span>
+          <span class="s-chevron">›</span>
+        </div>
+        <div class="s-row">
+          <div class="s-ico gray">🔒</div>
+          <span class="s-label">Data Encryption</span>
+          <span class="s-val">Enabled</span>
+          <span class="s-chevron">›</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ BOTTOM NAV ══════════════════════════════════════════════ -->
+<nav class="nav">
+  <div class="nav-item active" id="nav-home" onclick="App.nav('home')">
+    <div class="nav-icon">🏠</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item" id="nav-ai" onclick="App.nav('ai')">
+    <div class="nav-icon">💬</div>
+    <div class="nav-label">AI</div>
+  </div>
+  <div class="nav-item" id="nav-projects" onclick="App.nav('projects')">
+    <div class="nav-icon">📁</div>
+    <div class="nav-label">Projects</div>
+  </div>
+  <div class="nav-item" id="nav-agents" onclick="App.nav('agents')">
+    <div class="nav-icon">🤖</div>
+    <div class="nav-label">Agents</div>
+  </div>
+  <div class="nav-item" id="nav-deploy" onclick="App.nav('deploy')">
+    <div class="nav-icon">🚀</div>
+    <div class="nav-label">Deploy</div>
+  </div>
+  <div class="nav-item" id="nav-settings" onclick="App.nav('settings')">
+    <div class="nav-icon">⚙️</div>
+    <div class="nav-label">Settings</div>
+  </div>
+</nav>
+
+<!-- ═══ SHEETS ══════════════════════════════════════════════════ -->
 <!-- Connector Sheet -->
-<div class="sheet-overlay" id="connector-sheet">
+<div id="connector-sheet" class="overlay" onclick="Sheets.closeOnBg(event,'connector-sheet')">
   <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title" id="sheet-title">Configure</div>
-    <div id="sheet-content"></div>
-  </div>
-</div>
-
-<!-- Model Picker Sheet -->
-<div class="sheet-overlay" id="model-sheet">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">Choose Model</div>
-    <div id="model-picker-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="sh-handle"></div>
+    <div class="sh-title" id="connector-sheet-title">OpenRouter API Keys</div>
+    <label class="sh-label">API Key 1</label>
+    <input id="conn-key1" class="sh-input" type="password" placeholder="sk-or-v1-...">
+    <label class="sh-label">API Key 2 (optional)</label>
+    <input id="conn-key2" class="sh-input" type="password" placeholder="sk-or-v1-...">
+    <button class="sh-btn" onclick="Settings.saveConnector()">Save Keys</button>
   </div>
 </div>
 
 <!-- Agent Task Sheet -->
-<div class="sheet-overlay" id="agent-sheet">
+<div id="agent-sheet" class="overlay" onclick="Sheets.closeOnBg(event,'agent-sheet')">
   <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title" id="agent-sheet-title">Run Agent</div>
-    <textarea class="input" id="agent-task-input" placeholder="Describe the task..." style="min-height:100px;resize:none;margin-bottom:12px"></textarea>
-    <button class="btn btn-primary btn-full" onclick="Agents.executeTask()">▶ Execute</button>
+    <div class="sh-handle"></div>
+    <div class="sh-title" id="agent-sheet-title">Run Agent</div>
+    <label class="sh-label">Task description</label>
+    <input id="agent-task-input" class="sh-input" placeholder="Describe what you want...">
+    <button class="sh-btn" onclick="Agents.executeTask()">Run Agent</button>
   </div>
 </div>
 
-<!-- Toast container -->
-<div class="toast-container" id="toast-container"></div>
+<!-- Model Picker Sheet -->
+<div id="model-sheet" class="overlay" onclick="Sheets.closeOnBg(event,'model-sheet')">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title">Select Model</div>
+    <div id="model-list" style="padding: 0 20px 8px;"></div>
+  </div>
+</div>
 
-<script type="module" src="app.js"></script>
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
 </body>
 </html>
