@@ -181,7 +181,7 @@ const Git = {
 
   async request(path, method = 'GET', body = null) {
     const token = this.token();
-    if (!token) throw new Error('GitHub token not set. Go to Settings → API Keys');
+    if (!token) throw new Error('GitHub token sozlanmagan. Sozlamalar → API Kalitlar bo\'limiga o\'ting');
     const res = await fetch('https://api.github.com' + path, {
       method,
       headers: {
@@ -370,7 +370,7 @@ const AIRouter = {
     for (const fn of chain) {
       try { return await fn(); } catch (e) { console.warn('AI fallback:', e.message); }
     }
-    throw new Error('All AI providers failed. Check API keys in Settings.');
+    throw new Error('Barcha AI provayderlar ishlamadi. Sozlamalarda API kalitlarni tekshiring.');
   },
 };
 
@@ -395,7 +395,7 @@ const MD = {
   render(text) {
     return text
       .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
-        `<div class="code-block"><span class="code-lang-tag">${lang||'code'}</span><button class="code-copy-btn" onclick="MD.copy(this)">Copy</button><pre>${this.esc(code.trim())}</pre></div>`)
+        `<div class="code-block"><span class="code-lang-tag">${lang||'code'}</span><button class="code-copy-btn" onclick="MD.copy(this)">Nusxa</button><pre>${this.esc(code.trim())}</pre></div>`)
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
       .replace(/^# (.+)$/gm, '<h1 style="font-size:18px;margin:10px 0 6px">$1</h1>')
@@ -411,7 +411,7 @@ const MD = {
   esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
   copy(btn) {
     navigator.clipboard.writeText(btn.nextElementSibling.textContent)
-      .then(() => { btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = 'Copy', 2000); });
+      .then(() => { btn.textContent = '✓ Nusxalandi'; setTimeout(() => btn.textContent = 'Nusxa', 2000); });
   },
 };
 
@@ -499,11 +499,11 @@ const App = {
     Sheet.open('new-project-sheet');
   },
 
-  showNotifs() { toast('🔔 No new notifications'); },
+  showNotifs() { toast('🔔 Yangi bildirishnomalar yo\'q'); },
 
   init() {
     const hour = new Date().getHours();
-    const greet = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+    const greet = hour < 12 ? 'Xayrli tong' : hour < 17 ? 'Xayrli kun' : 'Xayrli kech';
     const name = tg?.initDataUnsafe?.user?.first_name || 'User';
     const el = document.getElementById('greeting-text');
     if (el) el.textContent = `${greet}, ${name} 👋`;
@@ -565,7 +565,7 @@ const Home = {
     const usageSub = document.getElementById('usage-sub');
     if (usageEl) usageEl.textContent = usagePct + '%';
     if (usageBar) usageBar.style.width = usagePct + '%';
-    if (usageSub) usageSub.textContent = today.requests + ' requests today · Free providers';
+    if (usageSub) usageSub.textContent = today.requests + ' ta so\'rov bugun · Bepul provayderlar';
   },
 
   _updateProjects() {
@@ -584,7 +584,7 @@ const Home = {
         <div class="project-more">⋯</div>
       </div>`).join('') :
       `<div style="text-align:center;padding:20px;color:var(--text3)">
-        No projects yet.<br><span style="color:var(--accent);cursor:pointer" onclick="App.newProject()">+ Create your first project</span>
+        Hali loyiha yo'q.<br><span style="color:var(--accent);cursor:pointer" onclick="App.newProject()">+ Birinchi loyihangizni yarating</span>
       </div>`;
   },
 
@@ -593,7 +593,7 @@ const Home = {
     if (!container) return;
     const tasks = Tasks.list().filter(t => t.status === 'running');
     if (!tasks.length) {
-      container.innerHTML = `<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">No running tasks</div>`;
+      container.innerHTML = `<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">Faol vazifalar yo'q</div>`;
       return;
     }
     container.innerHTML = tasks.map(t => `
@@ -615,7 +615,7 @@ const Home = {
     const aiName = document.getElementById('conn-ai-name');
 
     if (ghStatus) {
-      ghStatus.textContent = keys.github ? 'Connected' : 'Not set';
+      ghStatus.textContent = keys.github ? 'Ulangan' : 'Sozlanmagan';
       ghStatus.style.color = keys.github ? 'var(--green)' : 'var(--text3)';
     }
     if (aiStatus && aiName) {
@@ -623,11 +623,11 @@ const Home = {
       if (hasKey) {
         const provName = keys.anthropic ? 'Anthropic' : keys.or1 ? 'OpenRouter' : keys.groq ? 'Groq' : keys.gemini ? 'Gemini' : keys.deepseek ? 'DeepSeek' : 'Together AI';
         aiName.textContent = provName + ' AI';
-        aiStatus.textContent = 'Connected';
+        aiStatus.textContent = 'Ulangan';
         aiStatus.style.color = 'var(--green)';
       } else {
-        aiName.textContent = 'AI Provider';
-        aiStatus.textContent = 'No key set → Pollinations (free)';
+        aiName.textContent = 'AI Provayder';
+        aiStatus.textContent = 'Kalit yo\'q → Pollinations (bepul)';
         aiStatus.style.color = 'var(--text3)';
       }
     }
@@ -682,21 +682,21 @@ Rules: Be concise. Write working code. For mobile: short explanations.`;
     const el = document.getElementById('chat-messages');
     if (!el) return;
     el.innerHTML = '';
-    this.appendBubble('ai', `**OmniCode AI** — Claude Code on your phone 🚀
+    this.appendBubble('ai', `**OmniCode AI** — Telefondan Claude Code 🚀
 
-**What I can do:**
-- Write complete files & full projects
-- Edit your code (like Cursor's Cmd+K)
-- Review PRs, fix bugs, explain code
-- Push directly to GitHub
-- Run 12 specialized AI agents
+**Nima qila olaman:**
+- To'liq fayllar va loyihalar yozish
+- Kodni tahrirlash (Cursor Cmd+K kabi)
+- PR ko'rib chiqish, xatolarni tuzatish
+- To'g'ridan-to'g'ri GitHubga yuborish
+- 12 ta ixtisoslashgan AI agent ishlatish
 
-**Getting started:**
-1. Create a project (Projects tab)
-2. Describe what to build
-3. I'll write the files — you approve them
+**Boshlash:**
+1. Loyiha yarating (Loyihalar bo'limi)
+2. Nima qurishni tasvirlab bering
+3. Men fayllarni yozaman — siz tasdiqlaysiz
 
-What are we building today?`, false);
+Bugun nima quramiz?`, false);
   },
 
   appendBubble(role, text, hasWrites) {
@@ -708,14 +708,14 @@ What are we building today?`, false);
       if (hasWrites) {
         const btn = document.createElement('button');
         btn.className = 'apply-btn';
-        btn.textContent = `📝 Apply ${State.pendingWrites.length} file${State.pendingWrites.length>1?'s':''}`;
+        btn.textContent = `📝 ${State.pendingWrites.length} ta faylni qo'llash`;
         btn.onclick = () => DiffView.show();
         div.appendChild(btn);
       }
       const chips = document.createElement('div');
       chips.className = 'bubble-chips';
-      chips.innerHTML = ['Improve','Explain','Shorter','Fix bugs'].map(a =>
-        `<button class="bubble-chip" onclick="AI.quickAction('${a}')">${a}</button>`).join('');
+      chips.innerHTML = [['Improve','Yaxshilash'],['Explain','Tushuntirish'],['Shorter','Qisqartirish'],['Fix bugs','Xatolarni tuzat']].map(([a,uz]) =>
+        `<button class="bubble-chip" onclick="AI.quickAction('${a}')">${uz}</button>`).join('');
       div.appendChild(chips);
     } else {
       div.textContent = text;
@@ -729,7 +729,7 @@ What are we building today?`, false);
     const el = document.getElementById('chat-messages');
     const div = document.createElement('div');
     div.className = 'bubble thinking'; div.id = 'typing-ind';
-    div.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div><span style="font-size:13px;color:var(--text3)">Thinking...</span>`;
+    div.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div><span style="font-size:13px;color:var(--text3)">O'ylayapman...</span>`;
     el.appendChild(div); el.scrollTop = el.scrollHeight;
   },
   hideTyping() { document.getElementById('typing-ind')?.remove(); },
@@ -768,7 +768,7 @@ What are we building today?`, false);
       if (writes.length) {
         State.pendingWrites = writes;
         this.appendBubble('ai', reply, true);
-        toast(`📝 ${writes.length} file${writes.length>1?'s':''} ready to apply`);
+        toast(`📝 ${writes.length} ta fayl qo'llashga tayyor`);
       } else {
         this.appendBubble('ai', reply, false);
       }
@@ -777,7 +777,7 @@ What are we building today?`, false);
       Tasks.remove(taskId);
     } catch (e) {
       this.hideTyping();
-      this.appendBubble('ai', `❌ **${e.message}**\n\nAdd API keys in **Settings → API Keys** to enable AI.`, false);
+      this.appendBubble('ai', `❌ **${e.message}**\n\nAI yoqish uchun **Sozlamalar → AI API Kalitlar** bo'limiga kalit qo'shing.`, false);
       Tasks.remove(taskId);
     } finally {
       this.busy = false;
@@ -800,13 +800,13 @@ What are we building today?`, false);
   toggleTool(el, name) {
     if (State.activeTools.has(name)) { State.activeTools.delete(name); el.classList.remove('active'); }
     else { State.activeTools.add(name); el.classList.add('active'); }
-    toast(`Tool: ${name} ${State.activeTools.has(name) ? 'ON' : 'OFF'}`);
+    toast(`Vosita: ${name} ${State.activeTools.has(name) ? 'YOQILDI' : 'O\'CHIRILDI'}`);
   },
 
   async quickAction(action) {
     const last = State.chatHistory.filter(m => m.role === 'assistant').pop();
-    if (!last) { toast('No previous response to act on'); return; }
-    const prompts = { Improve: 'Improve this:', Explain: 'Explain this clearly:', Shorter: 'Make this shorter:', 'Fix bugs': 'Find and fix any bugs in this:' };
+    if (!last) { toast('Avval AI dan javob oling'); return; }
+    const prompts = { Improve: 'Buni yaxshilang:', Explain: 'Buni tushunarli tushuntiring:', Shorter: 'Buni qisqartiring:', 'Fix bugs': 'Xatolarni toping va tuzating:' };
     await this.send(`${prompts[action]} ${last.content.slice(0, 500)}`);
   },
 };
@@ -818,7 +818,7 @@ const DiffView = {
   current: 0,
 
   show() {
-    if (!State.pendingWrites.length) { toast('No pending changes'); return; }
+    if (!State.pendingWrites.length) { toast('O\'zgarishlar yo\'q'); return; }
     this.current = 0;
     this.render();
     Sheet.open('diff-sheet');
@@ -828,7 +828,7 @@ const DiffView = {
     const w = State.pendingWrites[this.current];
     const existing = State.projectId ? FS.read(State.projectId, w.path) : '';
     const diff = Diff.compute(existing, w.content);
-    document.getElementById('diff-title').textContent = `${!existing ? '+ New' : '~ Modified'}: ${w.path}`;
+    document.getElementById('diff-title').textContent = `${!existing ? '+ Yangi' : '~ O\'zgartirildi'}: ${w.path}`;
     document.getElementById('diff-nav').textContent = `${this.current+1} / ${State.pendingWrites.length}`;
     document.getElementById('diff-body').innerHTML = Diff.renderHTML(diff);
     document.getElementById('diff-prev').style.opacity = this.current === 0 ? '0.3' : '1';
@@ -839,7 +839,7 @@ const DiffView = {
   next() { if (this.current < State.pendingWrites.length-1) { this.current++; this.render(); } },
 
   applyAll() {
-    if (!State.projectId) { toast('⚠️ Select a project first'); Sheet.close('diff-sheet'); App.nav('projects'); return; }
+    if (!State.projectId) { toast('⚠️ Avval loyiha tanlang'); Sheet.close('diff-sheet'); App.nav('projects'); return; }
     for (const w of State.pendingWrites) FS.write(State.projectId, w.path, w.content);
     const count = State.pendingWrites.length;
     State.pendingWrites = [];
@@ -847,10 +847,10 @@ const DiffView = {
     Projects.render();
     Home.refresh();
     PM.update(State.projectId, {});
-    toast(`✅ Applied ${count} file${count>1?'s':''}`);
+    toast(`✅ ${count} ta fayl qo'llandi`);
   },
 
-  rejectAll() { State.pendingWrites = []; Sheet.close('diff-sheet'); toast('❌ Changes rejected'); },
+  rejectAll() { State.pendingWrites = []; Sheet.close('diff-sheet'); toast('❌ O\'zgarishlar rad etildi'); },
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -865,8 +865,8 @@ const Projects = {
     if (!list.length) {
       el.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text3)">
         <div style="font-size:40px;margin-bottom:12px">📁</div>
-        <div style="font-size:15px;font-weight:600;margin-bottom:8px">No Projects Yet</div>
-        <button onclick="App.newProject()" style="background:var(--accent);border:none;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">+ New Project</button>
+        <div style="font-size:15px;font-weight:600;margin-bottom:8px">Hali loyiha yo'q</div>
+        <button onclick="App.newProject()" style="background:var(--accent);border:none;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">+ Yangi loyiha</button>
       </div>`;
       return;
     }
@@ -879,7 +879,7 @@ const Projects = {
           <span class="f-arrow open" onclick="Projects.toggleFolder(this,event)">▶</span>
           <span class="f-icon">📁</span>
           <span class="f-name">${p.name}</span>
-          ${isActive ? '<span style="font-size:10px;color:var(--accent);font-weight:700;background:rgba(255,77,79,0.1);padding:2px 7px;border-radius:10px">Active</span>' : ''}
+          ${isActive ? '<span style="font-size:10px;color:var(--accent);font-weight:700;background:rgba(255,77,79,0.1);padding:2px 7px;border-radius:10px">Faol</span>' : ''}
           <span onclick="Projects.menu('${p.id}',event)" style="font-size:18px;color:var(--text3);padding:4px 8px">⋯</span>
         </div>
         <div class="folder-files">
@@ -890,7 +890,7 @@ const Projects = {
           </div>`).join('')}
           <div class="file-row" style="color:var(--text3)" onclick="Projects.addFile('${p.id}')">
             <span class="fi-icon">+</span>
-            <span class="fi-name" style="color:var(--text3)">Add file...</span>
+            <span class="fi-name" style="color:var(--text3)">Fayl qo'shish...</span>
           </div>
         </div>
       </div>`;
@@ -902,7 +902,7 @@ const Projects = {
     State.pendingWrites = [];
     State.agent = null;
     const p = PM.get(id);
-    toast(`📁 ${p.name} — active`);
+    toast(`📁 ${p.name} — faol loyiha`);
     this.render();
     Home.refresh();
     const lbl = document.getElementById('active-project-label');
@@ -912,12 +912,12 @@ const Projects = {
   newProject() {
     const name = document.getElementById('new-project-name').value.trim();
     const tpl = document.getElementById('new-project-template').value;
-    if (!name) { toast('Enter project name'); return; }
+    if (!name) { toast('Loyiha nomini kiriting'); return; }
     const p = PM.create(name, tpl);
     this.open(p.id);
     Sheet.close('new-project-sheet');
     App.nav('projects');
-    toast(`✅ "${name}" created`);
+    toast(`✅ "${name}" yaratildi`);
   },
 
   toggleFolder(arrow, e) {
@@ -929,7 +929,7 @@ const Projects = {
   },
 
   addFile(projectId) {
-    const name = prompt('File path (e.g. src/utils.js):');
+    const name = prompt('Fayl yo\'li (masalan: src/utils.js):');
     if (!name) return;
     FS.write(projectId, name, `// ${name}\n`);
     Editor.open(projectId, name);
@@ -940,11 +940,11 @@ const Projects = {
     e.stopPropagation();
     const p = PM.get(id);
     const actions = ['Push to GitHub', 'Delete project', 'Cancel'];
-    const action = prompt(`${p.name}\n\n1) Push to GitHub\n2) Delete project\n3) Cancel\n\nEnter 1, 2 or 3:`);
+    const action = prompt(`${p.name}\n\n1) GitHubga yuborish\n2) Loyihani o'chirish\n3) Bekor qilish\n\n1, 2 yoki 3 kiriting:`);
     if (action === '1') { PM.setCurrent(id); Deploy.start(); }
     else if (action === '2') {
-      if (confirm(`Delete "${p.name}"? Cannot be undone.`)) {
-        PM.delete(id); this.render(); Home.refresh(); toast('🗑 Deleted');
+      if (confirm(`"${p.name}" o'chirilsinmi? Bu amalni bekor qilib bo'lmaydi.`)) {
+        PM.delete(id); this.render(); Home.refresh(); toast('🗑 O\'chirildi');
       }
     }
   },
@@ -992,11 +992,11 @@ const Editor = {
   },
 
   async aiEdit() {
-    if (!this.file) { toast('Open a file first'); return; }
+    if (!this.file) { toast('Avval fayl oching'); return; }
     const content = FS.read(this.projectId, this.file);
-    const instruction = prompt('What should AI do with this file?');
+    const instruction = prompt('AI bu fayl bilan nima qilsin?');
     if (!instruction) return;
-    toast('🤖 AI editing...', 3000);
+    toast('🤖 AI tahrirlayapti...', 3000);
     const messages = [
       { role: 'system', content: `You are a code editor. Respond ONLY with the complete modified file content wrapped in <WRITE_FILE path="${this.file}">...</WRITE_FILE>. No explanation.` },
       { role: 'user', content: `File: ${this.file}\n\nContent:\n${content}\n\nInstruction: ${instruction}` },
@@ -1005,7 +1005,7 @@ const Editor = {
       const reply = await AIRouter.call(messages);
       const writes = FS.parseWrites(reply);
       if (writes.length) { State.pendingWrites = writes; DiffView.show(); }
-      else { toast('AI did not return file changes'); }
+      else { toast('AI fayl o\'zgarishlarini qaytarmadi'); }
     } catch (e) { toast('❌ ' + e.message); }
   },
 
@@ -1016,17 +1016,17 @@ const Editor = {
     if (!body) return;
     if (tab === 'git') {
       const p = PM.get(this.projectId);
-      const ghInfo = p?.github ? `${p.github.owner}/${p.github.repo} @ ${p.github.branch || 'main'}` : 'Not configured';
+      const ghInfo = p?.github ? `${p.github.owner}/${p.github.repo} @ ${p.github.branch || 'main'}` : 'Sozlanmagan';
       body.innerHTML = `<div><span class="t-prompt">$ </span>git status</div>
         <div class="t-dim">On branch main</div>
         <div class="t-dim">GitHub: ${ghInfo}</div>
         <div class="t-dim">Files: ${this.projectId ? FS.index(this.projectId).length : 0}</div>`;
     } else if (tab === 'problems') {
-      body.innerHTML = `<div class="t-dim">No problems found</div>`;
+      body.innerHTML = `<div class="t-dim">Muammolar topilmadi</div>`;
     } else if (tab === 'output') {
-      body.innerHTML = `<div class="t-dim">No output</div>`;
+      body.innerHTML = `<div class="t-dim">Chiqish yo'q</div>`;
     } else {
-      body.innerHTML = `<div><span class="t-prompt">$ </span><span class="t-dim">OmniCode Terminal — read only in browser</span></div>`;
+      body.innerHTML = `<div><span class="t-prompt">$ </span><span class="t-dim">OmniCode Terminal — brauzerda faqat o'qish mumkin</span></div>`;
     }
   },
 };
@@ -1040,18 +1040,18 @@ const Agents = {
   run(name) {
     this.current = name;
     State.agent = name;
-    const title = name.charAt(0).toUpperCase() + name.slice(1) + ' Agent';
-    document.getElementById('agent-sheet-title').textContent = title;
+    const names = { planner:'Rejalashtiruvchi', researcher:'Tadqiqotchi', coder:'Dasturchi', designer:'Dizayner', reviewer:'Tekshiruvchi', tester:'Test qiluvchi', security:'Xavfsizlik', deployer:'Joylashtiruvchi', optimizer:'Optimallashtiruvchi', docs:'Hujjatchi', backend:'Backend' };
+    document.getElementById('agent-sheet-title').textContent = (names[name] || name) + ' Agenti';
     document.getElementById('agent-task-input').value = '';
-    document.getElementById('agent-task-input').placeholder = `What should the ${name} agent do?`;
+    document.getElementById('agent-task-input').placeholder = `${names[name] || name} agenti nima qilsin?`;
     Sheet.open('agent-sheet');
   },
 
   runMaster() {
     this.current = 'master';
     State.agent = 'master';
-    document.getElementById('agent-sheet-title').textContent = 'Master Agent';
-    document.getElementById('agent-task-input').placeholder = 'Describe your full project goal...';
+    document.getElementById('agent-sheet-title').textContent = 'Bosh Agent';
+    document.getElementById('agent-task-input').placeholder = 'Loyihangiz maqsadini batafsil tasvirlab bering...';
     Sheet.open('agent-sheet');
   },
 
@@ -1059,7 +1059,7 @@ const Agents = {
 
   async executeTask() {
     const task = document.getElementById('agent-task-input').value.trim();
-    if (!task) { toast('Enter a task description'); return; }
+    if (!task) { toast('Vazifa tavsifini kiriting'); return; }
     Sheet.close('agent-sheet');
     App.nav('ai');
     await AI.send(`[${(this.current || 'master').toUpperCase()} AGENT]\n${task}`);
@@ -1067,19 +1067,19 @@ const Agents = {
   },
 
   createNew() {
-    const name = prompt('Agent name:');
+    const name = prompt('Agent nomi:');
     if (!name) return;
-    const desc = prompt('Agent description:');
+    const desc = prompt('Agent tavsifi:');
     if (!desc) return;
-    toast(`✅ Agent "${name}" created (will be added to pipeline)`);
+    toast(`✅ "${name}" agenti yaratildi`);
     // Could store custom agents in localStorage here
   },
 
   async runPipeline(task, agentList = ['planner', 'coder', 'reviewer']) {
-    if (!task) { const t = document.getElementById('agent-task-input')?.value.trim(); if (!t) { toast('Enter a task first'); return; } task = t; }
+    if (!task) { const t = document.getElementById('agent-task-input')?.value.trim(); if (!t) { toast('Avval vazifa kiriting'); return; } task = t; }
     Sheet.close('agent-sheet');
     App.nav('ai');
-    AI.appendBubble('ai', `🤖 **Multi-Agent Pipeline** starting...\nAgents: ${agentList.join(' → ')}`, false);
+    AI.appendBubble('ai', `🤖 **Ko'p agentli Pipeline** boshlanmoqda...\nAgentlar: ${agentList.join(' → ')}`, false);
     let context = task;
     for (const name of agentList) {
       State.agent = name;
@@ -1118,7 +1118,7 @@ const Deploy = {
   async start() {
     const projectId = State.projectId;
     if (!projectId) {
-      toast('⚠️ Select a project first');
+      toast('⚠️ Avval loyiha tanlang');
       App.nav('projects');
       return;
     }
@@ -1135,10 +1135,10 @@ const Deploy = {
     const owner = document.getElementById('gh-owner').value.trim();
     const repo = document.getElementById('gh-repo').value.trim();
     const branch = document.getElementById('gh-branch').value.trim() || 'main';
-    if (!owner || !repo) { toast('Enter owner and repo name'); return; }
+    if (!owner || !repo) { toast('Foydalanuvchi nomi va repozitoriya nomini kiriting'); return; }
     Sheet.close('github-deploy-sheet');
     const projectId = State.projectId;
-    if (!projectId) { toast('No project selected'); return; }
+    if (!projectId) { toast('Loyiha tanlanmagan'); return; }
     PM.update(projectId, { github: { owner, repo, branch } });
     await this.push(projectId, owner, repo, branch);
   },
@@ -1168,9 +1168,9 @@ const Deploy = {
     addLog('› Connecting to GitHub...');
 
     if (!Git.token()) {
-      setStep('step-github', 'red', 'No token');
-      addLog('› Error: GitHub token not set. Go to Settings → API Keys → GitHub');
-      toast('❌ Add GitHub token in Settings first'); return;
+      setStep('step-github', 'red', 'Token yo\'q');
+      addLog('› Xato: GitHub token sozlanmagan. Sozlamalar → Kod va Joylashtirish → GitHub Token');
+      toast('❌ Avval Sozlamalarda GitHub token qo\'shing'); return;
     }
 
     try {
@@ -1295,7 +1295,7 @@ const Settings = {
     for (const [id, connected] of Object.entries(statuses)) {
       const el = document.getElementById(id);
       if (!el) continue;
-      el.textContent = connected ? 'Connected' : 'Not set';
+      el.textContent = connected ? 'Ulangan' : 'Sozlanmagan';
       el.className = connected ? 's-connected' : 's-val';
     }
     const modelEl = document.getElementById('default-model-val');
@@ -1330,15 +1330,15 @@ const Settings = {
     Sheet.close('connector-sheet');
     this.refresh();
     Home._updateConnectors?.();
-    toast('✅ Keys saved securely');
+    toast('✅ Kalitlar xavfsiz saqlandi');
   },
 
   accentPicker() {
     const colors = ['#FF4D4F', '#3B82F6', '#22C55E', '#F59E0B', '#8B5CF6', '#EC4899'];
-    const color = prompt('Accent color (hex):\n' + colors.join(', ') + '\n\nOr enter custom hex:') || '#FF4D4F';
+    const color = prompt('Asosiy rang (hex):\n' + colors.join(', ') + '\n\nYoki o\'z rangingizni kiriting:') || '#FF4D4F';
     document.documentElement.style.setProperty('--accent', color);
     Store.set('accent_color', color);
-    toast('🎨 Color updated');
+    toast('🎨 Rang yangilandi');
   },
 };
 
@@ -1362,10 +1362,10 @@ function toast(msg, dur = 2800) {
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s/60)}m ago`;
-  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
-  return `${Math.floor(s/86400)}d ago`;
+  if (s < 60) return 'hozir';
+  if (s < 3600) return `${Math.floor(s/60)} daqiqa oldin`;
+  if (s < 86400) return `${Math.floor(s/3600)} soat oldin`;
+  return `${Math.floor(s/86400)} kun oldin`;
 }
 function fileIcon(path) {
   const ext = path.split('.').pop().toLowerCase();

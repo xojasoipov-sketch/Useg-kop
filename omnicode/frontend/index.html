@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uz">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
@@ -12,44 +12,44 @@
 </head>
 <body>
 
-<!-- ═══ HOME ═══════════════════════════════════════════════════════ -->
+<!-- ═══ BOSH SAHIFA ═════════════════════════════════════════════ -->
 <div id="home" class="screen active">
   <div class="scroll-area">
 
     <div class="home-top">
       <div class="home-greeting">
-        <h2 id="greeting-text">Good Morning, User 👋</h2>
-        <p>Your AI workspace is ready.</p>
+        <h2 id="greeting-text">Xayrli tong 👋</h2>
+        <p>AI ish maydoningiz tayyor.</p>
       </div>
       <button class="notif-btn" onclick="App.showNotifs()">🔔</button>
     </div>
 
-    <!-- Stats cards -->
+    <!-- Statistika -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-label">Today's Usage</div>
+        <div class="stat-label">Bugungi foydalanish</div>
         <div class="stat-row">
           <div class="stat-value" id="usage-pct">0%</div>
           <div class="stat-badge red">📊</div>
         </div>
         <div class="stat-progress"><div class="stat-bar" id="usage-bar" style="width:0%"></div></div>
-        <div class="stat-sub" id="usage-sub">0 requests today · Free providers</div>
+        <div class="stat-sub" id="usage-sub">0 ta soʻrov · Bepul provayderlar</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Credits</div>
+        <div class="stat-label">Kredit</div>
         <div class="stat-row">
           <div class="stat-value" id="credits-val">∞</div>
           <div class="stat-badge green">💎</div>
         </div>
         <div class="stat-progress"><div class="stat-bar" style="width:100%;background:var(--green)"></div></div>
-        <div class="stat-sub">Free providers active</div>
+        <div class="stat-sub">Bepul provayderlar faol</div>
       </div>
     </div>
 
-    <!-- Quick Actions -->
+    <!-- Tezkor amallar -->
     <div class="quick-section">
       <div class="section-head" style="margin-bottom:12px">
-        <span class="section-title">Quick Actions</span>
+        <span class="section-title">Tezkor amallar</span>
       </div>
       <div class="qa-grid">
         <div class="qa-item" onclick="App.nav('ai')">
@@ -58,31 +58,31 @@
         </div>
         <div class="qa-item" onclick="App.newProject()">
           <div class="qa-icon blue">➕</div>
-          <span class="qa-label">New Project</span>
+          <span class="qa-label">Yangi loyiha</span>
         </div>
         <div class="qa-item" onclick="App.nav('agents')">
           <div class="qa-icon purple">🤖</div>
-          <span class="qa-label">AI Agents</span>
+          <span class="qa-label">AI Agentlar</span>
         </div>
         <div class="qa-item" onclick="App.nav('deploy')">
           <div class="qa-icon green">🚀</div>
-          <span class="qa-label">Deploy</span>
+          <span class="qa-label">Joylashtirish</span>
         </div>
       </div>
     </div>
 
-    <!-- Analytics — real data from localStorage -->
+    <!-- Tahlil — real ma'lumotlar -->
     <div class="analytics-section">
       <div class="section-head">
-        <span class="section-title">Analytics (7 days)</span>
+        <span class="section-title">Tahlil (7 kun)</span>
       </div>
       <div class="analytics-grid">
         <div class="an-card">
-          <div class="an-label">Token Usage</div>
+          <div class="an-label">Token sarfi</div>
           <div class="an-value" id="stat-tokens">0</div>
           <div class="an-meta">
             <span class="an-change up" id="stat-tokens-change">+0%</span>
-            <span class="an-period">vs yesterday</span>
+            <span class="an-period">kechaga nisbatan</span>
           </div>
           <div class="mini-chart">
             <div class="bar h20"></div><div class="bar h30"></div><div class="bar h25"></div>
@@ -91,11 +91,11 @@
           </div>
         </div>
         <div class="an-card">
-          <div class="an-label">AI Requests</div>
+          <div class="an-label">AI Soʻrovlar</div>
           <div class="an-value" id="stat-requests">0</div>
           <div class="an-meta">
             <span class="an-change up" id="stat-requests-change">+0%</span>
-            <span class="an-period">vs yesterday</span>
+            <span class="an-period">kechaga nisbatan</span>
           </div>
           <div class="mini-chart">
             <div class="bar h10"></div><div class="bar h30"></div><div class="bar h20"></div>
@@ -106,46 +106,46 @@
       </div>
     </div>
 
-    <!-- Recent Projects — real from PM.list() -->
+    <!-- So'nggi loyihalar -->
     <div class="recent-section">
       <div class="section-head">
-        <span class="section-title">Recent Projects</span>
-        <span class="section-link" onclick="App.nav('projects')">View All</span>
+        <span class="section-title">So'nggi loyihalar</span>
+        <span class="section-link" onclick="App.nav('projects')">Barchasini ko'r</span>
       </div>
       <div id="home-projects">
-        <div style="text-align:center;padding:20px;color:var(--text3)">Loading...</div>
+        <div style="text-align:center;padding:20px;color:var(--text3)">Yuklanmoqda...</div>
       </div>
     </div>
 
-    <!-- Running Tasks — real tasks from Tasks module -->
+    <!-- Faol vazifalar -->
     <div class="running-section">
       <div class="section-head">
-        <span class="section-title">Running Tasks</span>
-        <span class="section-link" onclick="Tasks.clear();Home.refresh()">Clear</span>
+        <span class="section-title">Faol vazifalar</span>
+        <span class="section-link" onclick="Tasks.clear();Home.refresh()">Tozalash</span>
       </div>
       <div id="running-tasks-container">
-        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">No running tasks</div>
+        <div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">Faol vazifalar yo'q</div>
       </div>
     </div>
 
-    <!-- Connectors — real status -->
+    <!-- Ulanishlar holati -->
     <div class="connectors-section">
       <div class="connector-row">
         <div class="connector-chip" onclick="App.nav('settings')">
           <span class="connector-icon">🐙</span>
           <div class="connector-info">
             <div class="connector-name">GitHub</div>
-            <div class="connector-status" id="conn-github-status">Not set</div>
+            <div class="connector-status" id="conn-github-status">Sozlanmagan</div>
           </div>
-          <div class="status-dot gray" id="conn-github-dot"></div>
+          <div class="status-dot gray"></div>
         </div>
         <div class="connector-chip" onclick="App.nav('settings')">
           <span class="connector-icon">🧠</span>
           <div class="connector-info">
-            <div class="connector-name" id="conn-ai-name">AI Provider</div>
-            <div class="connector-status" id="conn-ai-status">No key → Pollinations (free)</div>
+            <div class="connector-name" id="conn-ai-name">AI Provayder</div>
+            <div class="connector-status" id="conn-ai-status">Kalit yo'q → Pollinations (bepul)</div>
           </div>
-          <div class="status-dot gray" id="conn-ai-dot"></div>
+          <div class="status-dot gray"></div>
         </div>
       </div>
     </div>
@@ -167,70 +167,70 @@
   <div id="chat-messages" class="chat-messages"></div>
 
   <div class="chat-tools-bar">
-    <div class="tool-chip active" onclick="AI.toggleTool(this,'code')">⚡ Code</div>
-    <div class="tool-chip" onclick="AI.toggleTool(this,'files')">📁 Files</div>
+    <div class="tool-chip active" onclick="AI.toggleTool(this,'code')">⚡ Kod</div>
+    <div class="tool-chip" onclick="AI.toggleTool(this,'files')">📁 Fayllar</div>
     <div class="tool-chip" onclick="AI.toggleTool(this,'github')">🐙 GitHub</div>
     <div class="tool-chip" onclick="AI.toggleTool(this,'deploy')">🚀 Deploy</div>
-    <div class="tool-chip" onclick="AI.toggleTool(this,'search')">🔍 Search</div>
+    <div class="tool-chip" onclick="AI.toggleTool(this,'search')">🔍 Qidiruv</div>
     <div class="tool-chip" onclick="App.openModelPicker()">🧠 <span id="model-label">Llama 3.3</span></div>
   </div>
 
   <div class="chat-bottom">
     <div class="chat-input-wrap">
-      <textarea id="chat-input" class="chat-input" placeholder="Ask anything... (use @filename to reference files)" rows="1"
+      <textarea id="chat-input" class="chat-input" placeholder="Nima qilishimni so'rang... (@fayl.js fayl qo'shish uchun)" rows="1"
         onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
       <button class="input-btn send" onclick="AI.send()">▶</button>
     </div>
   </div>
 </div>
 
-<!-- ═══ PROJECTS ════════════════════════════════════════════════ -->
+<!-- ═══ LOYIHALAR ════════════════════════════════════════════════ -->
 <div id="projects" class="screen">
   <div class="chat-header">
-    <span class="chat-title">Projects</span>
+    <span class="chat-title">Loyihalar</span>
     <button class="notif-btn" onclick="App.newProject()">+</button>
   </div>
   <div class="scroll-area">
     <div class="search-box">
       <span class="search-icon">🔍</span>
-      <input type="text" placeholder="Search projects..." oninput="Projects.search(this.value)">
+      <input type="text" placeholder="Loyihalarni qidiring..." oninput="Projects.search(this.value)">
     </div>
     <div class="filter-tabs">
-      <div class="filter-tab active" onclick="Projects.filter('all',this)">All</div>
-      <div class="filter-tab" onclick="Projects.filter('recent',this)">Recent</div>
-      <div class="filter-tab" onclick="Projects.filter('starred',this)">Starred</div>
+      <div class="filter-tab active" onclick="Projects.filter('all',this)">Barchasi</div>
+      <div class="filter-tab" onclick="Projects.filter('recent',this)">So'nggi</div>
+      <div class="filter-tab" onclick="Projects.filter('starred',this)">Yulduzli</div>
     </div>
     <div id="projects-tree"></div>
   </div>
 </div>
 
-<!-- ═══ CODE EDITOR ══════════════════════════════════════════════ -->
+<!-- ═══ KOD MUHARRIR ══════════════════════════════════════════════ -->
 <div id="editor" class="screen">
   <div class="editor-header">
     <span class="ed-back" onclick="App.nav('projects')">‹</span>
-    <span class="ed-filename" id="ed-filename">untitled</span>
-    <span class="ed-badge" id="ed-badge">Text</span>
-    <button onclick="Editor.aiEdit()" style="background:rgba(255,77,79,0.15);border:1px solid rgba(255,77,79,0.3);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer">✨ AI Edit</button>
+    <span class="ed-filename" id="ed-filename">nomsiz</span>
+    <span class="ed-badge" id="ed-badge">Matn</span>
+    <button onclick="Editor.aiEdit()" style="background:rgba(255,77,79,0.15);border:1px solid rgba(255,77,79,0.3);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer">✨ AI Tahrirlash</button>
     <span class="ed-more">⋯</span>
   </div>
   <div class="code-view" id="code-view" style="padding:0;overflow:auto;flex:1"></div>
   <div class="terminal-panel">
     <div class="term-tabs">
       <div class="term-tab active" onclick="Editor.termTab(this,'terminal')">Terminal</div>
-      <div class="term-tab" onclick="Editor.termTab(this,'problems')">Problems</div>
-      <div class="term-tab" onclick="Editor.termTab(this,'output')">Output</div>
+      <div class="term-tab" onclick="Editor.termTab(this,'problems')">Muammolar</div>
+      <div class="term-tab" onclick="Editor.termTab(this,'output')">Natija</div>
       <div class="term-tab" onclick="Editor.termTab(this,'git')">Git</div>
     </div>
     <div class="term-body" id="term-body">
-      <div><span class="t-prompt">$ </span><span class="t-dim">Open a file to edit</span></div>
+      <div><span class="t-prompt">$ </span><span class="t-dim">Tahrirlash uchun fayl oching</span></div>
     </div>
   </div>
 </div>
 
-<!-- ═══ AGENTS ══════════════════════════════════════════════════ -->
+<!-- ═══ AGENTLAR ══════════════════════════════════════════════════ -->
 <div id="agents" class="screen">
   <div class="chat-header">
-    <span class="chat-title">AI Agents</span>
+    <span class="chat-title">AI Agentlar</span>
     <span class="chat-edit" onclick="Agents.showRunSheet()">▶</span>
   </div>
   <div class="scroll-area">
@@ -238,9 +238,9 @@
 
       <div class="master-card" onclick="Agents.runMaster()">
         <div class="master-left">
-          <h3>Master Agent</h3>
-          <p>Orchestrates all agents for complex tasks</p>
-          <span class="master-badge">● Active</span>
+          <h3>Bosh Agent</h3>
+          <p>Barcha agentlarni boshqaradi</p>
+          <span class="master-badge">● Faol</span>
         </div>
         <div class="orb master-orb"></div>
       </div>
@@ -248,111 +248,110 @@
       <div class="agents-grid">
         <div class="agent-card" onclick="Agents.run('planner')">
           <div class="ac-top"><div class="ac-icon orange">♦</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Planner</div>
-          <div class="ac-desc">Strategic planning & roadmap</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Rejalashtiruvchi</div>
+          <div class="ac-desc">Strategik reja va yo'l xaritasi</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('researcher')">
           <div class="ac-top"><div class="ac-icon blue">🔍</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Researcher</div>
-          <div class="ac-desc">Analysis & best practices</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Tadqiqotchi</div>
+          <div class="ac-desc">Tahlil va eng yaxshi amaliyotlar</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('coder')">
           <div class="ac-top"><div class="ac-icon green">⟨⟩</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Coder</div>
-          <div class="ac-desc">Write clean & efficient code</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Dasturchi</div>
+          <div class="ac-desc">Sifatli kod yozish</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('designer')">
           <div class="ac-top"><div class="ac-icon purple">✏️</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Designer</div>
-          <div class="ac-desc">UI/UX & visual design</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Dizayner</div>
+          <div class="ac-desc">UI/UX va vizual dizayn</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('reviewer')">
           <div class="ac-top"><div class="ac-icon red">🔎</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Reviewer</div>
-          <div class="ac-desc">Code review & quality</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Tekshiruvchi</div>
+          <div class="ac-desc">Kod sifati va xatolarni topish</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('tester')">
           <div class="ac-top"><div class="ac-icon yellow">👁</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Tester</div>
-          <div class="ac-desc">Testing & QA automation</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Test qiluvchi</div>
+          <div class="ac-desc">Test va sifat nazorati</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('security')">
           <div class="ac-top"><div class="ac-icon red">🔒</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Security</div>
-          <div class="ac-desc">Vulnerability scanning</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Xavfsizlik</div>
+          <div class="ac-desc">Zaifliklarni aniqlash</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('deployer')">
           <div class="ac-top"><div class="ac-icon blue">🚀</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Deployer</div>
-          <div class="ac-desc">Deploy & monitor apps</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Joylashtiruvchi</div>
+          <div class="ac-desc">Deploy va monitoring</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('optimizer')">
           <div class="ac-top"><div class="ac-icon green">⚡</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Optimizer</div>
-          <div class="ac-desc">Performance & efficiency</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Optimallashtiruvchi</div>
+          <div class="ac-desc">Unumdorlik va samaradorlik</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('docs')">
           <div class="ac-top"><div class="ac-icon orange">📖</div><div class="ac-sdot green"></div></div>
-          <div class="ac-name">Docs</div>
-          <div class="ac-desc">Documentation writer</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-name">Hujjatchi</div>
+          <div class="ac-desc">Texnik hujjat yozish</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="agent-card" onclick="Agents.run('backend')">
           <div class="ac-top"><div class="ac-icon purple">🗄️</div><div class="ac-sdot green"></div></div>
           <div class="ac-name">Backend</div>
-          <div class="ac-desc">APIs & databases</div>
-          <span class="ac-badge active">Active</span>
+          <div class="ac-desc">API va ma'lumotlar bazasi</div>
+          <span class="ac-badge active">Faol</span>
         </div>
         <div class="new-agent" onclick="Agents.createNew()">
           <div class="new-plus">+</div>
-          <div class="new-label">New Agent</div>
-          <div class="new-sub">Create custom AI agent</div>
+          <div class="new-label">Yangi agent</div>
+          <div class="new-sub">Maxsus AI agent yaratish</div>
         </div>
       </div>
 
-      <!-- Pipeline section -->
+      <!-- Pipeline bo'limi -->
       <div style="padding:0 16px 16px">
-        <div class="section-head" style="margin-bottom:12px"><span class="section-title">Quick Pipelines</span></div>
+        <div class="section-head" style="margin-bottom:12px"><span class="section-title">Tezkor Pipeline</span></div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button onclick="Agents.runPipeline('',['planner','coder','reviewer'])" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;cursor:pointer;text-align:left">🔄 Planner → Coder → Reviewer</button>
-          <button onclick="Agents.runPipeline('',['researcher','coder','tester'])" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;cursor:pointer;text-align:left">🔬 Researcher → Coder → Tester</button>
-          <button onclick="Agents.runPipeline('',['designer','coder','reviewer'])" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;cursor:pointer;text-align:left">🎨 Designer → Coder → Reviewer</button>
+          <button onclick="Agents.runPipeline('',['planner','coder','reviewer'])" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;cursor:pointer;text-align:left">🔄 Rejalashtiruvchi → Dasturchi → Tekshiruvchi</button>
+          <button onclick="Agents.runPipeline('',['researcher','coder','tester'])" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;cursor:pointer;text-align:left">🔬 Tadqiqotchi → Dasturchi → Test qiluvchi</button>
+          <button onclick="Agents.runPipeline('',['designer','coder','reviewer'])" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;cursor:pointer;text-align:left">🎨 Dizayner → Dasturchi → Tekshiruvchi</button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══ DEPLOY ══════════════════════════════════════════════════ -->
+<!-- ═══ JOYLASHTIRISH ══════════════════════════════════════════════ -->
 <div id="deploy" class="screen">
   <div class="chat-header">
-    <span class="chat-title">Deploy</span>
+    <span class="chat-title">Joylashtirish</span>
     <span class="ed-more" onclick="Sheet.open('github-deploy-sheet')">⚙️</span>
   </div>
   <div class="scroll-area">
 
     <div class="deploy-hero">
       <div class="orb deploy-orb"></div>
-      <button class="deploy-btn" onclick="Deploy.start()">▶ Deploy Now</button>
-      <div class="deploy-sub-text">Push project to GitHub</div>
+      <button class="deploy-btn" onclick="Deploy.start()">▶ Hozir joylashtirish</button>
+      <div class="deploy-sub-text">Loyihani GitHubga yuborish</div>
     </div>
 
-    <!-- Real Status Steps — start gray until deploy runs -->
     <div class="deploy-status">
       <div class="step-row">
         <div class="step-ico blue">🐙</div>
         <div class="step-inf">
           <div class="step-n">GitHub</div>
-          <div class="step-d" id="step-github-desc">Ready</div>
+          <div class="step-d" id="step-github-desc">Tayyor</div>
         </div>
         <div class="step-dot gray" id="step-github"></div>
       </div>
@@ -360,15 +359,15 @@
         <div class="step-ico green">🔨</div>
         <div class="step-inf">
           <div class="step-n">Build</div>
-          <div class="step-d" id="step-build-desc">Waiting</div>
+          <div class="step-d" id="step-build-desc">Kutilmoqda</div>
         </div>
         <div class="step-dot gray" id="step-build"></div>
       </div>
       <div class="step-row">
-        <div class="step-ico purple">✅</div>
+        <div class="step-ico purple">📁</div>
         <div class="step-inf">
-          <div class="step-n">Files</div>
-          <div class="step-d" id="step-tests-desc">Waiting</div>
+          <div class="step-n">Fayllar</div>
+          <div class="step-d" id="step-tests-desc">Kutilmoqda</div>
         </div>
         <div class="step-dot gray" id="step-tests"></div>
       </div>
@@ -376,166 +375,159 @@
         <div class="step-ico orange">🚀</div>
         <div class="step-inf">
           <div class="step-n">Deploy</div>
-          <div class="step-d" id="step-deploy-desc">Waiting</div>
+          <div class="step-d" id="step-deploy-desc">Kutilmoqda</div>
         </div>
         <div class="step-dot gray" id="step-deploy"></div>
       </div>
     </div>
 
-    <!-- Live Logs — start empty -->
     <div class="logs-section">
       <div class="section-head">
-        <span class="section-title">Live Logs</span>
-        <span class="section-link" onclick="Deploy.clearLogs()">Clear</span>
+        <span class="section-title">Jonli Loglar</span>
+        <span class="section-link" onclick="Deploy.clearLogs()">Tozalash</span>
       </div>
       <div class="logs-box" id="deploy-logs">
-        <div class="log-line"><span class="log-t">--:--:--</span><span class="log-m t-dim">› Press Deploy Now to start...</span></div>
+        <div class="log-line"><span class="log-t">--:--:--</span><span class="log-m t-dim">› Joylashtirishni boshlash uchun tugmani bosing...</span></div>
       </div>
     </div>
 
   </div>
 </div>
 
-<!-- ═══ SETTINGS ════════════════════════════════════════════════ -->
+<!-- ═══ SOZLAMALAR ═══════════════════════════════════════════════ -->
 <div id="settings" class="screen">
   <div class="chat-header">
-    <span class="chat-title">Settings</span>
+    <span class="chat-title">Sozlamalar</span>
   </div>
   <div class="scroll-area settings-wrap">
 
-    <!-- AI API Keys -->
     <div class="s-section">
-      <div class="s-section-title">AI API Keys</div>
+      <div class="s-section-title">AI API Kalitlar</div>
       <div class="s-group">
         <div class="s-row" onclick="Settings.openConnector('openrouter')">
           <div class="s-ico red">🔄</div>
           <span class="s-label">OpenRouter</span>
-          <span id="or-status" class="s-val">Not set</span>
+          <span id="or-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row" onclick="Settings.openConnector('anthropic')">
           <div class="s-ico orange">🤖</div>
           <span class="s-label">Anthropic / Claude</span>
-          <span id="anthropic-status" class="s-val">Not set</span>
+          <span id="anthropic-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row" onclick="Settings.openConnector('gemini')">
           <div class="s-ico blue">✨</div>
           <span class="s-label">Google Gemini</span>
-          <span id="gemini-status" class="s-val">Not set</span>
+          <span id="gemini-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row" onclick="Settings.openConnector('groq')">
           <div class="s-ico purple">⚡</div>
-          <span class="s-label">Groq (fastest)</span>
-          <span id="groq-status" class="s-val">Not set</span>
+          <span class="s-label">Groq (eng tez)</span>
+          <span id="groq-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row" onclick="Settings.openConnector('deepseek')">
           <div class="s-ico blue">🧠</div>
           <span class="s-label">DeepSeek</span>
-          <span id="deepseek-status" class="s-val">Not set</span>
+          <span id="deepseek-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row" onclick="Settings.openConnector('mistral')">
           <div class="s-ico green">🌀</div>
           <span class="s-label">Mistral AI</span>
-          <span id="mistral-status" class="s-val">Not set</span>
+          <span id="mistral-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row" onclick="Settings.openConnector('together')">
           <div class="s-ico yellow">🤝</div>
           <span class="s-label">Together AI</span>
-          <span id="together-status" class="s-val">Not set</span>
+          <span id="together-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row" onclick="Settings.openConnector('huggingface')">
           <div class="s-ico orange">🤗</div>
           <span class="s-label">HuggingFace</span>
-          <span id="hf-status" class="s-val">Not set</span>
+          <span id="hf-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row" onclick="Settings.openConnector('nvidia')">
           <div class="s-ico green">⚙️</div>
           <span class="s-label">NVIDIA NIM</span>
-          <span id="nvidia-status" class="s-val">Not set</span>
+          <span id="nvidia-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
       </div>
     </div>
 
-    <!-- GitHub -->
     <div class="s-section">
-      <div class="s-section-title">Code & Deploy</div>
+      <div class="s-section-title">Kod va Joylashtirish</div>
       <div class="s-group">
         <div class="s-row" onclick="Settings.openConnector('github')">
           <div class="s-ico gray">🐙</div>
           <span class="s-label">GitHub Token</span>
-          <span id="gh-status" class="s-val">Not set</span>
+          <span id="gh-status" class="s-val">Sozlanmagan</span>
           <span class="s-chevron">›</span>
         </div>
       </div>
     </div>
 
-    <!-- AI Config -->
     <div class="s-section">
-      <div class="s-section-title">AI Configuration</div>
+      <div class="s-section-title">AI Sozlamalari</div>
       <div class="s-group">
         <div class="s-row" onclick="App.openModelPicker()">
           <div class="s-ico green">🧠</div>
-          <span class="s-label">Default Model</span>
+          <span class="s-label">Asosiy model</span>
           <span class="s-val" id="default-model-val">Llama 3.3</span>
           <span class="s-chevron">›</span>
         </div>
         <div class="s-row">
           <div class="s-ico orange">📊</div>
-          <span class="s-label">Max Tokens</span>
+          <span class="s-label">Maksimal token</span>
           <span class="s-val">8192</span>
-          <span class="s-chevron">›</span>
         </div>
         <div class="s-row">
           <div class="s-ico blue">🔄</div>
-          <span class="s-label">Fallback Chain</span>
+          <span class="s-label">Zaxira zanjir</span>
           <span class="s-val">OpenRouter → Groq → Pollinations</span>
         </div>
       </div>
     </div>
 
-    <!-- Appearance -->
     <div class="s-section">
-      <div class="s-section-title">Appearance</div>
+      <div class="s-section-title">Ko'rinish</div>
       <div class="s-group">
         <div class="s-row">
           <div class="s-ico gray">🌙</div>
-          <span class="s-label">Theme</span>
-          <span class="s-val">Dark</span>
+          <span class="s-label">Mavzu</span>
+          <span class="s-val">Qoʻngʻir</span>
         </div>
         <div class="s-row" onclick="Settings.accentPicker()">
           <div class="s-ico red">🎨</div>
-          <span class="s-label">Accent Color</span>
-          <span class="s-val">Custom</span>
+          <span class="s-label">Asosiy rang</span>
+          <span class="s-val">Maxsus</span>
           <span class="s-chevron">›</span>
         </div>
       </div>
     </div>
 
-    <!-- About -->
     <div class="s-section">
-      <div class="s-section-title">About</div>
+      <div class="s-section-title">Dastur haqida</div>
       <div class="s-group">
         <div class="s-row">
           <div class="s-ico blue">ℹ️</div>
-          <span class="s-label">Version</span>
+          <span class="s-label">Versiya</span>
           <span class="s-val">2.0.0</span>
         </div>
         <div class="s-row">
           <div class="s-ico green">🔒</div>
-          <span class="s-label">Storage</span>
-          <span class="s-val">Local only</span>
+          <span class="s-label">Saqlash</span>
+          <span class="s-val">Faqat lokal</span>
         </div>
-        <div class="s-row" onclick="if(confirm('Clear all data?')){localStorage.clear();location.reload();}">
+        <div class="s-row" onclick="if(confirm('Barcha ma\'lumotlarni o\'chirasizmi?')){localStorage.clear();location.reload();}">
           <div class="s-ico red">🗑️</div>
-          <span class="s-label">Clear All Data</span>
+          <span class="s-label">Barcha ma'lumotlarni o'chirish</span>
           <span class="s-chevron">›</span>
         </div>
       </div>
@@ -544,23 +536,23 @@
   </div>
 </div>
 
-<!-- ═══ BOTTOM NAV ══════════════════════════════════════════════ -->
+<!-- ═══ QUYI NAVIGATSIYA ══════════════════════════════════════════ -->
 <nav class="nav">
   <div class="nav-item active" id="nav-home" onclick="App.nav('home')">
     <div class="nav-icon">🏠</div>
-    <div class="nav-label">Home</div>
+    <div class="nav-label">Bosh sahifa</div>
   </div>
   <div class="nav-item" id="nav-ai" onclick="App.nav('ai')">
     <div class="nav-icon">💬</div>
-    <div class="nav-label">AI</div>
+    <div class="nav-label">AI Chat</div>
   </div>
   <div class="nav-item" id="nav-projects" onclick="App.nav('projects')">
     <div class="nav-icon">📁</div>
-    <div class="nav-label">Projects</div>
+    <div class="nav-label">Loyihalar</div>
   </div>
   <div class="nav-item" id="nav-agents" onclick="App.nav('agents')">
     <div class="nav-icon">🤖</div>
-    <div class="nav-label">Agents</div>
+    <div class="nav-label">Agentlar</div>
   </div>
   <div class="nav-item" id="nav-deploy" onclick="App.nav('deploy')">
     <div class="nav-icon">🚀</div>
@@ -568,11 +560,10 @@
   </div>
   <div class="nav-item" id="nav-settings" onclick="App.nav('settings')">
     <div class="nav-icon">⚙️</div>
-    <div class="nav-label">Settings</div>
+    <div class="nav-label">Sozlamalar</div>
   </div>
 </nav>
 
-<!-- ═══ SHARED STYLES ══════════════════════════════════════════ -->
 <style>
 .active-proj-chip{display:none;font-size:11px;font-weight:700;padding:3px 10px;background:rgba(255,77,79,0.12);border:1px solid rgba(255,77,79,0.25);color:var(--accent);border-radius:20px;margin-left:8px}
 .apply-btn{display:block;margin-top:12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;width:100%;text-align:left}
@@ -586,65 +577,65 @@
 .step-dot.gray{background:var(--text3)}
 </style>
 
-<!-- ═══ SHEETS ══════════════════════════════════════════════════ -->
+<!-- ═══ SHEETLAR ══════════════════════════════════════════════════ -->
 
-<!-- Connector Sheet — dynamic fields -->
+<!-- Ulanish Sheeti -->
 <div id="connector-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'connector-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
-    <div class="sh-title" id="connector-sheet-title">API Keys</div>
+    <div class="sh-title" id="connector-sheet-title">API Kalitlar</div>
     <div id="connector-fields"></div>
-    <button class="sh-btn" onclick="Settings.save()">Save Securely</button>
+    <button class="sh-btn" onclick="Settings.save()">Xavfsiz saqlash</button>
   </div>
 </div>
 
-<!-- Agent Task Sheet -->
+<!-- Agent Vazifa Sheeti -->
 <div id="agent-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'agent-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
-    <div class="sh-title" id="agent-sheet-title">Run Agent</div>
-    <label class="sh-label">Task description</label>
-    <textarea id="agent-task-input" class="sh-input" rows="3" placeholder="Describe what you want in detail..." style="resize:none;height:80px"></textarea>
-    <button class="sh-btn" onclick="Agents.executeTask()">▶ Run Agent</button>
-    <label class="sh-label" style="margin-top:8px">Multi-agent pipeline</label>
-    <button onclick="Agents.runPipeline(document.getElementById('agent-task-input').value,['planner','coder','reviewer'])" style="display:block;margin:0 20px 16px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;font-weight:600;padding:12px;border-radius:10px;cursor:pointer;width:calc(100% - 40px)">🤖 Planner → Coder → Reviewer</button>
+    <div class="sh-title" id="agent-sheet-title">Agentni ishga tushirish</div>
+    <label class="sh-label">Vazifa tavsifi</label>
+    <textarea id="agent-task-input" class="sh-input" rows="3" placeholder="Nima qilishini batafsil yozing..." style="resize:none;height:80px"></textarea>
+    <button class="sh-btn" onclick="Agents.executeTask()">▶ Agentni ishga tushirish</button>
+    <label class="sh-label" style="margin-top:8px">Ko'p agentli pipeline</label>
+    <button onclick="Agents.runPipeline(document.getElementById('agent-task-input').value,['planner','coder','reviewer'])" style="display:block;margin:0 20px 16px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;font-weight:600;padding:12px;border-radius:10px;cursor:pointer;width:calc(100% - 40px)">🤖 Rejalashtiruvchi → Dasturchi → Tekshiruvchi</button>
   </div>
 </div>
 
-<!-- New Project Sheet -->
+<!-- Yangi Loyiha Sheeti -->
 <div id="new-project-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'new-project-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
-    <div class="sh-title">New Project</div>
-    <label class="sh-label">Project Name</label>
-    <input id="new-project-name" class="sh-input" placeholder="My Awesome App" autofocus>
-    <label class="sh-label">Template</label>
+    <div class="sh-title">Yangi loyiha</div>
+    <label class="sh-label">Loyiha nomi</label>
+    <input id="new-project-name" class="sh-input" placeholder="Mening ilovam" autofocus>
+    <label class="sh-label">Shablon</label>
     <select id="new-project-template" class="sh-input" style="appearance:none">
-      <option value="blank">📄 Blank</option>
+      <option value="blank">📄 Bo'sh</option>
       <option value="react">⚛️ React + Vite</option>
       <option value="nextjs">▲ Next.js</option>
       <option value="telegram-bot">🤖 Telegram Bot (Python)</option>
     </select>
-    <button class="sh-btn" onclick="Projects.newProject()">Create Project</button>
+    <button class="sh-btn" onclick="Projects.newProject()">Loyiha yaratish</button>
   </div>
 </div>
 
-<!-- Model Picker Sheet -->
+<!-- Model Tanlash Sheeti -->
 <div id="model-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'model-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
-    <div class="sh-title">Select AI Model</div>
+    <div class="sh-title">AI Modelni tanlang</div>
     <div id="model-list" style="padding:0 20px 8px"></div>
   </div>
 </div>
 
-<!-- Diff / Apply Changes Sheet -->
+<!-- Diff / O'zgarishlarni qo'llash Sheeti -->
 <div id="diff-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'diff-sheet')">
   <div class="sheet" style="border-radius:22px 22px 0 0">
     <div class="sh-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0 20px 12px">
       <div>
-        <div style="font-size:17px;font-weight:800" id="diff-title">Changes</div>
+        <div style="font-size:17px;font-weight:800" id="diff-title">O'zgarishlar</div>
         <div style="font-size:12px;color:var(--text3)" id="diff-nav">1 / 1</div>
       </div>
       <div style="display:flex;gap:8px">
@@ -654,29 +645,29 @@
     </div>
     <div class="diff-body" id="diff-body"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 20px 8px">
-      <button onclick="DiffView.rejectAll()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:13px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">✕ Reject</button>
-      <button onclick="DiffView.applyAll()" style="background:var(--green);border:none;color:#fff;padding:13px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">✓ Apply All</button>
+      <button onclick="DiffView.rejectAll()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:13px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">✕ Rad etish</button>
+      <button onclick="DiffView.applyAll()" style="background:var(--green);border:none;color:#fff;padding:13px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">✓ Hammasini qo'llash</button>
     </div>
   </div>
 </div>
 
-<!-- GitHub Deploy Sheet -->
+<!-- GitHub Deploy Sheeti -->
 <div id="github-deploy-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'github-deploy-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
-    <div class="sh-title">Push to GitHub</div>
-    <label class="sh-label">GitHub Username / Org</label>
-    <input id="gh-owner" class="sh-input" placeholder="your-username">
-    <label class="sh-label">Repository Name</label>
-    <input id="gh-repo" class="sh-input" placeholder="my-app">
+    <div class="sh-title">GitHubga yuborish</div>
+    <label class="sh-label">GitHub foydalanuvchi nomi</label>
+    <input id="gh-owner" class="sh-input" placeholder="foydalanuvchi-nomi">
+    <label class="sh-label">Repozitoriya nomi</label>
+    <input id="gh-repo" class="sh-input" placeholder="mening-ilovam">
     <label class="sh-label">Branch</label>
     <input id="gh-branch" class="sh-input" placeholder="main" value="main">
-    <button class="sh-btn" onclick="Deploy.setupAndPush()">🚀 Push & Deploy</button>
-    <div style="font-size:11px;color:var(--text3);padding:4px 20px 12px">Add GitHub token in Settings → Code & Deploy first</div>
+    <button class="sh-btn" onclick="Deploy.setupAndPush()">🚀 Yuborish va joylashtirish</button>
+    <div style="font-size:11px;color:var(--text3);padding:4px 20px 12px">Avval Sozlamalar → Kod va Joylashtirish → GitHub Token qo'shing</div>
   </div>
 </div>
 
-<!-- Toast -->
+<!-- Toast xabarnoma -->
 <div id="toast" class="toast"></div>
 
 <script src="app.js"></script>
