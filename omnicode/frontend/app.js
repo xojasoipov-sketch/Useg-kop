@@ -1381,29 +1381,48 @@ const SelfHeal = {
   async analyze() {
     let projectId = State.projectId;
 
-    // Loyiha yo'q bo'lsa — OmniCode o'z kodini tahlil qiladi (GitHub dan)
+    // Loyiha yo'q → SelfImport loyihasiga o'tamiz (agar token bor bo'lsa)
+    if (!projectId && Git.token()) {
+      await SelfImport.ensureProject();
+      projectId = SelfImport.PROJECT_ID;
+    }
+
+    // GitHub token yo'q bo'lsa — o'z kodini tahlil qilish imkonsiz
     if (!projectId) {
       App.nav('ai');
-      AI.appendBubble('ai', `🔧 **O'z-o'zini tuzatish** — loyiha topilmadi, OmniCode o'z kodini tekshirmoqda...`, false);
-      // GitHub token bor bo'lsa — omnicode/frontend/app.js ni o'qib tahlil qiladi
-      if (Git.token()) {
-        const taskId2 = Tasks.add('🔧 SelfHeal', 'O\'z kodi tahlil qilinmoqda');
-        try {
-          const code = await Git.getFileContent('xojasoipov-sketch', 'Useg-kop', 'omnicode/frontend/app.js', 'claude/shuni-chuntr-va-qil-60bfra');
-          const msgs = [
-            { role: 'system', content: AI.system() },
-            { role: 'user', content: `OmniCode app.js kodini tahlil qil, xatolarni topib tuzat:\n\`\`\`js\n${(code||'').slice(0,15000)}\n\`\`\`` },
-          ];
-          ActivityBar.start('thinking');
-          const reply = await AIRouter.call(msgs);
-          const el = AI.appendBubble('ai', reply, false);
-          await AI._finalize(reply, el, msgs, document.getElementById('chat-messages'), taskId2);
-        } catch(e) {
-          Tasks.remove(taskId2);
-          AI.appendBubble('ai', `❌ GitHub token kerak: Sozlamalar → GitHub token qo'shing`, false);
+      AI.appendBubble('ai', `⚠️ **Loyiha yoki GitHub token kerak**\n\n1. Sozlamalar → GitHub Token qo'shing\n2. Yoki Loyihalar → Yangi loyiha yarating`, false);
+      return;
+    }
+
+    // Loyiha SelfImport bo'lsa — GitHub dan faylni yuklab olamiz
+    if (projectId === SelfImport.PROJECT_ID) {
+      App.nav('ai');
+      AI.appendBubble('ai', `🔧 **O'z-o'zini tuzatish** — OmniCode o'z kodini tekshirmoqda...`, false);
+      const taskId2 = Tasks.add('🔧 SelfHeal', 'O\'z kodi tahlil qilinmoqda');
+      try {
+        AI._showStatus('📖 OmniCode kodi GitHub dan yuklanmoqda...');
+        const code = await Git.getFileContent('xojasoipov-sketch', 'Useg-kop', 'omnicode/frontend/app.js', 'claude/shuni-chuntr-va-qil-60bfra');
+        AI._hideStatus();
+        if (!code) throw new Error('Fayl GitHub dan yuklanmadi');
+        FS.write(SelfImport.PROJECT_ID, 'omnicode/frontend/app.js', code);
+        const msgs = [
+          { role: 'system', content: AI.system() },
+          { role: 'user', content: `OmniCode app.js kodini tahlil qil, xatolarni topib tuzat:\n\`\`\`js\n${code.slice(0,15000)}\n\`\`\`` },
+        ];
+        ActivityBar.start('thinking');
+        const reply = await AIRouter.call(msgs);
+        const el = AI.appendBubble('ai', reply, false);
+        await AI._finalize(reply, el, msgs, document.getElementById('chat-messages'), taskId2);
+      } catch(e) {
+        AI._hideStatus();
+        Tasks.remove(taskId2);
+        ActivityBar.error();
+        const msg = e.message || '';
+        if (/kalit|key|401|403|topilmadi/i.test(msg)) {
+          AI.appendBubble('ai', `❌ **AI kaliti kerak**\n\nGitHub token ulangan ✅\n\nLekin AI kaliti yo'q. /setup yozing → Groq kalit qo'shing (bepul, 1 daqiqa).`, false);
+        } else {
+          AI.appendBubble('ai', `❌ **${msg}**`, false);
         }
-      } else {
-        AI.appendBubble('ai', `⚠️ Loyiha tanlang yoki GitHub token qo'shing.\n\n**Qanday qilish:**\n1. Sozlamalar → GitHub → token kiriting\n2. Yoki Loyihalar → Yangi loyiha yarating`, false);
       }
       return;
     }
