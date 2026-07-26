@@ -41,11 +41,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   border-top: 1px solid var(--border); display: flex; align-items: center;
   padding: 0 4px 8px; z-index: 100;
 }
-.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; cursor: pointer; transition: all 0.2s var(--ease); border-radius: var(--r3); }
-.nav-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: transform 0.2s; }
-.nav-label { font-size: 10px; font-weight: 500; color: var(--text3); transition: color 0.2s; }
-.nav-item.active .nav-label { color: var(--accent); }
-.nav-item.active .nav-icon { transform: translateY(-1px); }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px 4px; cursor: pointer; transition: all 0.2s var(--ease); border-radius: var(--r3); position: relative; }
+.nav-item:active { transform: scale(0.92); }
+.nav-svg { width: 24px; height: 24px; color: var(--text3); transition: color 0.2s, transform 0.2s, filter 0.2s; }
+.nav-label { font-size: 9.5px; font-weight: 500; color: var(--text3); transition: color 0.2s; letter-spacing: 0.01em; }
+.nav-item.active .nav-label { color: var(--accent); font-weight: 600; }
+.nav-item.active .nav-svg { color: var(--accent); transform: translateY(-1px); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
+.nav-icon { display: none; }
 
 /* ── Glowing Orb ─────────────────────────────────────────────── */
 .orb {
