@@ -747,6 +747,10 @@ const MODELS = [
 const AIRouter = {
   keys() { const k = Store.get('keys', {}); return [k.or1, k.or2, k.or3, k.or4].filter(Boolean); },
 
+  // 429 = limit tugadi, 401/403 = kalit noto'g'ri — darhol skip
+  _isHardFail(status) { return status === 401 || status === 403; },
+  _isRateLimit(status) { return status === 429 || status === 503 || status === 529; },
+
   async openrouter(messages, modelId) {
     const keys = this.keys();
     if (!keys.length) throw new Error('OpenRouter kaliti yo\'q');
@@ -763,7 +767,6 @@ const AIRouter = {
   async groq(messages) {
     const key = Store.get('keys', {}).groq;
     if (!key) throw new Error('Groq kaliti yo\'q');
-    // Groq: 6000 token limit — katta kontekstni trimlaymiz
     const trimmed = this._trimMessages(messages, 20000);
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -924,36 +927,60 @@ const AIRouter = {
 
   async call(messages, model) {
     const m = model || State.model;
-    let chain;
-    if (m.provider === 'anthropic') chain = [() => this.anthropic(messages)];
-    else if (m.provider === 'gemini') chain = [() => this.gemini(messages)];
-    else if (m.provider === 'deepseek') chain = [() => this.deepseek(messages)];
-    else if (m.provider === 'mistral') chain = [() => this.mistral(messages)];
-    else if (m.provider === 'groq') chain = [() => this.groq(messages)];
-    else chain = [() => this.openrouter(messages, m.id)];
 
+    // Provider nomi + funksiyasi juftligi — statusda ko'rsatiladi
+    const chain = [];
+    if (m.provider === 'anthropic') chain.push(['Anthropic', () => this.anthropic(messages)]);
+    else if (m.provider === 'gemini') chain.push(['Gemini', () => this.gemini(messages)]);
+    else if (m.provider === 'deepseek') chain.push(['DeepSeek', () => this.deepseek(messages)]);
+    else if (m.provider === 'mistral') chain.push(['Mistral', () => this.mistral(messages)]);
+    else if (m.provider === 'groq') chain.push(['Groq', () => this.groq(messages)]);
+    else chain.push(['OpenRouter', () => this.openrouter(messages, m.id)]);
+
+    // Fallback zanjiri — bepul provayderlar
     chain.push(
-      () => this.openrouter(messages, MODELS[0].id),
-      () => this.groq(messages),
-      () => this.together(messages),
-      () => this.pollinations(messages),
-      () => this.pollinationsText(messages),
+      ['OpenRouter-fb', () => this.openrouter(messages, MODELS[0].id)],
+      ['Groq', () => this.groq(messages)],
+      ['Anthropic', () => this.anthropic(messages)],
+      ['Gemini', () => this.gemini(messages)],
+      ['Together', () => this.together(messages)],
+      ['Pollinations', () => this.pollinations(messages)],
+      ['Pollinations-txt', () => this.pollinationsText(messages)],
     );
 
     const errs = [];
-    for (const fn of chain) {
-      try { return await this._withTimeout(fn(), 30000); }
-      catch (e) { errs.push(e.message); console.warn('AI fallback:', e.message); }
-    }
-    try { return await this._withTimeout(this.pollinationsText(messages), 20000); } catch (e) { errs.push(e.message); }
+    let tried = 0;
 
-    // Xatolarni aniq ko'rsatamiz — "internet" emas, asl sabab
-    const hasKeyErr = errs.some(e => /kalit|key|401|403/i.test(e));
-    const hasNetErr = errs.some(e => /fetch|network|CORS|failed/i.test(e));
-    if (hasKeyErr && !hasNetErr) {
-      throw new Error('AI kalit topilmadi. Sozlamalar → AI kalitlari → Groq (bepul) qo\'shing');
+    for (const [name, fn] of chain) {
+      // Kalit yo'q xatolarini skip — timeout sarf etmaymiz
+      try {
+        AI._showStatus?.(`🔄 ${name} urinilmoqda... (${++tried}/${chain.length})`);
+        const result = await this._withTimeout(fn(), 25000);
+        AI._hideStatus?.();
+        if (tried > 1) toast(`✅ ${name} ishladi`);
+        return result;
+      } catch (e) {
+        const msg = e.message || '';
+        errs.push(`${name}: ${msg}`);
+        const statusCode = parseInt(msg.match(/\d{3}/)?.[0] || '0');
+        // 429 = limit tugadi → darhol keyingisiga
+        // 401/403 = noto'g'ri kalit → skip
+        // "kaliti yo'q" → skip (timeout yo'q)
+        if (statusCode === 429) {
+          console.warn(`${name} limit tugadi → keyingisi`);
+          continue;
+        }
+        console.warn(`AI fallback [${name}]:`, msg);
+      }
     }
-    throw new Error(`AI javob bermadi (${errs.slice(-2).join(' | ')}). Sozlamalar → Groq kalit qo'shing`);
+
+    AI._hideStatus?.();
+    const allNoKey = errs.every(e => /kalit yo'q|kaliti yo'q/i.test(e));
+    if (allNoKey) {
+      throw new Error('AI kalit topilmadi. /setup yozing yoki Sozlamalar → AI Kalitlari → Groq (bepul)');
+    }
+    const last = errs.filter(e => !/kalit yo'q/i.test(e)).slice(-2).join(' | ');
+    throw new Error(`Barcha AI ${chain.length} ta urinishdan so'ng javob bermadi. ${last ? '(' + last + ')' : ''}`);
   },
 };
 
@@ -1010,22 +1037,33 @@ const StreamAI = {
 
   async call(messages, model, onChunk) {
     const m = model || State.model;
-    if (m.provider === 'openrouter' && AIRouter.keys().length) {
-      return this.openrouter(messages, m.id, onChunk);
+    const streamChain = [];
+
+    // Tanlangan model birinchi
+    if (m.provider === 'openrouter' && AIRouter.keys().length)
+      streamChain.push(['OpenRouter', () => this.openrouter(messages, m.id, onChunk)]);
+    if (m.provider === 'groq' && Store.get('keys', {}).groq)
+      streamChain.push(['Groq', () => this.groq(messages, onChunk)]);
+
+    // Fallback stream providers
+    if (AIRouter.keys().length)
+      streamChain.push(['OpenRouter-fb', () => this.openrouter(messages, MODELS[0].id, onChunk)]);
+    if (Store.get('keys', {}).groq)
+      streamChain.push(['Groq-fb', () => this.groq(messages, onChunk)]);
+
+    if (!streamChain.length) throw new Error('Stream kalit yo\'q');
+
+    for (const [name, fn] of streamChain) {
+      try {
+        return await AIRouter._withTimeout(fn(), 25000);
+      } catch (e) {
+        const code = parseInt((e.message||'').match(/\d{3}/)?.[0]||'0');
+        console.warn(`Stream [${name}] xato:`, e.message);
+        if (code === 429 || code === 503) continue; // limit → keyingisi
+        throw e; // boshqa xato → non-stream ga fallback
+      }
     }
-    if (m.provider === 'groq' && Store.get('keys', {}).groq) {
-      return this.groq(messages, onChunk);
-    }
-    // Try openrouter as fallback with stream
-    if (AIRouter.keys().length) {
-      return this.openrouter(messages, MODELS[0].id, onChunk);
-    }
-    // Try groq fallback
-    if (Store.get('keys', {}).groq) {
-      return this.groq(messages, onChunk);
-    }
-    // Stream yo'q — Pollinations orqali non-stream (har doim ishlaydi)
-    throw new Error('Stream kalit yo\'q — Pollinations fallback');
+    throw new Error('Stream limit — non-stream ga o\'tiladi');
   },
 };
 
