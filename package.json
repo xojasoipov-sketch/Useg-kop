@@ -4,6 +4,10 @@
   "type": "module",
   "scripts": {
     "start": "node proxy.js",
-    "dev": "node --watch proxy.js"
-  }
+    "dev": "node --watch proxy.js",
+    "build": "cd omnicode/frontend && npm run build",
+    "frontend": "cd omnicode/frontend && npm run dev"
+  },
+  "dependencies": {},
+  "devDependencies": {}
 }
