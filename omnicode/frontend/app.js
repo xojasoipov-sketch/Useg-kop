@@ -56,6 +56,118 @@ const Tasks = {
 };
 
 // ══════════════════════════════════════════════════════════════
+//  ACTIVITY BAR — Real-time faoliyat ko'rsatgich (Claude Code uslubi)
+// ══════════════════════════════════════════════════════════════
+const ActivityBar = {
+  _el: null,
+  _stats: { added: 0, removed: 0, files: 0, tokens: 0, agents: [] },
+  _phase: null,
+  _startTime: null,
+
+  _getOrCreate() {
+    if (this._el && document.body.contains(this._el)) return this._el;
+    this._el = document.createElement('div');
+    this._el.id = 'activity-bar';
+    this._el.style.cssText = `
+      position:fixed;top:52px;left:0;right:0;z-index:900;
+      background:rgba(10,10,12,0.96);backdrop-filter:blur(12px);
+      border-bottom:1px solid rgba(255,255,255,0.07);
+      padding:6px 14px;display:flex;flex-direction:column;gap:3px;
+      font-size:11.5px;font-family:monospace;
+      transform:translateY(-100%);transition:transform 0.2s ease;
+    `;
+    document.body.appendChild(this._el);
+    setTimeout(() => { if (this._el) this._el.style.transform = 'translateY(0)'; }, 10);
+    return this._el;
+  },
+
+  _render() {
+    const el = this._getOrCreate();
+    const s = this._stats;
+    const elapsed = this._startTime ? ((Date.now() - this._startTime) / 1000).toFixed(1) : '0';
+
+    const phaseIcon = { thinking:'🧠', reading:'📖', writing:'✍️', pushing:'🐙', done:'✅', error:'❌' };
+    const phaseLabel = { thinking:'O\'ylayapman', reading:'O\'qiyapman', writing:'Yozayapman', pushing:'Push qilyapman', done:'Tayyor', error:'Xato' };
+
+    const diffLine = (s.added || s.removed)
+      ? `<span style="color:#3fb950">+${s.added}</span> <span style="color:#f85149">-${s.removed}</span> qator`
+      + (s.files ? ` · <span style="color:#58a6ff">${s.files} fayl</span>` : '')
+      : '';
+
+    const agentLine = s.agents.length
+      ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:1px">`
+        + s.agents.map(a => `<span style="background:rgba(255,255,255,0.07);border-radius:4px;padding:1px 6px;color:${a.status==='done'?'#3fb950':a.status==='error'?'#f85149':'#e6b450'}">${a.icon} ${a.name} ${a.status==='running'?'…':a.status==='done'?'✓':'✗'}</span>`).join('')
+        + `</div>`
+      : '';
+
+    const tokensStr = s.tokens ? ` · <span style="color:var(--text3)">${s.tokens} token</span>` : '';
+
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="color:var(--accent)">${phaseIcon[this._phase]||'⚡'} ${phaseLabel[this._phase]||''}</span>
+        <span style="color:var(--text3);margin-left:auto">${elapsed}s${tokensStr}</span>
+      </div>
+      ${diffLine ? `<div style="color:var(--text2)">${diffLine}</div>` : ''}
+      ${agentLine}
+    `;
+  },
+
+  start(phase = 'thinking') {
+    this._startTime = Date.now();
+    this._stats = { added: 0, removed: 0, files: 0, tokens: 0, agents: [] };
+    this._phase = phase;
+    this._render();
+    this._ticker = setInterval(() => this._render(), 500);
+  },
+
+  setPhase(phase) { this._phase = phase; this._render(); },
+
+  updateDiff(content, oldContent = '') {
+    if (!content) return;
+    const newLines = content.split('\n').length;
+    const oldLines = oldContent ? oldContent.split('\n').length : 0;
+    if (newLines > oldLines) this._stats.added += newLines - oldLines;
+    else if (oldLines > newLines) this._stats.removed += oldLines - newLines;
+    this._stats.files++;
+    this._render();
+  },
+
+  addTokens(n) { this._stats.tokens += n; this._render(); },
+
+  addAgent(name, icon = '🤖') {
+    this._stats.agents.push({ name, icon, status: 'running' });
+    this._render();
+    return this._stats.agents.length - 1;
+  },
+
+  doneAgent(idx, ok = true) {
+    if (this._stats.agents[idx]) this._stats.agents[idx].status = ok ? 'done' : 'error';
+    this._render();
+  },
+
+  done() {
+    clearInterval(this._ticker);
+    this._phase = 'done';
+    this._render();
+    setTimeout(() => this.hide(), 2500);
+  },
+
+  error() {
+    clearInterval(this._ticker);
+    this._phase = 'error';
+    this._render();
+    setTimeout(() => this.hide(), 3000);
+  },
+
+  hide() {
+    if (!this._el) return;
+    this._el.style.transform = 'translateY(-100%)';
+    setTimeout(() => { this._el?.remove(); this._el = null; }, 220);
+    clearInterval(this._ticker);
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
 //  SUPABASE — Cloud sync
 // ══════════════════════════════════════════════════════════════
 const SB = {
@@ -1490,6 +1602,7 @@ Nima quramiz?`, false);
 
     State.chatHistory.push({ role: 'user', content: userContent });
     this.busy = true;
+    ActivityBar.start('thinking');
 
     const taskId = Tasks.add('🤖 AI', msg.slice(0, 40));
     const messages = [
@@ -1505,12 +1618,17 @@ Nima quramiz?`, false);
     try {
       if (useStream) {
         let bubble = null;
+        let lastLen = 0;
         reply = await StreamAI.call(messages, null, (full) => {
           if (!bubble) {
             bubble = document.createElement('div');
             bubble.className = 'bubble ai';
             chatEl.appendChild(bubble);
+            ActivityBar.setPhase('writing');
           }
+          const delta = full.length - lastLen;
+          if (delta > 0) ActivityBar.addTokens(Math.floor(delta / 4));
+          lastLen = full.length;
           bubble.innerHTML = MD.render(FS.stripCommands(full)) + '<span class="stream-cursor"></span>';
           chatEl.scrollTop = chatEl.scrollHeight;
         });
@@ -1523,11 +1641,13 @@ Nima quramiz?`, false);
     }
 
     // ── Non-streaming ────────────────────────────────────────────
+    ActivityBar.setPhase('thinking');
     this.showTyping();
     try {
       reply = await AIRouter.call(messages);
     } catch (e) {
       this.hideTyping();
+      ActivityBar.error();
       const isKeyErr = /kalit|key|api|auth|401|403/i.test(e.message);
       const hint = isKeyErr
         ? '\n\n💡 Bepul kalit: [Groq](https://console.groq.com/keys) yoki Sozlamalar → AI'
@@ -1538,6 +1658,8 @@ Nima quramiz?`, false);
       return;
     }
     this.hideTyping();
+    ActivityBar.setPhase('writing');
+    ActivityBar.addTokens(Math.floor(reply.length / 4));
     const div = this.appendBubble('ai', reply, false);
     await this._finalize(reply, div, messages, chatEl, taskId);
   },
@@ -1546,14 +1668,19 @@ Nima quramiz?`, false);
   async _finalize(reply, el, messages, chatEl, taskId) {
     const writes = FS.parseWrites(reply);
 
-    // VFS ga saqlash
+    // VFS ga saqlash + diff statistika
     if (writes.length && State.projectId) {
-      writes.forEach(w => FS.write(State.projectId, w.path, w.content));
+      writes.forEach(w => {
+        const old = FS.read(State.projectId, w.path) || '';
+        ActivityBar.updateDiff(w.content, old);
+        FS.write(State.projectId, w.path, w.content);
+      });
       State.pendingWrites = writes;
     }
 
     // GitHub chip active + token bor → avtomatik push
     if (writes.length && State.activeTools.has('github') && Git.token()) {
+      ActivityBar.setPhase('pushing');
       await this._autoPushWrites(writes);
     }
 
@@ -1565,6 +1692,7 @@ Nima quramiz?`, false);
     State.chatHistory.push({ role: 'assistant', content: reply });
     Tasks.remove(taskId);
     this.busy = false;
+    ActivityBar.done();
     if (App.screen === 'home') Home.refresh();
   },
 
@@ -2158,35 +2286,55 @@ const Agents = {
     if (!task) { const t = document.getElementById('agent-task-input')?.value.trim(); if (!t) { toast('Avval vazifa kiriting'); return; } task = t; }
     Sheet.close('agent-sheet');
     App.nav('ai');
-    AI.appendBubble('ai', `🤖 **Ko'p agentli Pipeline** boshlanmoqda...\nAgentlar: ${agentList.join(' → ')}`, false);
+
+    const agentIcons = { planner:'📋', researcher:'🔍', coder:'💻', designer:'🎨', reviewer:'🔎', tester:'🧪', security:'🔒', deployer:'🚀', optimizer:'⚡', docs:'📄', backend:'🖥️', master:'👑' };
+    ActivityBar.start('thinking');
+    // Barcha agentlarni darhol ro'yxatga olish
+    const agentIdxMap = {};
+    agentList.forEach(name => {
+      agentIdxMap[name] = ActivityBar.addAgent(name, agentIcons[name] || '🤖');
+    });
+
+    AI.appendBubble('ai', `🤖 **Ko'p agentli Pipeline** boshlanmoqda...\nAgentlar: ${agentList.map(n => (agentIcons[n]||'🤖')+' '+n).join(' → ')}`, false);
     let context = task;
     for (const name of agentList) {
       State.agent = name;
-      const taskId = Tasks.add(`${name} agent`, task.slice(0, 40));
+      ActivityBar.setPhase('thinking');
+      const taskId = Tasks.add(`${agentIcons[name]||'🤖'} ${name}`, task.slice(0, 40));
       Tasks.update(taskId, { progress: 50 });
       const messages = [
         { role: 'system', content: AGENT_SYSTEMS[name] + '\n\n' + AI.system() },
         { role: 'user', content: `Task: ${task}\n\nContext:\n${context}\n\nComplete your part now.` },
       ];
-      AI.appendBubble('user', `[${name.toUpperCase()}]`, false);
+      AI.appendBubble('user', `[${(agentIcons[name]||'🤖')} ${name.toUpperCase()}]`, false);
       AI.showTyping();
       try {
+        ActivityBar.setPhase('writing');
         const reply = await AIRouter.call(messages);
         AI.hideTyping();
         const writes = FS.parseWrites(reply);
-        if (writes.length) State.pendingWrites = [...State.pendingWrites, ...writes];
+        if (writes.length) {
+          writes.forEach(w => {
+            const old = State.projectId ? (FS.read(State.projectId, w.path) || '') : '';
+            ActivityBar.updateDiff(w.content, old);
+          });
+          State.pendingWrites = [...State.pendingWrites, ...writes];
+        }
         AI.appendBubble('ai', reply, writes.length > 0);
         context += `\n\n[${name.toUpperCase()} OUTPUT]:\n${reply.slice(0, 1000)}`;
         Analytics.track(Math.floor(reply.length / 4));
+        ActivityBar.doneAgent(agentIdxMap[name], true);
         Tasks.update(taskId, { progress: 100, status: 'done' });
         Tasks.remove(taskId);
       } catch (e) {
         AI.hideTyping();
         AI.appendBubble('ai', `❌ ${name} xatosi: ${e.message}`, false);
+        ActivityBar.doneAgent(agentIdxMap[name], false);
         Tasks.remove(taskId);
       }
     }
     State.agent = null;
+    ActivityBar.done();
   },
 };
 
