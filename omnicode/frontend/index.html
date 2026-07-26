@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>OmniCode</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>body{font-family:-apple-system,'Inter',sans-serif}</style>
 <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
@@ -229,132 +230,7 @@
       <div class="filter-tab" onclick="Projects.filter('starred',this)">Starred</div>
     </div>
 
-    <div id="projects-tree">
-      <!-- SMM Tools -->
-      <div class="folder-block">
-        <div class="folder-row" onclick="Projects.toggleFolder(this)">
-          <span class="f-arrow open">▶</span>
-          <span class="f-icon">📁</span>
-          <span class="f-name">SMM Tools</span>
-        </div>
-        <div class="folder-files">
-          <div class="file-row" onclick="Editor.open('dashboard.tsx','typescript')">
-            <span class="fi-icon">📄</span>
-            <span class="fi-name">dashboard.tsx</span>
-            <span class="fi-badge M">M</span>
-          </div>
-          <div class="file-row">
-            <span class="fi-icon">🐍</span>
-            <span class="fi-name">analytics.py</span>
-            <span class="fi-badge M">M</span>
-          </div>
-          <div class="file-row">
-            <span class="fi-icon">🎨</span>
-            <span class="fi-name">styles.css</span>
-            <span class="fi-badge U">U</span>
-          </div>
-          <div class="file-row">
-            <span class="fi-icon">⚙️</span>
-            <span class="fi-name">config.json</span>
-            <span class="fi-badge A">A</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- AI Content Generator -->
-      <div class="folder-block">
-        <div class="folder-row" onclick="Projects.toggleFolder(this)">
-          <span class="f-arrow open">▶</span>
-          <span class="f-icon">📁</span>
-          <span class="f-name">AI Content Generator</span>
-        </div>
-        <div class="folder-files">
-          <div class="file-row" onclick="Editor.open('generator.py','python')">
-            <span class="fi-icon">🐍</span>
-            <span class="fi-name">generator.py</span>
-            <span class="fi-badge A">A</span>
-          </div>
-          <div class="file-row">
-            <span class="fi-icon">📁</span>
-            <span class="fi-name">templates/</span>
-            <span class="fi-badge A">A</span>
-          </div>
-          <div class="file-row">
-            <span class="fi-icon">🔧</span>
-            <span class="fi-name">utils.py</span>
-            <span class="fi-badge A">A</span>
-          </div>
-          <div class="file-row">
-            <span class="fi-icon">📖</span>
-            <span class="fi-name">README.md</span>
-            <span class="fi-badge A">A</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- TG Growth Tool -->
-      <div class="folder-block">
-        <div class="folder-row" onclick="Projects.toggleFolder(this)">
-          <span class="f-arrow open">▶</span>
-          <span class="f-icon">📁</span>
-          <span class="f-name">TG Growth Tool</span>
-        </div>
-        <div class="folder-files">
-          <div class="file-row">
-            <span class="fi-icon">🐍</span>
-            <span class="fi-name">bot.py</span>
-            <span class="fi-badge A">A</span>
-          </div>
-          <div class="file-row">
-            <span class="fi-icon">🗄️</span>
-            <span class="fi-name">database.db</span>
-            <span class="fi-badge A">A</span>
-          </div>
-          <div class="file-row">
-            <span class="fi-icon">📁</span>
-            <span class="fi-name">handlers/</span>
-            <span class="fi-badge A">A</span>
-          </div>
-          <div class="file-row">
-            <span class="fi-icon">📝</span>
-            <span class="fi-name">requirements.txt</span>
-            <span class="fi-badge A">A</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent Files -->
-    <div class="recent-files-section">
-      <div class="section-head">
-        <span class="section-title">Recent Files</span>
-        <span class="section-link">View All</span>
-      </div>
-      <div class="rf-item" onclick="Editor.open('dashboard.tsx','typescript')">
-        <div class="rf-thumb blue">📄</div>
-        <div style="flex:1">
-          <div class="rf-file-name">dashboard.tsx</div>
-          <div class="rf-meta">SMM Tools • 2m ago</div>
-        </div>
-        <div class="rf-dot green"></div>
-      </div>
-      <div class="rf-item" onclick="Editor.open('generator.py','python')">
-        <div class="rf-thumb green">🐍</div>
-        <div style="flex:1">
-          <div class="rf-file-name">generator.py</div>
-          <div class="rf-meta">AI Content Generator • 1h ago</div>
-        </div>
-        <div class="rf-dot green"></div>
-      </div>
-      <div class="rf-item">
-        <div class="rf-thumb orange">🐍</div>
-        <div style="flex:1">
-          <div class="rf-file-name">bot.py</div>
-          <div class="rf-meta">TG Growth Tool • 3h ago</div>
-        </div>
-        <div class="rf-dot green"></div>
-      </div>
-    </div>
+    <div id="projects-tree"></div>
   </div>
 </div>
 
@@ -362,26 +238,21 @@
 <div id="editor" class="screen">
   <div class="editor-header">
     <span class="ed-back" onclick="App.nav('projects')">‹</span>
-    <span class="ed-filename" id="ed-filename">dashboard.tsx</span>
-    <span class="ed-badge" id="ed-badge">TypeScript</span>
-    <span class="ed-w">W</span>
+    <span class="ed-filename" id="ed-filename">untitled</span>
+    <span class="ed-badge" id="ed-badge">Text</span>
+    <button onclick="Editor.aiEdit()" style="background:rgba(255,77,79,0.15);border:1px solid rgba(255,77,79,0.3);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer">✨ AI Edit</button>
     <span class="ed-more">⋯</span>
   </div>
-  <div class="code-view" id="code-view"></div>
+  <div class="code-view" id="code-view" style="padding:0;overflow:auto;flex:1"></div>
   <div class="terminal-panel">
     <div class="term-tabs">
       <div class="term-tab active" onclick="Editor.termTab(this,'terminal')">Terminal</div>
-      <div class="term-tab" onclick="Editor.termTab(this,'problems')">Problems <span class="err-badge">3</span></div>
+      <div class="term-tab" onclick="Editor.termTab(this,'problems')">Problems</div>
       <div class="term-tab" onclick="Editor.termTab(this,'output')">Output</div>
       <div class="term-tab" onclick="Editor.termTab(this,'git')">Git</div>
     </div>
     <div class="term-body" id="term-body">
-      <div><span class="t-prompt">$ </span><span class="t-cmd">npm run dev</span></div>
-      <div><span class="t-out">vite v5.0.0</span> <span class="t-dim">ready in 320ms</span></div>
-      <div class="t-dim"> </div>
-      <div><span class="t-dim">  ➜  Local: </span><span class="t-link">http://localhost:5173/</span></div>
-      <div><span class="t-dim">  ➜  Network: use </span><span class="t-cmd">--host</span><span class="t-dim"> to expose</span></div>
-      <div><span class="t-out">  ✓ Compiled successfully in 320ms</span></div>
+      <div><span class="t-prompt">$ </span><span class="t-dim">Open a file to edit</span></div>
     </div>
   </div>
 </div>
@@ -684,37 +555,109 @@
   </div>
 </nav>
 
+<!-- ═══ AI CHAT: active project label ══════════════════════════ -->
+<style>
+.active-proj-chip{display:none;font-size:11px;font-weight:700;padding:3px 10px;background:rgba(255,77,79,0.12);border:1px solid rgba(255,77,79,0.25);color:var(--accent);border-radius:20px;margin-left:8px}
+.apply-btn{display:block;margin-top:12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;width:100%;text-align:left}
+.apply-btn:active{background:rgba(34,197,94,0.3)}
+.inline-code{background:var(--bg3);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.editor-ta{width:100%;height:100%;background:var(--bg);border:none;outline:none;color:#e2e8f0;font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;line-height:1.75;padding:14px 16px;resize:none;-webkit-overflow-scrolling:touch}
+.diff-add{color:var(--green);background:rgba(34,197,94,0.08)}
+.diff-del{color:var(--accent);background:rgba(255,77,79,0.08);text-decoration:line-through}
+.diff-same{color:var(--text3)}
+.diff-body{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;padding:12px;overflow:auto;max-height:50vh;background:var(--bg)}
+</style>
+
 <!-- ═══ SHEETS ══════════════════════════════════════════════════ -->
+
 <!-- Connector Sheet -->
-<div id="connector-sheet" class="overlay" onclick="Sheets.closeOnBg(event,'connector-sheet')">
+<div id="connector-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'connector-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
-    <div class="sh-title" id="connector-sheet-title">OpenRouter API Keys</div>
-    <label class="sh-label">API Key 1</label>
-    <input id="conn-key1" class="sh-input" type="password" placeholder="sk-or-v1-...">
-    <label class="sh-label">API Key 2 (optional)</label>
-    <input id="conn-key2" class="sh-input" type="password" placeholder="sk-or-v1-...">
-    <button class="sh-btn" onclick="Settings.saveConnector()">Save Keys</button>
+    <div class="sh-title" id="connector-sheet-title">API Keys</div>
+    <label class="sh-label">Key 1</label>
+    <input id="conn-key1" class="sh-input" type="password" placeholder="Enter key...">
+    <label class="sh-label">Key 2 (optional)</label>
+    <input id="conn-key2" class="sh-input" type="password" placeholder="Enter key...">
+    <button class="sh-btn" onclick="Settings.save()">Save Securely</button>
   </div>
 </div>
 
 <!-- Agent Task Sheet -->
-<div id="agent-sheet" class="overlay" onclick="Sheets.closeOnBg(event,'agent-sheet')">
+<div id="agent-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'agent-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
     <div class="sh-title" id="agent-sheet-title">Run Agent</div>
     <label class="sh-label">Task description</label>
-    <input id="agent-task-input" class="sh-input" placeholder="Describe what you want...">
-    <button class="sh-btn" onclick="Agents.executeTask()">Run Agent</button>
+    <textarea id="agent-task-input" class="sh-input" rows="3" placeholder="Describe what you want in detail..." style="resize:none;height:80px"></textarea>
+    <button class="sh-btn" onclick="Agents.executeTask()">▶ Run Agent</button>
+    <label class="sh-label" style="margin-top:8px">Multi-agent pipeline</label>
+    <button onclick="Agents.runPipeline(document.getElementById('agent-task-input').value,['planner','coder','reviewer'])" style="display:block;margin:0 20px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:13px;font-weight:600;padding:12px;border-radius:10px;cursor:pointer;width:calc(100% - 40px)">🤖 Planner → Coder → Reviewer</button>
+  </div>
+</div>
+
+<!-- New Project Sheet -->
+<div id="new-project-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'new-project-sheet')">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title">New Project</div>
+    <label class="sh-label">Project Name</label>
+    <input id="new-project-name" class="sh-input" placeholder="My Awesome App" autofocus>
+    <label class="sh-label">Template</label>
+    <select id="new-project-template" class="sh-input" style="appearance:none">
+      <option value="blank">📄 Blank</option>
+      <option value="react">⚛️ React + Vite</option>
+      <option value="nextjs">▲ Next.js</option>
+      <option value="telegram-bot">🤖 Telegram Bot (Python)</option>
+    </select>
+    <button class="sh-btn" onclick="Projects.newProject()">Create Project</button>
   </div>
 </div>
 
 <!-- Model Picker Sheet -->
-<div id="model-sheet" class="overlay" onclick="Sheets.closeOnBg(event,'model-sheet')">
+<div id="model-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'model-sheet')">
   <div class="sheet">
     <div class="sh-handle"></div>
-    <div class="sh-title">Select Model</div>
-    <div id="model-list" style="padding: 0 20px 8px;"></div>
+    <div class="sh-title">Select AI Model</div>
+    <div id="model-list" style="padding:0 20px 8px"></div>
+  </div>
+</div>
+
+<!-- Diff / Apply Changes Sheet -->
+<div id="diff-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'diff-sheet')">
+  <div class="sheet" style="border-radius:22px 22px 0 0">
+    <div class="sh-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 20px 12px">
+      <div>
+        <div style="font-size:17px;font-weight:800" id="diff-title">Changes</div>
+        <div style="font-size:12px;color:var(--text3)" id="diff-nav">1 / 1</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="DiffView.prev()" id="diff-prev" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px">‹</button>
+        <button onclick="DiffView.next()" id="diff-next" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px">›</button>
+      </div>
+    </div>
+    <div class="diff-body" id="diff-body"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 20px 8px">
+      <button onclick="DiffView.rejectAll()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:13px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">✕ Reject</button>
+      <button onclick="DiffView.applyAll()" style="background:var(--green);border:none;color:#fff;padding:13px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">✓ Apply All</button>
+    </div>
+  </div>
+</div>
+
+<!-- GitHub Deploy Sheet -->
+<div id="github-deploy-sheet" class="overlay" onclick="Sheet.closeOnBg(event,'github-deploy-sheet')">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title">Push to GitHub</div>
+    <label class="sh-label">GitHub Username / Org</label>
+    <input id="gh-owner" class="sh-input" placeholder="your-username">
+    <label class="sh-label">Repository Name</label>
+    <input id="gh-repo" class="sh-input" placeholder="my-app">
+    <label class="sh-label">Branch (default: main)</label>
+    <input id="gh-branch" class="sh-input" placeholder="main" value="main">
+    <button class="sh-btn" onclick="Deploy.setupAndPush()">🚀 Push & Deploy</button>
+    <label class="sh-label" style="font-size:11px;color:var(--text3);padding:4px 20px 12px">Add GitHub token in Settings first</label>
   </div>
 </div>
 
