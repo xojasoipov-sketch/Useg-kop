@@ -56,6 +56,170 @@ const Tasks = {
 };
 
 // ══════════════════════════════════════════════════════════════
+//  ATTACH — Fayl biriktirish: rasm, kod, ZIP
+// ══════════════════════════════════════════════════════════════
+const Attach = {
+  _items: [], // { name, type, content, preview }
+
+  pick() { document.getElementById('file-input')?.click(); },
+
+  async onFiles(files) {
+    if (!files?.length) return;
+    toast(`📎 ${files.length} ta fayl o'qilmoqda...`);
+    for (const file of Array.from(files)) {
+      try {
+        const item = await this._read(file);
+        if (item) { this._items.push(item); }
+      } catch (e) { toast(`❌ ${file.name}: ${e.message}`); }
+    }
+    this._renderPreview();
+    document.getElementById('file-input').value = '';
+  },
+
+  async _read(file) {
+    const name = file.name;
+    const ext  = name.split('.').pop().toLowerCase();
+    const size = (file.size / 1024).toFixed(1);
+
+    // ── Rasm ──────────────────────────────────────────────────
+    if (file.type.startsWith('image/')) {
+      const b64 = await this._toBase64(file);
+      return { name, type: 'image', size, content: b64, preview: b64, ext };
+    }
+
+    // ── ZIP ───────────────────────────────────────────────────
+    if (ext === 'zip' || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') {
+      return await this._readZip(file);
+    }
+
+    // ── PDF (matn sifatida) ───────────────────────────────────
+    if (ext === 'pdf') {
+      const buf  = await file.arrayBuffer();
+      const text = this._extractPdfText(buf);
+      return { name, type: 'text', size, ext, content: text || `[PDF: ${name}, ${size}KB — matn ajratib olinmadi]` };
+    }
+
+    // ── Matn / kod fayllar ────────────────────────────────────
+    const TEXT_EXTS = ['txt','js','ts','jsx','tsx','py','html','css','json','md','csv','xml','yaml','yml','sh','bash','sql','graphql','vue','rs','go','java','cpp','c','h','php','rb','swift','kt','env','gitignore','lock','toml','ini','cfg','conf','log'];
+    if (TEXT_EXTS.includes(ext) || file.type.startsWith('text/')) {
+      const text = await file.text();
+      if (text.length > 120_000) {
+        // Katta fayl — boshini olish
+        return { name, type: 'text', size, ext, content: text.slice(0, 120_000) + '\n\n... [fayl qisqartirildi]' };
+      }
+      return { name, type: 'text', size, ext, content: text };
+    }
+
+    // ── Noma'lum — matn sifatida urinish ─────────────────────
+    try {
+      const text = await file.text();
+      return { name, type: 'text', size, ext, content: text.slice(0, 50_000) };
+    } catch { return { name, type: 'binary', size, ext, content: `[Ikkilik fayl: ${name}, ${size}KB]` }; }
+  },
+
+  async _readZip(file) {
+    // JSZip CDN dan yuklaymiz (kerak bo'lganda)
+    if (!window.JSZip) {
+      await this._loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    }
+    const buf = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(buf);
+    const parts = [`📦 ZIP: ${file.name}\n`];
+    const TEXT_RE = /\.(js|ts|jsx|tsx|py|html|css|json|md|txt|yaml|yml|sh|sql|rs|go|java|cpp|c|h|php|rb|vue|svelte|xml|env|toml|ini|cfg|conf|log|csv)$/i;
+
+    for (const [path, entry] of Object.entries(zip.files)) {
+      if (entry.dir) continue;
+      const size = (entry._data?.uncompressedSize || 0) / 1024;
+      if (size > 200) { parts.push(`📄 ${path} (${size.toFixed(0)}KB — o'tkazib yuborildi)`); continue; }
+      if (TEXT_RE.test(path)) {
+        try {
+          const text = await entry.async('string');
+          parts.push(`\n\`\`\`${path}\n${text.slice(0, 8000)}\n\`\`\``);
+        } catch { parts.push(`⚠️ ${path} o'qib bo'lmadi`); }
+      } else {
+        parts.push(`📎 ${path} (binary, o'tkazildi)`);
+      }
+      if (parts.join('').length > 80_000) { parts.push('\n... [ZIP katta, qisqartirildi]'); break; }
+    }
+    return { name: file.name, type: 'zip', size: (file.size/1024).toFixed(1), ext: 'zip', content: parts.join('\n') };
+  },
+
+  _extractPdfText(buf) {
+    // Oddiy PDF matn ajratish (PDFjs o'rnatilmagan bo'lsa)
+    try {
+      const str = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+      const matches = str.match(/\(([^\)]{2,200})\)/g);
+      if (!matches) return null;
+      return matches.map(m => m.slice(1, -1)).filter(s => /[a-zA-Z]/.test(s)).join(' ').slice(0, 50_000);
+    } catch { return null; }
+  },
+
+  _toBase64(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  },
+
+  _loadScript(src) {
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  },
+
+  _renderPreview() {
+    const wrap = document.getElementById('attach-preview');
+    if (!wrap) return;
+    if (!this._items.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+    wrap.style.display = 'flex';
+    wrap.innerHTML = this._items.map((it, i) => `
+      <div style="position:relative;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:4px 8px;font-size:11px;max-width:140px">
+        ${it.type === 'image'
+          ? `<img src="${it.preview}" style="width:22px;height:22px;object-fit:cover;border-radius:4px">`
+          : `<span>${it.type==='zip'?'📦':it.type==='pdf'?'📄':'📎'}</span>`}
+        <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px">${it.name}</span>
+        <span style="color:var(--text3)">${it.size}KB</span>
+        <button onclick="Attach.remove(${i})" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:rgba(248,81,73,0.8);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">×</button>
+      </div>
+    `).join('');
+  },
+
+  remove(idx) {
+    this._items.splice(idx, 1);
+    this._renderPreview();
+  },
+
+  // AI yuborishdan oldin context sifatida olish
+  buildContext() {
+    if (!this._items.length) return '';
+    const parts = this._items.map(it => {
+      if (it.type === 'image') {
+        return `### Rasm: ${it.name}\n[Rasm biriktirildi — ${it.size}KB]\n\`\`\`\n${it.content.slice(0,100)}...\n\`\`\``;
+      }
+      return `### Fayl: ${it.name} (${it.size}KB)\n\`\`\`${it.ext||''}\n${it.content}\n\`\`\``;
+    });
+    return `\n\n━━━ Biriktirilgan fayllar ━━━\n${parts.join('\n\n')}`;
+  },
+
+  // Rasmlar uchun vision messages formati
+  buildVisionMessages(userText) {
+    const images = this._items.filter(it => it.type === 'image');
+    const texts  = this._items.filter(it => it.type !== 'image');
+    if (!images.length) return null;
+
+    const content = [{ type: 'text', text: userText + (texts.length ? '\n\n' + texts.map(t => `### ${t.name}\n\`\`\`\n${t.content}\n\`\`\``).join('\n\n') : '') }];
+    images.forEach(img => content.push({ type: 'image_url', image_url: { url: img.content } }));
+    return content;
+  },
+
+  clear() { this._items = []; this._renderPreview(); },
+};
+
+// ══════════════════════════════════════════════════════════════
 //  ACTIVITY BAR — Real-time faoliyat ko'rsatgich (Claude Code uslubi)
 // ══════════════════════════════════════════════════════════════
 const ActivityBar = {
@@ -1584,11 +1748,13 @@ Nima quramiz?`, false);
       await this._loadGithubContext();
     }
 
-    // ── User bubble ─────────────────────────────────────────────
-    const resolved = await this.resolveRefs(msg);
-    this.appendBubble('user', msg, false);
+    // ── Biriktirilgan fayllar ────────────────────────────────────
+    const attachCtx = Attach.buildContext();
+    const visionContent = Attach.buildVisionMessages(msg);
+    Attach.clear();
 
     // ── Smart pre-fetch: biz o'zimiz o'qib, AI ga tayyor beramiz ─
+    const resolved = await this.resolveRefs(msg);
     let autoCtx = '';
     if (State.activeTools.has('github') && Git.token()) {
       this._showStatus('🔍 GitHub ma\'lumotlari yuklanmoqda...');
@@ -1596,11 +1762,17 @@ Nima quramiz?`, false);
       this._hideStatus();
     }
 
+    const baseContent = resolved + attachCtx;
     const userContent = autoCtx
-      ? `${resolved}\n\n━━━ GitHub ma'lumotlari (haqiqiy, API dan) ━━━\n${autoCtx}`
-      : resolved;
+      ? `${baseContent}\n\n━━━ GitHub ma'lumotlari (haqiqiy, API dan) ━━━\n${autoCtx}`
+      : baseContent;
 
-    State.chatHistory.push({ role: 'user', content: userContent });
+    // Vision (rasm) bo'lsa — messages array ga content array yuboriladi
+    const userMsg = visionContent
+      ? { role: 'user', content: visionContent }
+      : { role: 'user', content: userContent };
+
+    State.chatHistory.push(userMsg);
     this.busy = true;
     ActivityBar.start('thinking');
 
@@ -1609,6 +1781,13 @@ Nima quramiz?`, false);
       { role: 'system', content: this.system() },
       ...State.chatHistory.slice(-14),
     ];
+    // User bubble ga fayl nomlari ko'rsatish
+    if (attachCtx) {
+      const fileNames = attachCtx.match(/### (?:Fayl|Rasm): ([^\n]+)/g)?.map(s => s.replace(/### (?:Fayl|Rasm): /,'')) || [];
+      this.appendBubble('user', msg + (fileNames.length ? '\n\n📎 ' + fileNames.join(', ') : ''), false);
+    } else {
+      this.appendBubble('user', msg, false);
+    }
 
     // ── Streaming ────────────────────────────────────────────────
     const chatEl  = document.getElementById('chat-messages');
