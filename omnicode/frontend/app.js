@@ -757,6 +757,7 @@ const Palette = {
     { icon: '💬', label: 'AI Chat ochish',            hint: 'ai',    action: () => App.nav('ai') },
     { icon: '📁', label: 'Yangi loyiha yaratish',     hint: 'new',   action: () => App.newProject() },
     { icon: '🔧', label: 'O\'z-o\'zini tuzatish',     hint: 'fix',   action: () => SelfHeal.analyze() },
+    { icon: '📦', label: 'OmniCode kodini import',   hint: 'self',  action: () => SelfImport.run() },
     { icon: '☁️', label: 'Bulutga saqlash',           hint: 'sync',  action: () => SB.syncAll() },
     { icon: '⬇️', label: 'Bulutdan yuklash',          hint: 'pull',  action: () => SB.pullAll() },
     { icon: '🚀', label: 'GitHubga yuborish',         hint: 'deploy',action: () => Deploy.start() },
@@ -815,6 +816,147 @@ const Palette = {
 
 // ══════════════════════════════════════════════════════════════
 //  SELF-HEAL — Auto analyze and fix project issues
+// ══════════════════════════════════════════════════════════════
+//  SELF IMPORT — OmniCode o'z kodini loyiha sifatida saqlaydi
+// ══════════════════════════════════════════════════════════════
+const SelfImport = {
+  PROJECT_ID: 'self_omnicode_source',
+  REPO_OWNER: 'xojasoipov-sketch',
+  REPO_NAME: 'Useg-kop',
+  BRANCH: 'claude/shuni-chuntr-va-qil-60bfra',
+
+  // Key files to track
+  FILES: [
+    'omnicode/frontend/app.js',
+    'omnicode/frontend/index.html',
+    'omnicode/frontend/styles/main.css',
+    '.github/workflows/pages.yml',
+    'CLAUDE.md',
+  ],
+
+  async run() {
+    toast('🔄 OmniCode o\'z kodini yuklamoqda...');
+
+    // Ensure project exists locally
+    if (!PM.get(this.PROJECT_ID)) {
+      const projects = PM.list();
+      projects.unshift({
+        id: this.PROJECT_ID,
+        name: '📦 OmniCode — Manba Kodi',
+        template: 'self',
+        created: Date.now(),
+        updated: Date.now(),
+        github: { owner: this.REPO_OWNER, repo: this.REPO_NAME, branch: this.BRANCH },
+        starred: true,
+      });
+      Store.set('projects', projects);
+    }
+
+    const results = [];
+    let ok = 0;
+
+    for (const filePath of this.FILES) {
+      try {
+        // Try GitHub API first
+        const token = Git.token();
+        let content = null;
+        if (token) {
+          content = await Git.getFileContent(this.REPO_OWNER, this.REPO_NAME, filePath, this.BRANCH);
+        }
+        // Fallback: fetch from GitHub Pages raw URL
+        if (!content) {
+          const raw = `https://raw.githubusercontent.com/${this.REPO_OWNER}/${this.REPO_NAME}/${this.BRANCH}/${filePath}`;
+          const res = await fetch(raw);
+          if (res.ok) content = await res.text();
+        }
+        if (content) {
+          FS.write(this.PROJECT_ID, filePath, content);
+          results.push(`✅ ${filePath} (${(content.length/1024).toFixed(1)}kb)`);
+          ok++;
+        } else {
+          results.push(`⚠️ ${filePath} — yuklanmadi`);
+        }
+      } catch (e) {
+        results.push(`❌ ${filePath}: ${e.message}`);
+      }
+    }
+
+    // Add AI context file so next AI knows everything
+    const contextFile = this._buildContextFile();
+    FS.write(this.PROJECT_ID, 'AI_CONTEXT.md', contextFile);
+    results.push(`✅ AI_CONTEXT.md — AI uchun kontekst`);
+
+    // Sync to Supabase
+    try {
+      await SB.syncAll();
+      results.push(`☁️ Supabase'ga saqlandi`);
+    } catch {}
+
+    // Set as current project
+    PM.setCurrent(this.PROJECT_ID);
+
+    const summary = `📦 **OmniCode Manba Kodi import qilindi!**\n\n${results.join('\n')}\n\n**${ok}/${this.FILES.length}** fayl muvaffaqiyatli\n\nEndi AI Chat ga o'tib "@omnicode/frontend/app.js ni tahrirlash" deb so'rasangiz, AI loyiha kodiga ega bo'lib ishlaydi.`;
+
+    // Show in AI chat
+    App.nav('chat');
+    AI.appendBubble('ai', summary, false);
+    toast(`✅ ${ok} ta fayl import qilindi`);
+  },
+
+  _buildContextFile() {
+    return `# OmniCode — AI Kontekst Fayli
+Yaratilgan: ${new Date().toISOString()}
+
+## Loyiha haqida
+OmniCode — Telegram Mini App sifatida ishlaydigan AI coding assistant.
+Foydalanuvchi: xojasoipov@gmail.com
+GitHub: xojasoipov-sketch/Useg-kop
+Branch: claude/shuni-chuntr-va-qil-60bfra
+Deploy: GitHub Pages (peaceiris/actions-gh-pages@v4)
+
+## Arxitektura
+- \`omnicode/frontend/app.js\` — Barcha JavaScript logika (bitta fayl, ~2000 qator)
+- \`omnicode/frontend/index.html\` — Barcha HTML + CSS
+- \`omnicode/frontend/styles/main.css\` — Qo'shimcha stillar
+- Supabase: tomkxsdkerpbvlumubbg.supabase.co (anon key hardcoded, xavfsiz)
+
+## Asosiy modullar (app.js ichida)
+- \`Store\` — localStorage wrapper
+- \`SB\` — Supabase cloud sync
+- \`Git\` — GitHub API (browser fetch)
+- \`GitTools\` — AI→GitHub tool protocol (<GH_*> tags)
+- \`SelfImport\` — O'z kodini import qilish
+- \`SelfHeal\` — O'z-o'zini tuzatish
+- \`StreamAI\` — SSE streaming (OpenRouter + Groq)
+- \`AIRouter\` — Multi-provider fallback
+- \`FS\` — Virtual File System (localStorage)
+- \`PM\` — Project Manager
+- \`DiffView\` — LCS diff viewer (approve/reject)
+- \`Palette\` — Command palette (⌘K)
+- \`Deploy\` — GitHub Pages deploy
+- \`AI\` — Chat logic + tool dispatch
+- \`Settings\` — Tabbed settings panel
+- \`App\` — Navigation, init
+
+## GitHub Tool Protocol
+AI javobida quyidagi taglar → app.js execute qiladi:
+\`\`\`
+<GH_LIST_REPOS/>
+<GH_LIST_FILES owner="x" repo="y" path=""/>
+<GH_READ_FILE owner="x" repo="y" path="file.js"/>
+<GH_WRITE_FILE owner="x" repo="y" path="file.js" message="commit msg">content</GH_WRITE_FILE>
+<GH_CREATE_REPO name="repo" private="false"/>
+\`\`\`
+
+## Davom ettirish uchun
+1. Sozlamalar → GitHub token kiriting
+2. AI Chat → 🐙 GitHub chip → repolar yuklanadi
+3. "@AI_CONTEXT.md" deb murojaat qiling — bu fayl
+4. "/import xojasoipov-sketch/Useg-kop" → loyiha yangilanadi
+`;
+  },
+};
+
 // ══════════════════════════════════════════════════════════════
 const SelfHeal = {
   async analyze() {
@@ -972,6 +1114,14 @@ const App = {
     Home.refresh();
     Projects.render();
     Settings.refresh();
+
+    // Auto-check: if self project exists, show update hint
+    if (PM.get(SelfImport.PROJECT_ID)) {
+      const age = Date.now() - (PM.get(SelfImport.PROJECT_ID)?.updated || 0);
+      if (age > 86400000) { // older than 1 day
+        setTimeout(() => toast('💡 /self buyrug\'i bilan OmniCode kodini yangilang'), 3000);
+      }
+    }
   },
 };
 
@@ -1254,6 +1404,10 @@ Bugun nima quramiz?`, false);
     if (cmd === '/palette') { Palette.open(); return; }
     if (cmd === '/github' || cmd === '/repos' || cmd === '/gh') {
       await this._loadGithubContext();
+      return;
+    }
+    if (cmd === '/self' || cmd === '/omnicode' || cmd === '/import-self') {
+      await SelfImport.run();
       return;
     }
     if (cmd === '/import') {
