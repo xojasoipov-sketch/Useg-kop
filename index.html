@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OmniRoute — 251 AI Providers Through One Endpoint</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #111118;
+      --bg3: #1a1a24;
+      --border: #2a2a3a;
+      --text: #e8e8f0;
+      --muted: #888899;
+      --accent: #ff6b35;
+      --accent2: #7c3aed;
+      --green: #22c55e;
+      --pink: #ec4899;
+      --blue: #3b82f6;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(10,10,15,0.92);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nav-links { display: flex; gap: 1.5rem; }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #ff4500);
+      color: #fff;
+      border: none;
+      padding: .5rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: opacity .2s;
+      text-decoration: none;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem 3rem;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      background: rgba(255,107,53,.12);
+      border: 1px solid rgba(255,107,53,.3);
+      color: var(--accent);
+      padding: .35rem 1rem;
+      border-radius: 999px;
+      font-size: .85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+    }
+    h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto 2rem;
+    }
+    .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: .6rem 1.4rem;
+      border-radius: 8px;
+      font-size: .95rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color .2s;
+    }
+    .btn-outline:hover { border-color: var(--muted); }
+
+    /* STATS */
+    .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      padding: 2.5rem 2rem;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin: 3rem 2rem;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 2.2rem; font-weight: 900; color: var(--accent); }
+    .stat-label { font-size: .85rem; color: var(--muted); margin-top: .2rem; }
+
+    /* SECTION */
+    section { padding: 4rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: .5rem;
+    }
+    .section-sub { color: var(--muted); margin-bottom: 2.5rem; font-size: .95rem; }
+
+    /* PROVIDERS GRID */
+    .providers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 1rem;
+    }
+    .provider-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      transition: border-color .2s, transform .2s;
+      cursor: default;
+    }
+    .provider-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .provider-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      margin: 0 auto .6rem;
+    }
+    .provider-name { font-size: .82rem; font-weight: 600; color: var(--text); }
+    .provider-tag { font-size: .72rem; color: var(--green); margin-top: .2rem; }
+    .provider-tag.paid { color: var(--muted); }
+
+    /* FREE TIER BUDGET */
+    .budget-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      max-width: 620px;
+    }
+    .budget-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+    .budget-title { font-weight: 700; font-size: 1.05rem; }
+    .budget-total { color: var(--pink); font-weight: 700; font-size: 1.1rem; }
+    .budget-total span { color: var(--muted); font-weight: 400; font-size: .9rem; }
+    .budget-bar-outer {
+      height: 6px;
+      background: var(--bg3);
+      border-radius: 99px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .budget-bar-inner {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--pink), var(--accent2));
+    }
+    .provider-row {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .provider-row-name { width: 100px; font-size: .9rem; font-weight: 500; flex-shrink: 0; }
+    .row-bar-outer { flex: 1; height: 8px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+    .row-bar-inner { height: 100%; border-radius: 99px; }
+    .provider-row-limit { font-size: .8rem; color: var(--muted); width: 72px; text-align: right; flex-shrink: 0; }
+
+    /* COMPARISON TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: var(--bg3);
+      padding: .85rem 1rem;
+      text-align: left;
+      font-size: .85rem;
+      color: var(--muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    th.highlight { color: var(--accent); }
+    td {
+      padding: .75rem 1rem;
+      font-size: .88rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    .td-feature { color: var(--muted); font-size: .85rem; }
+    .td-omni { font-weight: 600; }
+    .highlight-row td { background: rgba(255,107,53,.06); }
+    .highlight-row td.td-omni { color: var(--accent); }
+    td .chip {
+      display: inline-block;
+      background: rgba(34,197,94,.12);
+      color: var(--green);
+      border-radius: 4px;
+      padding: .1rem .45rem;
+      font-size: .75rem;
+      font-weight: 600;
+    }
+
+    /* ENDPOINT CODE */
+    .code-block {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: .88rem;
+      overflow-x: auto;
+      line-height: 1.7;
+    }
+    .code-comment { color: #5a6a7a; }
+    .code-key { color: #7dd3fc; }
+    .code-str { color: #86efac; }
+    .code-num { color: #fca5a5; }
+
+    /* ROUTING STRATEGIES */
+    .strategies-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .strategy-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.2rem;
+      transition: border-color .2s;
+    }
+    .strategy-card:hover { border-color: var(--accent2); }
+    .strategy-icon { font-size: 1.4rem; margin-bottom: .5rem; }
+    .strategy-name { font-weight: 700; font-size: .9rem; margin-bottom: .3rem; }
+    .strategy-desc { font-size: .8rem; color: var(--muted); }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: .85rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .stats-row { gap: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">⚡ OmniRoute</div>
+  <div class="nav-links">
+    <a href="#providers">Providers</a>
+    <a href="#budget">Free Tier</a>
+    <a href="#compare">Compare</a>
+    <a href="#routing">Routing</a>
+    <a href="#docs">Docs</a>
+  </div>
+  <a href="#start" class="btn-primary">Get Started →</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">🌐 251 AI Providers — 90+ Free</div>
+  <h1>Every major lab —<br><span>through one endpoint</span></h1>
+  <p class="subtitle">
+    The most complete open-source AI router: 251 providers, 90+ with a free tier,
+    18 routing strategies, token compression up to 95%, built-in MCP server &amp; A2A protocol.
+  </p>
+  <div class="hero-btns">
+    <a href="#start" class="btn-primary">🚀 Start for Free</a>
+    <a href="https://github.com/diegosouzapw/OmniRoute" target="_blank" class="btn-outline">⭐ GitHub</a>
+    <a href="#docs" class="btn-outline">📖 Docs</a>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat">
+    <div class="stat-num">251</div>
+    <div class="stat-label">AI Providers</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">90+</div>
+    <div class="stat-label">Free Providers</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">18</div>
+    <div class="stat-label">Routing Strategies</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">95%</div>
+    <div class="stat-label">Token Compression</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">94</div>
+    <div class="stat-label">MCP Tools</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">42</div>
+    <div class="stat-label">Languages (i18n)</div>
+  </div>
+</div>
+
+<!-- PROVIDERS -->
+<section id="providers">
+  <div class="section-title">🤖 Every Major Lab</div>
+  <p class="section-sub">One API key. All providers. Zero lock-in.</p>
+  <div class="providers-grid" id="providers-grid"></div>
+</section>
+
+<!-- FREE TIER BUDGET -->
+<section id="budget">
+  <div class="section-title">💰 Free-Tier Budget Tracker</div>
+  <p class="section-sub">Pool-deduped &amp; honest — no inflated multi-B claims.</p>
+  <div class="budget-card">
+    <div class="budget-header">
+      <span class="budget-title">Free-Tier Budget</span>
+      <span class="budget-total">1.4B <span>/ 1.6B this month</span></span>
+    </div>
+    <div class="budget-bar-outer">
+      <div class="budget-bar-inner" style="width: 87%"></div>
+    </div>
+    <div id="budget-rows"></div>
+    <p style="font-size:.75rem;color:var(--muted);margin-top:.75rem;">Pool-deduped &amp; honest — no inflated multi-B claims.</p>
+  </div>
+</section>
+
+<!-- ENDPOINT CODE -->
+<section id="start">
+  <div class="section-title">⚡ One Endpoint, All Providers</div>
+  <p class="section-sub">Drop-in replacement for OpenAI SDK — just change the base URL.</p>
+  <div class="code-block">
+    <span class="code-comment">// Install: npm install omniroute</span><br><br>
+    <span class="code-key">import</span> OmniRoute <span class="code-key">from</span> <span class="code-str">'omniroute'</span>;<br><br>
+    <span class="code-key">const</span> client = <span class="code-key">new</span> OmniRoute({<br>
+    &nbsp;&nbsp;baseURL: <span class="code-str">'https://omniroute.online/v1'</span>,<br>
+    &nbsp;&nbsp;routing: <span class="code-str">'cost-optimized'</span>,  <span class="code-comment">// or 'priority', 'weighted', 'fusion'</span><br>
+    &nbsp;&nbsp;compression: <span class="code-str">'rtk+caveman'</span>,    <span class="code-comment">// 15–95% token reduction</span><br>
+    &nbsp;&nbsp;freeFirst: <span class="code-key">true</span>,               <span class="code-comment">// use free providers first</span><br>
+    });<br><br>
+    <span class="code-key">const</span> response = <span class="code-key">await</span> client.chat.completions.create({<br>
+    &nbsp;&nbsp;model: <span class="code-str">'auto'</span>,  <span class="code-comment">// OmniRoute picks the best available</span><br>
+    &nbsp;&nbsp;messages: [{ role: <span class="code-str">'user'</span>, content: <span class="code-str">'Hello!'</span> }],<br>
+    });<br>
+  </div>
+</section>
+
+<!-- ROUTING STRATEGIES -->
+<section id="routing">
+  <div class="section-title">🔀 18 Routing Strategies</div>
+  <p class="section-sub">From simple priority queues to intelligent multi-model fusion.</p>
+  <div class="strategies-grid" id="strategies-grid"></div>
+</section>
+
+<!-- COMPARISON TABLE -->
+<section id="compare">
+  <div class="section-title">🏆 What Sets OmniRoute Apart</div>
+  <p class="section-sub">Compared to other open-source routers.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th class="highlight">OmniRoute</th>
+          <th>Other routers</th>
+        </tr>
+      </thead>
+      <tbody id="compare-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>Built with ❤️ by the open-source community &nbsp;·&nbsp;
+    <a href="https://omniroute.online/" target="_blank">omniroute.online</a> &nbsp;·&nbsp;
+    <a href="https://github.com/diegosouzapw/OmniRoute" target="_blank">GitHub</a>
+  </p>
+  <p style="margin-top:.5rem">Star ⭐ the repo to support the project</p>
+</footer>
+
+<script>
+  // ── PROVIDERS ────────────────────────────────────────────────────────
+  const providers = [
+    { name: 'OpenAI',      icon: '🤖', color: '#10a37f', free: false },
+    { name: 'Anthropic',   icon: '✳️',  color: '#d97706', free: false },
+    { name: 'Gemini',      icon: '♊',  color: '#4285f4', free: true  },
+    { name: 'xAI Grok',   icon: '𝕏',  color: '#888',    free: false },
+    { name: 'DeepSeek',    icon: '🐋', color: '#3b82f6', free: true  },
+    { name: 'Mistral',     icon: '🟠', color: '#f97316', free: true  },
+    { name: 'Qwen',        icon: '🟣', color: '#8b5cf6', free: true  },
+    { name: 'Meta Llama',  icon: '🦙', color: '#0866ff', free: true  },
+    { name: 'Groq',        icon: '⚡', color: '#f59e0b', free: true  },
+    { name: 'NVIDIA',      icon: '🟢', color: '#76b900', free: true  },
+    { name: 'MiniMax',     icon: '🌊', color: '#06b6d4', free: true  },
+    { name: 'Cohere',      icon: '🔴', color: '#ef4444', free: false },
+    { name: 'Perplexity',  icon: '🔮', color: '#a78bfa', free: true  },
+    { name: 'HuggingFace', icon: '🤗', color: '#ffbd2e', free: true  },
+    { name: 'Together',    icon: '🍊', color: '#f97316', free: true  },
+    { name: 'Fireworks',   icon: '🎆', color: '#ec4899', free: true  },
+    { name: 'Cloudflare',  icon: '🌩️', color: '#f38020', free: true  },
+    { name: 'Baidu',       icon: '🔵', color: '#2563eb', free: false },
+    { name: 'Cerebras',    icon: '🧠', color: '#7c3aed', free: true  },
+    { name: 'Kiro',        icon: '🌀', color: '#06b6d4', free: true  },
+    { name: 'Pollinations',icon: '🌸', color: '#f9a8d4', free: true  },
+    { name: 'LongCat',     icon: '🐱', color: '#fbbf24', free: true  },
+    { name: '+220 more',   icon: '➕', color: '#6b7280', free: true  },
+  ];
+
+  const grid = document.getElementById('providers-grid');
+  providers.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'provider-card';
+    card.innerHTML = `
+      <div class="provider-icon" style="background:${p.color}22">${p.icon}</div>
+      <div class="provider-name">${p.name}</div>
+      <div class="provider-tag ${p.free ? '' : 'paid'}">${p.free ? '✓ Free tier' : 'Paid'}</div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // ── FREE TIER BUDGET ──────────────────────────────────────────────
+  const budgetRows = [
+    { name: 'Kiro',         pct: 55, color: '#ec4899,#8b5cf6', limit: '50 cr'    },
+    { name: 'Qoder',        pct: 80, color: '#22c55e,#22c55e', limit: '∞'        },
+    { name: 'LongCat',      pct: 48, color: '#ec4899,#8b5cf6', limit: '50M/day'  },
+    { name: 'Cerebras',     pct: 35, color: '#ec4899,#7c3aed', limit: '1M/day'   },
+    { name: 'NVIDIA',       pct: 28, color: '#ec4899,#7c3aed', limit: '40 rpm'   },
+    { name: 'Pollinations', pct: 90, color: '#22c55e,#22c55e', limit: 'no key'   },
+  ];
+
+  const budgetContainer = document.getElementById('budget-rows');
+  budgetRows.forEach(r => {
+    budgetContainer.innerHTML += `
+      <div class="provider-row">
+        <div class="provider-row-name">${r.name}</div>
+        <div class="row-bar-outer">
+          <div class="row-bar-inner" style="width:${r.pct}%;background:linear-gradient(90deg,${r.color})"></div>
+        </div>
+        <div class="provider-row-limit">${r.limit}</div>
+      </div>
+    `;
+  });
+
+  // ── ROUTING STRATEGIES ───────────────────────────────────────────
+  const strategies = [
+    { icon: '🎯', name: 'Priority',        desc: 'Route to highest-priority available provider' },
+    { icon: '⚖️', name: 'Weighted',        desc: 'Distribute load by custom weights' },
+    { icon: '💰', name: 'Cost-Optimized',  desc: 'Always pick the cheapest option' },
+    { icon: '📡', name: 'Context-Relay',   desc: 'Pass context between providers seamlessly' },
+    { icon: '🔀', name: 'Fusion',          desc: 'Blend outputs from multiple models' },
+    { icon: '⚡', name: 'Latency-First',   desc: 'Route to the fastest responding endpoint' },
+    { icon: '🆓', name: 'Free-First',      desc: 'Exhaust free tiers before paid fallback' },
+    { icon: '🧠', name: 'Smart-Fallback',  desc: 'Auto-retry with next best provider on error' },
+    { icon: '🎲', name: 'Round-Robin',     desc: 'Evenly distribute requests across providers' },
+    { icon: '🔬', name: 'A/B Test',        desc: 'Split traffic for model evaluation' },
+    { icon: '🌍', name: 'Geo-Routing',     desc: 'Route based on user geography & latency' },
+    { icon: '📊', name: 'Quality-Gate',    desc: 'Validate outputs before returning response' },
+  ];
+
+  const sGrid = document.getElementById('strategies-grid');
+  strategies.forEach(s => {
+    sGrid.innerHTML += `
+      <div class="strategy-card">
+        <div class="strategy-icon">${s.icon}</div>
+        <div class="strategy-name">${s.name}</div>
+        <div class="strategy-desc">${s.desc}</div>
+      </div>
+    `;
+  });
+
+  // ── COMPARISON TABLE ─────────────────────────────────────────────
+  const rows = [
+    { feature: '🌐 Providers',          omni: '251',                                    other: '20–100',         hl: false },
+    { feature: '🆓 Free providers',     omni: '90+ (11 free forever)',                  other: '1–5',            hl: false },
+    { feature: '🔀 Routing strategies', omni: '18 (priority, weighted, cost-optimized, context-relay, fusion…)', other: '1–3', hl: false },
+    { feature: '🗜️ Token compression',  omni: 'RTK + Caveman stacked (15–95%)',          other: 'None / 20–40%',  hl: true  },
+    { feature: '🔌 Built-in MCP server',omni: '94 tools, 3 transports, 30 scopes',      other: 'Rare',           hl: false },
+    { feature: '🤝 A2A agent protocol', omni: '6 skills, JSON-RPC 2.0',                 other: 'None',           hl: false },
+    { feature: '🧠 Memory (FTS5+vec)', omni: 'Yes',                                     other: 'Rare',           hl: false },
+    { feature: '🛡️ Guardrails',         omni: 'PII, injection, vision',                 other: 'Rare',           hl: false },
+    { feature: '☁️ Cloud agents',       omni: 'Codex, Cursor, Devin, Jules',            other: 'None',           hl: false },
+    { feature: '🕵️ TLS fingerprint',    omni: 'JA3/JA4 via wreq-js',                   other: 'None',           hl: false },
+    { feature: '📱 Multi-platform',     omni: 'Web · Desktop · Termux · PWA',           other: 'Web only',       hl: false },
+    { feature: '🌍 i18n',               omni: '42 locales',                              other: '0–4',            hl: false },
+  ];
+
+  const tbody = document.getElementById('compare-tbody');
+  rows.forEach(r => {
+    tbody.innerHTML += `
+      <tr class="${r.hl ? 'highlight-row' : ''}">
+        <td class="td-feature">${r.feature}</td>
+        <td class="td-omni">${r.omni}</td>
+        <td style="color:var(--muted)">${r.other}</td>
+      </tr>
+    `;
+  });
+</script>
+
+</body>
+</html>
