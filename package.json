@@ -1,0 +1,9 @@
+{
+  "name": "omniroute-proxy",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node proxy.js",
+    "dev": "node --watch proxy.js"
+  }
+}
