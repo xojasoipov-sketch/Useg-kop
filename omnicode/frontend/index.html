@@ -43,7 +43,7 @@
 <div id="home" class="screen active">
   <div class="scroll-area">
     <div class="home-top">
-      <div class="home-greeting"><h2 id="greeting-text">Xayrli kun</h2><p>Premium AI Coding Platform</p></div>
+      <div class="home-greeting"><h2 id="greeting-text">Xayrli kun</h2><p>Premium AI Coding + TG SMM Agency</p></div>
       <button class="notif-btn" onclick="KeyVault.open()" data-ic="key" data-ic-size="18"></button>
     </div>
     <div class="stats-row">
@@ -54,7 +54,7 @@
       <div class="section-head" style="margin-bottom:12px"><span class="section-title">Modullar</span></div>
       <div class="qa-grid">
         <div class="qa-item" onclick="SadiPrime.open()"><div class="qa-icon red" data-ic="brain"></div><span class="qa-label">SadiPrime</span></div>
-        <div class="qa-item" onclick="App.nav('ai')"><div class="qa-icon blue" data-ic="chat"></div><span class="qa-label">AI Chat</span></div>
+        <div class="qa-item" onclick="SMMAI.open()"><div class="qa-icon green" data-ic="phone"></div><span class="qa-label">TG SMM</span></div>
         <div class="qa-item" onclick="App.newProject()"><div class="qa-icon blue" data-ic="plus"></div><span class="qa-label">Loyiha</span></div>
         <div class="qa-item" onclick="PromptLib.open()"><div class="qa-icon purple" data-ic="spark"></div><span class="qa-label">Promptlar</span></div>
         <div class="qa-item" onclick="Preview.open()"><div class="qa-icon green" data-ic="phone"></div><span class="qa-label">Preview</span></div>
@@ -133,9 +133,29 @@
 </div>
 
 <div id="smm" class="screen">
-  <div class="chat-header"><div class="chat-header-left"><span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span><span class="chat-title">SMM AI</span></div></div>
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span>
+      <span class="chat-title">TG SMM AI</span>
+      <span class="sp-badge">Agency</span>
+    </div>
+    <span class="chat-edit" onclick="SMMAI.clear()" data-ic="edit" data-ic-size="18"></span>
+  </div>
+  <div class="chat-actions">
+    <span class="chip-mini" onclick="document.getElementById('smm-input').value='Instagram Reel yoz: ';document.getElementById('smm-input').focus()">Reel</span>
+    <span class="chip-mini" onclick="document.getElementById('smm-input').value='Post yoz: ';document.getElementById('smm-input').focus()">Post</span>
+    <span class="chip-mini" onclick="document.getElementById('smm-input').value='10 ta Stories ketma-ketligi: ';document.getElementById('smm-input').focus()">Stories</span>
+    <span class="chip-mini" onclick="document.getElementById('smm-input').value='90 kunlik marketing strategy: ';document.getElementById('smm-input').focus()">Strategy</span>
+    <span class="chip-mini" onclick="document.getElementById('smm-input').value='Meta Ads creative: ';document.getElementById('smm-input').focus()">Ads</span>
+    <span class="chip-mini" onclick="document.getElementById('smm-input').value='Brand audit: ';document.getElementById('smm-input').focus()">Brand</span>
+  </div>
   <div id="smm-messages" class="chat-messages"></div>
-  <div class="chat-bottom"><div class="chat-input-wrap"><textarea id="smm-input" class="chat-input" placeholder="Post..." rows="1" onkeydown="SMMAI.onKey(event)"></textarea><button class="input-btn send" onclick="SMMAI.send()" data-ic="send" data-ic-size="18"></button></div></div>
+  <div class="chat-bottom">
+    <div class="chat-input-wrap">
+      <textarea id="smm-input" class="chat-input" placeholder="Brend, mahsulot, maqsad yoki: Reel / Post / Strategy..." rows="1" onkeydown="SMMAI.onKey(event)"></textarea>
+      <button class="input-btn send" onclick="SMMAI.send()" data-ic="send" data-ic-size="18"></button>
+    </div>
+  </div>
 </div>
 
 <div id="projects" class="screen">
@@ -212,7 +232,7 @@
     </div></div>
     <div class="s-section"><div class="s-section-title">AI</div><div class="s-group">
       <div class="s-row" onclick="App.openModelPicker()"><div class="s-ico green" data-ic="brain" data-ic-size="18"></div><span class="s-label">Model</span><span class="s-val" id="default-model-val">Llama 3.3</span><span class="s-chevron">›</span></div>
-      <div class="s-row" onclick="ModelRouter.toggle()"><div class="s-ico purple" data-ic="spark" data-ic-size="18"></div><span class="s-label">Auto-model (vazifa bo'yicha)</span><span class="s-chevron">›</span></div>
+      <div class="s-row" onclick="ModelRouter.toggle()"><div class="s-ico purple" data-ic="spark" data-ic-size="18"></div><span class="s-label">Auto-model</span><span class="s-chevron">›</span></div>
       <div class="s-row" onclick="SadiPrime.toggleAutoPush()"><div class="s-ico green" data-ic="github" data-ic-size="18"></div><span class="s-label">Auto-push</span><span class="s-chevron">›</span></div>
       <div class="s-row" onclick="App.nav('monitor')"><div class="s-ico orange" data-ic="zap" data-ic-size="18"></div><span class="s-label">Monitoring</span><span class="s-chevron">›</span></div>
     </div></div>
@@ -226,8 +246,8 @@
 <nav class="nav">
   <div class="nav-item active" id="nav-home" onclick="App.nav('home')"><div class="nav-icon" data-ic="home" data-ic-size="22"></div><div class="nav-label">Bosh</div></div>
   <div class="nav-item" id="nav-ai" onclick="App.nav('ai')"><div class="nav-icon" data-ic="brain" data-ic-size="22"></div><div class="nav-label">Prime</div></div>
+  <div class="nav-item" id="nav-smm" onclick="SMMAI.open()"><div class="nav-icon" data-ic="phone" data-ic-size="22"></div><div class="nav-label">SMM</div></div>
   <div class="nav-item" id="nav-projects" onclick="App.nav('projects')"><div class="nav-icon" data-ic="folder" data-ic-size="22"></div><div class="nav-label">Loyiha</div></div>
-  <div class="nav-item" id="nav-agents" onclick="App.nav('agents')"><div class="nav-icon" data-ic="agents" data-ic-size="22"></div><div class="nav-label">Agent</div></div>
   <div class="nav-item" id="nav-settings" onclick="App.nav('settings')"><div class="nav-icon" data-ic="settings" data-ic-size="22"></div><div class="nav-label">Sozlama</div></div>
 </nav>
 
@@ -245,6 +265,7 @@
 <script src="premium.js"></script>
 <script src="supabase.js"></script>
 <script src="product.js"></script>
+<script src="smm-brain.js"></script>
 <script>
 setTimeout(async function(){
   if(typeof renderIcons==='function')renderIcons();
