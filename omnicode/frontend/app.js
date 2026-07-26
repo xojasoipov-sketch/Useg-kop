@@ -882,6 +882,14 @@ const AIRouter = {
     return await res.text();
   },
 
+  // Har bir provider uchun timeout wrapper — 30 soniya kutamiz
+  _withTimeout(promise, ms = 30000) {
+    return Promise.race([
+      promise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), ms)),
+    ]);
+  },
+
   async call(messages, model) {
     const m = model || State.model;
     let chain;
@@ -901,11 +909,12 @@ const AIRouter = {
     );
 
     for (const fn of chain) {
-      try { return await fn(); } catch (e) { console.warn('AI fallback:', e.message); }
+      try { return await this._withTimeout(fn(), 30000); }
+      catch (e) { console.warn('AI fallback:', e.message); }
     }
     // Oxirgi urinish — Pollinations GET (eng oddiy, har doim ishlaydi)
-    try { return await this.pollinationsText(messages); } catch (_) {}
-    throw new Error('Tarmoq xatosi. Internet aloqasini tekshiring.');
+    try { return await this._withTimeout(this.pollinationsText(messages), 20000); } catch (_) {}
+    throw new Error('Barcha AI provayderlar javob bermadi. Internetni tekshiring.');
   },
 };
 
@@ -1743,18 +1752,7 @@ Nima quramiz?`, false);
     div.className = `bubble ${role}`;
     if (role === 'ai') {
       div.innerHTML = MD.render(FS.stripCommands(text));
-      if (hasWrites) {
-        const btn = document.createElement('button');
-        btn.className = 'apply-btn';
-        btn.textContent = `📝 ${State.pendingWrites.length} ta faylni qo'llash`;
-        btn.onclick = () => DiffView.show();
-        div.appendChild(btn);
-      }
-      const chips = document.createElement('div');
-      chips.className = 'bubble-chips';
-      chips.innerHTML = [['Improve','Yaxshilash'],['Explain','Tushuntirish'],['Shorter','Qisqartirish'],['Fix bugs','Xatolarni tuzat']].map(([a,uz]) =>
-        `<button class="bubble-chip" onclick="AI.quickAction('${a}')">${uz}</button>`).join('');
-      div.appendChild(chips);
+      // chips faqat _addBubbleActions da qo'shiladi — bu yerda qo'shmaymiz (duplicate oldini olish)
     } else {
       div.textContent = text;
     }
@@ -1767,16 +1765,39 @@ Nima quramiz?`, false);
     const el = document.getElementById('chat-messages');
     const div = document.createElement('div');
     div.className = 'bubble thinking'; div.id = 'typing-ind';
-    div.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div><span style="font-size:13px;color:var(--text3)">O'ylayapman...</span>`;
+    div.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div><span style="font-size:13px;color:var(--text3)">O'ylayapman...</span><button onclick="AI.cancel()" style="margin-left:10px;padding:2px 8px;border-radius:6px;border:1px solid rgba(255,100,100,0.4);background:rgba(255,100,100,0.1);color:rgba(255,100,100,0.9);font-size:11px;cursor:pointer">Bekor qil</button>`;
     el.appendChild(div); el.scrollTop = el.scrollHeight;
   },
   hideTyping() { document.getElementById('typing-ind')?.remove(); },
 
+  cancel() {
+    this.hideTyping();
+    ActivityBar.error();
+    this.busy = false;
+    toast('Bekor qilindi');
+    // Force-reset any pending state
+    State.chatHistory = State.chatHistory.filter((_, i) =>
+      i < State.chatHistory.length - 1 || State.chatHistory[i].role !== 'user'
+    );
+  },
+
   async send(text) {
     const inp = document.getElementById('chat-input');
     const msg = (text || inp?.value || '').trim();
-    if (!msg || this.busy) return;
+    // busy stuck bo'lib qolgan bo'lsa avtomatik qayta qo'yamiz
+    if (this.busy) {
+      if (Date.now() - (this._busySince || 0) > 90000) {
+        this.busy = false;
+        this.hideTyping();
+        ActivityBar.error();
+        toast('AI timeout — qayta urinilmoqda');
+      } else {
+        return;
+      }
+    }
+    if (!msg) return;
     if (inp) { inp.value = ''; inp.style.height = ''; }
+    this._busySince = Date.now();
 
     // ── Slash buyruqlar ──────────────────────────────────────────
     const cmd = msg.split(' ')[0].toLowerCase();
@@ -1911,6 +1932,7 @@ Nima quramiz?`, false);
       }
     } catch (e) {
       console.warn('Stream xatosi, fallback:', e.message);
+      // busy holati qolmasligi uchun — non-stream ga o'tamiz
     }
 
     // ── Non-streaming ────────────────────────────────────────────
@@ -1934,7 +1956,14 @@ Nima quramiz?`, false);
     ActivityBar.setPhase('writing');
     ActivityBar.addTokens(Math.floor(reply.length / 4));
     const div = this.appendBubble('ai', reply, false);
-    await this._finalize(reply, div, messages, chatEl, taskId);
+    try {
+      await this._finalize(reply, div, messages, chatEl, taskId);
+    } catch(e) {
+      console.error('finalize error:', e);
+      this.busy = false;
+      Tasks.remove(taskId);
+      ActivityBar.error();
+    }
   },
 
   // ── Javobni tugallash: fayllar, auto-push, action buttons ──
