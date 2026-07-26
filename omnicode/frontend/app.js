@@ -301,6 +301,34 @@ const Git = {
   async repos() { return this.request('/user/repos?per_page=50&sort=updated'); },
   async createRepo(name, isPrivate = false) { return this.request('/user/repos', 'POST', { name, private: isPrivate, auto_init: true }); },
 
+  async getRepoContents(owner, repo, path = '', branch = 'main') {
+    try { return await this.request(`/repos/${owner}/${repo}/contents/${path}?ref=${branch}`); }
+    catch { return await this.request(`/repos/${owner}/${repo}/contents/${path}?ref=master`).catch(() => null); }
+  },
+
+  async getFileContent(owner, repo, path, branch = 'main') {
+    const data = await this.getRepoContents(owner, repo, path, branch);
+    if (!data || !data.content) return null;
+    try { return decodeURIComponent(escape(atob(data.content.replace(/\n/g, '')))); }
+    catch { return atob(data.content.replace(/\n/g, '')); }
+  },
+
+  async importRepoToProject(owner, repo, projectId, branch = 'main') {
+    const importDir = async (dirPath = '') => {
+      const items = await this.getRepoContents(owner, repo, dirPath, branch);
+      if (!items || !Array.isArray(items)) return;
+      for (const item of items) {
+        if (item.type === 'file' && item.size < 200000) {
+          const content = await this.getFileContent(owner, repo, item.path, branch);
+          if (content !== null) FS.write(projectId, item.path, content);
+        } else if (item.type === 'dir' && !['node_modules','.git','dist','build'].includes(item.name)) {
+          await importDir(item.path);
+        }
+      }
+    };
+    await importDir();
+  },
+
   async getSHA(owner, repo, path, branch = 'main') {
     try { return (await this.request(`/repos/${owner}/${repo}/contents/${path}?ref=${branch}`)).sha; }
     catch { return null; }
@@ -556,6 +584,7 @@ const State = {
   pendingWrites: [],
   chatHistory: [],
   editorFile: null,
+  githubCtx: null,
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -948,8 +977,13 @@ const Home = {
     const aiName = document.getElementById('conn-ai-name');
 
     if (ghStatus) {
-      ghStatus.textContent = keys.github ? 'Ulangan' : 'Sozlanmagan';
+      ghStatus.textContent = keys.github ? 'Ulangan ✓' : 'Sozlanmagan';
       ghStatus.style.color = keys.github ? 'var(--green)' : 'var(--text3)';
+    }
+    // Update GitHub chip in chat
+    const ghChip = document.getElementById('gh-chip');
+    if (ghChip) {
+      ghChip.innerHTML = keys.github ? '🐙 GitHub <span style="color:var(--green);font-size:10px">●</span>' : '🐙 GitHub';
     }
     if (aiStatus && aiName) {
       const hasKey = keys.or1 || keys.groq || keys.anthropic || keys.gemini || keys.deepseek || keys.mistral || keys.together;
@@ -992,7 +1026,9 @@ const AI = {
     const agentSys = State.agent ? AGENT_SYSTEMS[State.agent] : '';
     const projectCtx = State.projectId ? FS.context(State.projectId) : '';
     const project = State.projectId ? PM.get(State.projectId) : null;
-    return `You are OmniCode — a world-class AI coding assistant (like Cursor AI on mobile). You are connected to Supabase, GitHub, Figma, Vercel, Notion, Gmail, and Calendar via MCP.
+    const ghToken = Git.token();
+    const ghCtx = State.githubCtx || (ghToken ? 'GITHUB: Token mavjud (foydalanuvchi o\'z GitHub akkauntini ulagan)' : 'GITHUB: Token yo\'q');
+    return `You are OmniCode — a world-class AI coding assistant (like Cursor AI on mobile).
 
 ${agentSys}
 
@@ -1007,7 +1043,16 @@ Always write complete file contents. Multiple files allowed per response.
 ACTIVE PROJECT: ${project ? project.name : 'None selected'}
 ACTIVE TOOLS: ${[...State.activeTools].join(', ')}
 SUPABASE: tomkxsdkerpbvlumubbg.supabase.co (connected)
+${ghCtx}
 ${projectCtx}
+
+CAPABILITIES:
+- You CAN read/write files in the virtual file system (use WRITE_FILE)
+- You CAN push code to GitHub if github tool is active and token is set
+- You CAN see user's GitHub repos when github tool is active
+- You CAN help fix, refactor, and explain any code in the project
+- When user asks about their GitHub repos, list them from GITHUB REPOS above
+- When user asks to push/deploy to GitHub, confirm repo name and use Git.pushProject()
 
 Rules: Be concise. Write working code. For mobile: short explanations. Use Uzbek for explanations when user writes in Uzbek.`;
   },
@@ -1030,7 +1075,12 @@ Rules: Be concise. Write working code. For mobile: short explanations. Use Uzbek
 2. Nima qurishni yozing
 3. AI fayllarni yozadi → siz diff ko'rib tasdiqlaysiz
 
-**Tezkor buyruqlar:** \`/fix\` tuzatish · \`/sync\` saqlash · \`/model\` model almashtirish
+**Tezkor buyruqlar:** \`/fix\` tuzatish · \`/sync\` saqlash · \`/model\` model almashtirish · \`/github\` repolarni ko'rish · \`/import owner/repo\` import qilish
+
+**GitHub bilan ishlash:**
+1. Sozlamalar → Kod → GitHub token kiriting
+2. Chat da 🐙 GitHub chipni bosing
+3. AI sizning barcha repolaringizni ko'radi va ular bilan ishlaydi
 
 Bugun nima quramiz?`, false);
   },
@@ -1082,6 +1132,22 @@ Bugun nima quramiz?`, false);
     if (msg === '/model') { App.openModelPicker(); return; }
     if (msg === '/clear' || msg === '/tozala') { this.clear(); return; }
     if (msg === '/palette' || msg === '/k') { Palette.open(); return; }
+    if (msg === '/github' || msg === '/repos') { await this._loadGithubContext(); return; }
+    if (msg.startsWith('/import ')) {
+      const parts = msg.split(' ');
+      const repoFull = parts[1]; // owner/repo
+      const [owner, repo] = repoFull.split('/');
+      if (!owner || !repo) { toast('Format: /import owner/repo'); return; }
+      const pid = State.projectId;
+      if (!pid) { toast('Avval loyiha tanlang'); return; }
+      toast(`⬇️ ${repoFull} import qilinmoqda...`);
+      try {
+        await Git.importRepoToProject(owner, repo, pid);
+        toast(`✅ ${repoFull} import qilindi`);
+        this.appendBubble('ai', `✅ **${repoFull}** loyihaga import qilindi!\n\nFayllar Loyihalar → Fayllar bo'limida ko'rinadi. Qanday o'zgartirish qilishni so'rang.`);
+      } catch (e) { toast('Import xatosi: ' + e.message); }
+      return;
+    }
 
     const resolved = await this.resolveRefs(msg);
     this.appendBubble('user', msg, false);
@@ -1199,9 +1265,41 @@ Bugun nima quramiz?`, false);
   autoGrow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; },
 
   toggleTool(el, name) {
-    if (State.activeTools.has(name)) { State.activeTools.delete(name); el.classList.remove('active'); }
-    else { State.activeTools.add(name); el.classList.add('active'); }
-    toast(`Vosita: ${name} ${State.activeTools.has(name) ? 'YOQILDI' : 'O\'CHIRILDI'}`);
+    if (State.activeTools.has(name)) {
+      State.activeTools.delete(name);
+      el.classList.remove('active');
+      toast(`${name} o'chirildi`);
+    } else {
+      State.activeTools.add(name);
+      el.classList.add('active');
+      toast(`${name} yoqildi`);
+      if (name === 'github') this._loadGithubContext();
+    }
+  },
+
+  async _loadGithubContext() {
+    const token = Git.token();
+    if (!token) {
+      toast('⚠️ GitHub token yo\'q — Sozlamalar → Kod bo\'limiga o\'ting');
+      return;
+    }
+    toast('🐙 GitHub repolar yuklanmoqda...');
+    try {
+      const [me, repos] = await Promise.all([Git.me(), Git.repos()]);
+      const repoList = repos.slice(0, 20).map(r =>
+        `- ${r.full_name} (${r.private ? 'private' : 'public'}, ⭐${r.stargazers_count}, ${r.language || 'unknown'}, updated: ${r.updated_at?.slice(0,10)})`
+      ).join('\n');
+      State.githubCtx = `GITHUB USER: ${me.login} (${me.name || ''})\nGITHUB REPOS (${repos.length}):\n${repoList}`;
+
+      // Show a system-like message in chat
+      this.appendBubble('ai', `🐙 **GitHub ulandi** — @${me.login}\n\n**${repos.length} ta repo topildi:**\n${repos.slice(0,8).map(r => `• \`${r.name}\` — ${r.description || r.language || 'no desc'}`).join('\n')}${repos.length > 8 ? `\n...va ${repos.length-8} ta boshqa` : ''}\n\nEndi menga repo haqida so'rang, fayllarni ko'ring yoki GitHub orqali kodni push qiling.`);
+    } catch (e) {
+      toast('GitHub xatosi: ' + e.message);
+      State.activeTools.delete('github');
+      document.querySelectorAll('.tool-chip').forEach(el => {
+        if (el.getAttribute('onclick')?.includes('github')) el.classList.remove('active');
+      });
+    }
   },
 
   async quickAction(action) {
