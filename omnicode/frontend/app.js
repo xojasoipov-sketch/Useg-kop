@@ -563,13 +563,34 @@ const AIRouter = {
   },
 
   async pollinations(messages) {
-    const res = await fetch('https://text.pollinations.ai/openai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'openai', messages, max_tokens: 4096 }),
-    });
-    if (!res.ok) throw new Error(`Pollinations ${res.status}`);
-    return (await res.json()).choices[0].message.content;
+    // Try multiple models — Pollinations key talab qilmaydi
+    const models = ['openai', 'openai-large', 'mistral', 'claude-hybridspace'];
+    let lastErr;
+    for (const mdl of models) {
+      try {
+        const res = await fetch('https://text.pollinations.ai/openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: mdl, messages, max_tokens: 4096, seed: 42 }),
+        });
+        if (!res.ok) { lastErr = new Error(`Pollinations/${mdl} ${res.status}`); continue; }
+        const data = await res.json();
+        const content = data?.choices?.[0]?.message?.content;
+        if (content) return content;
+        lastErr = new Error(`Pollinations/${mdl} empty`);
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('Pollinations ishlamadi');
+  },
+
+  async pollinationsText(messages) {
+    // GET endpoint — hech qanday key yo'q, eng ishonchli
+    const last = messages[messages.length - 1]?.content || '';
+    const sys = messages.find(m => m.role === 'system')?.content || '';
+    const prompt = encodeURIComponent((sys ? sys + '\n\n' : '') + last);
+    const res = await fetch(`https://text.pollinations.ai/${prompt}?model=openai&seed=42`);
+    if (!res.ok) throw new Error(`Pollinations text ${res.status}`);
+    return await res.text();
   },
 
   async call(messages, model) {
@@ -587,12 +608,15 @@ const AIRouter = {
       () => this.groq(messages),
       () => this.together(messages),
       () => this.pollinations(messages),
+      () => this.pollinationsText(messages),
     );
 
     for (const fn of chain) {
       try { return await fn(); } catch (e) { console.warn('AI fallback:', e.message); }
     }
-    throw new Error('Barcha AI provayderlar ishlamadi. Sozlamalarda API kalitlarni tekshiring.');
+    // Oxirgi urinish — Pollinations GET (eng oddiy, har doim ishlaydi)
+    try { return await this.pollinationsText(messages); } catch (_) {}
+    throw new Error('Tarmoq xatosi. Internet aloqasini tekshiring.');
   },
 };
 
@@ -663,7 +687,8 @@ const StreamAI = {
     if (Store.get('keys', {}).groq) {
       return this.groq(messages, onChunk);
     }
-    throw new Error('Stream qo\'llab-quvvatlanmaydi');
+    // Stream yo'q — Pollinations orqali non-stream (har doim ishlaydi)
+    throw new Error('Stream kalit yo\'q — Pollinations fallback');
   },
 };
 
@@ -1503,7 +1528,11 @@ Nima quramiz?`, false);
       reply = await AIRouter.call(messages);
     } catch (e) {
       this.hideTyping();
-      this.appendBubble('ai', `❌ **${e.message}**\n\nSozlamalar → AI bo'limiga kalit qo'shing.`, false);
+      const isKeyErr = /kalit|key|api|auth|401|403/i.test(e.message);
+      const hint = isKeyErr
+        ? '\n\n💡 Bepul kalit: [Groq](https://console.groq.com/keys) yoki Sozlamalar → AI'
+        : '\n\n💡 Internet aloqasini tekshiring yoki keyinroq urinib ko\'ring';
+      this.appendBubble('ai', `❌ **${e.message}**${hint}`, false);
       Tasks.remove(taskId);
       this.busy = false;
       return;
