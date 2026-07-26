@@ -356,6 +356,101 @@ const Git = {
 };
 
 // ══════════════════════════════════════════════════════════════
+//  GITHUB TOOL PROTOCOL — AI emits <GH_*> tags, app executes them
+// ══════════════════════════════════════════════════════════════
+const GitTools = {
+  // Parse AI response for GitHub tool calls
+  async execute(reply) {
+    let result = reply;
+    const results = [];
+
+    // <GH_LIST_REPOS/>
+    if (/<GH_LIST_REPOS\s*\/?>/.test(reply)) {
+      try {
+        const [me, repos] = await Promise.all([Git.me(), Git.repos()]);
+        const list = repos.map((r, i) =>
+          `${i+1}. **${r.full_name}** — ${r.description || r.language || 'no desc'} | ⭐${r.stargazers_count} | ${r.private ? '🔒' : '🌐'} | ${r.updated_at?.slice(0,10)}`
+        ).join('\n');
+        State.githubCtx = `GITHUB USER: ${me.login}\nGITHUB REPOS:\n` + repos.map(r =>
+          `- ${r.full_name} (${r.private?'private':'public'}, ${r.language||'?'}, ⭐${r.stargazers_count})`
+        ).join('\n');
+        results.push(`🐙 **GitHub — @${me.login}** (${repos.length} ta repo)\n\n${list}`);
+      } catch (e) {
+        results.push(`❌ GitHub xatosi: ${e.message}\n\nSozlamalar → Kod → GitHub token tekshiring`);
+      }
+      result = result.replace(/<GH_LIST_REPOS\s*\/?>/g, '');
+    }
+
+    // <GH_LIST_FILES owner="x" repo="y" path="z"/>
+    const listFilesRe = /<GH_LIST_FILES\s+owner="([^"]+)"\s+repo="([^"]+)"(?:\s+path="([^"]*)")?\s*\/?>/g;
+    let m;
+    while ((m = listFilesRe.exec(reply)) !== null) {
+      const [, owner, repo, path = ''] = m;
+      try {
+        const items = await Git.getRepoContents(owner, repo, path);
+        if (Array.isArray(items)) {
+          const dirs = items.filter(i => i.type === 'dir').map(i => `📁 ${i.name}/`).join('\n');
+          const files = items.filter(i => i.type === 'file').map(i => `📄 ${i.name} (${(i.size/1024).toFixed(1)}kb)`).join('\n');
+          results.push(`📂 **${owner}/${repo}${path ? '/' + path : ''}**\n\n${dirs}\n${files}`);
+        } else {
+          results.push(`❌ Fayl topilmadi: ${owner}/${repo}/${path}`);
+        }
+      } catch (e) { results.push(`❌ ${e.message}`); }
+      result = result.replace(m[0], '');
+    }
+
+    // <GH_READ_FILE owner="x" repo="y" path="z"/>
+    const readRe = /<GH_READ_FILE\s+owner="([^"]+)"\s+repo="([^"]+)"\s+path="([^"]+)"\s*\/?>/g;
+    while ((m = readRe.exec(reply)) !== null) {
+      const [, owner, repo, path] = m;
+      try {
+        const content = await Git.getFileContent(owner, repo, path);
+        if (content !== null) {
+          const ext = path.split('.').pop();
+          results.push(`📄 **${owner}/${repo}/${path}**\n\`\`\`${ext}\n${content.slice(0, 3000)}${content.length > 3000 ? '\n... (qisqartirildi)' : ''}\n\`\`\``);
+          // Also inject into VFS if project is open
+          if (State.projectId) FS.write(State.projectId, path, content);
+        } else {
+          results.push(`❌ Fayl o'qib bo'lmadi: ${path}`);
+        }
+      } catch (e) { results.push(`❌ ${e.message}`); }
+      result = result.replace(m[0], '');
+    }
+
+    // <GH_WRITE_FILE owner="x" repo="y" path="z" message="commit">content</GH_WRITE_FILE>
+    const writeRe = /<GH_WRITE_FILE\s+owner="([^"]+)"\s+repo="([^"]+)"\s+path="([^"]+)"(?:\s+message="([^"]*)")?\s*>([\s\S]*?)<\/GH_WRITE_FILE>/g;
+    while ((m = writeRe.exec(reply)) !== null) {
+      const [full, owner, repo, path, commitMsg, content] = m;
+      try {
+        await Git.pushFile(owner, repo, path, content.trim(), 'main', commitMsg || `update ${path} via OmniCode AI`);
+        results.push(`✅ **GitHub'ga yuklandi:** \`${owner}/${repo}/${path}\`\nCommit: "${commitMsg || 'update via OmniCode AI'}"`);
+        toast(`✅ ${path} GitHub'ga yuklandi`);
+      } catch (e) { results.push(`❌ Push xatosi ${path}: ${e.message}`); }
+      result = result.replace(full, '');
+    }
+
+    // <GH_CREATE_REPO name="x" private="false"/>
+    const createRe = /<GH_CREATE_REPO\s+name="([^"]+)"(?:\s+private="([^"]*)")?\s*\/?>/g;
+    while ((m = createRe.exec(reply)) !== null) {
+      const [, name, priv = 'false'] = m;
+      try {
+        const r = await Git.createRepo(name, priv === 'true');
+        results.push(`✅ **Repo yaratildi:** [${r.full_name}](${r.html_url})\n${r.private ? '🔒 Private' : '🌐 Public'}`);
+        toast(`✅ ${name} repo yaratildi`);
+      } catch (e) { results.push(`❌ Repo yaratib bo'lmadi: ${e.message}`); }
+      result = result.replace(m[0], '');
+    }
+
+    return { cleanReply: result.trim(), toolResults: results };
+  },
+
+  // Check if reply has any GH_ commands
+  has(reply) {
+    return /<GH_/.test(reply);
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
 //  AI MODELS
 // ══════════════════════════════════════════════════════════════
 const MODELS = [
@@ -1027,34 +1122,58 @@ const AI = {
     const projectCtx = State.projectId ? FS.context(State.projectId) : '';
     const project = State.projectId ? PM.get(State.projectId) : null;
     const ghToken = Git.token();
-    const ghCtx = State.githubCtx || (ghToken ? 'GITHUB: Token mavjud (foydalanuvchi o\'z GitHub akkauntini ulagan)' : 'GITHUB: Token yo\'q');
-    return `You are OmniCode — a world-class AI coding assistant (like Cursor AI on mobile).
+    const ghActive = State.activeTools.has('github');
+    const ghCtx = State.githubCtx
+      ? State.githubCtx
+      : ghToken
+        ? 'GITHUB: Token ulangan (foydalanuvchi GitHub akkauntini bog\'lagan). Repolarni ko\'rish uchun <GH_LIST_REPOS/> ishlatib ma\'lumot oling.'
+        : 'GITHUB: Token yo\'q — foydalanuvchiga "Sozlamalar → Kod → GitHub token" qo\'shishini ayting.';
+
+    return `You are OmniCode — a super-intelligent AI coding assistant running as a Telegram Mini App. You work like Cursor AI / Claude Code on mobile.
 
 ${agentSys}
 
-FILE WRITING PROTOCOL:
-Use this exact format to create/modify files:
+═══ VIRTUAL FILE SYSTEM ═══
+Write/create files using:
 <WRITE_FILE path="relative/path/file.ext">
 complete file content here
 </WRITE_FILE>
+Always write COMPLETE file contents. Multiple files OK. User approves diffs before applying.
 
-Always write complete file contents. Multiple files allowed per response.
+═══ GITHUB TOOL PROTOCOL ═══
+${ghActive ? '✅ GITHUB TOOL IS ACTIVE — you can and SHOULD use these commands:' : '⚠️ GitHub tool not active (user must tap 🐙 GitHub chip)'}
 
-ACTIVE PROJECT: ${project ? project.name : 'None selected'}
-ACTIVE TOOLS: ${[...State.activeTools].join(', ')}
-SUPABASE: tomkxsdkerpbvlumubbg.supabase.co (connected)
+When you need GitHub data, emit these exact XML tags in your response (the app will execute them and show results):
+
+<GH_LIST_REPOS/>                          — list all user repos with details
+<GH_LIST_FILES owner="x" repo="y" path=""/>  — list files in repo directory
+<GH_READ_FILE owner="x" repo="y" path="src/main.js"/>  — read a file from GitHub
+<GH_WRITE_FILE owner="x" repo="y" path="src/main.js" message="fix: update logic">
+file content here
+</GH_WRITE_FILE>                           — write/commit file to GitHub
+<GH_CREATE_REPO name="my-app" private="false"/>  — create new repository
+
+RULES FOR GITHUB:
+- If user asks "nechta repoyim bor" or "repolarimni ko'rsat" → emit <GH_LIST_REPOS/>
+- If user asks to read/edit a repo file → first <GH_LIST_FILES>, then <GH_READ_FILE>
+- If user asks to push changes → use <GH_WRITE_FILE> with actual content
+- NEVER say "I cannot access GitHub" — you CAN via these commands
+- NEVER make up repo names — use <GH_LIST_REPOS/> to get real ones first
+- After reading a file with GH_READ_FILE, you can edit it and push back with GH_WRITE_FILE
+
 ${ghCtx}
+
+═══ CONTEXT ═══
+ACTIVE PROJECT: ${project ? `"${project.name}"` : 'None'}
+ACTIVE TOOLS: ${[...State.activeTools].join(', ')}
+SUPABASE: connected (tomkxsdkerpbvlumubbg.supabase.co)
 ${projectCtx}
 
-CAPABILITIES:
-- You CAN read/write files in the virtual file system (use WRITE_FILE)
-- You CAN push code to GitHub if github tool is active and token is set
-- You CAN see user's GitHub repos when github tool is active
-- You CAN help fix, refactor, and explain any code in the project
-- When user asks about their GitHub repos, list them from GITHUB REPOS above
-- When user asks to push/deploy to GitHub, confirm repo name and use Git.pushProject()
-
-Rules: Be concise. Write working code. For mobile: short explanations. Use Uzbek for explanations when user writes in Uzbek.`;
+═══ RULES ═══
+- Use Uzbek when user writes in Uzbek
+- Be concise, no unnecessary text
+- Write working, complete code
+- For GitHub questions when tool is active: USE THE GH_ COMMANDS, don't explain how to use GitHub website`;
   },
 
   addWelcome() {
@@ -1126,18 +1245,21 @@ Bugun nima quramiz?`, false);
     if (!msg || this.busy) return;
     if (inp) { inp.value = ''; inp.style.height = ''; }
 
-    // Handle slash commands
-    if (msg === '/fix' || msg === '/tuzat') { await SelfHeal.analyze(); return; }
-    if (msg === '/sync' || msg === '/saqlash') { await SB.syncAll(); return; }
-    if (msg === '/model') { App.openModelPicker(); return; }
-    if (msg === '/clear' || msg === '/tozala') { this.clear(); return; }
-    if (msg === '/palette' || msg === '/k') { Palette.open(); return; }
-    if (msg === '/github' || msg === '/repos') { await this._loadGithubContext(); return; }
-    if (msg.startsWith('/import ')) {
-      const parts = msg.split(' ');
-      const repoFull = parts[1]; // owner/repo
+    // Handle slash commands (startsWith for flexible matching)
+    const cmd = msg.split(' ')[0].toLowerCase();
+    if (cmd === '/fix' || cmd === '/tuzat') { await SelfHeal.analyze(); return; }
+    if (cmd === '/sync' || cmd === '/saqlash') { await SB.syncAll(); return; }
+    if (cmd === '/model') { App.openModelPicker(); return; }
+    if (cmd === '/clear' || cmd === '/tozala') { this.clear(); return; }
+    if (cmd === '/palette') { Palette.open(); return; }
+    if (cmd === '/github' || cmd === '/repos' || cmd === '/gh') {
+      await this._loadGithubContext();
+      return;
+    }
+    if (cmd === '/import') {
+      const repoFull = msg.split(' ')[1];
+      if (!repoFull || !repoFull.includes('/')) { toast('Format: /import owner/repo'); return; }
       const [owner, repo] = repoFull.split('/');
-      if (!owner || !repo) { toast('Format: /import owner/repo'); return; }
       const pid = State.projectId;
       if (!pid) { toast('Avval loyiha tanlang'); return; }
       toast(`⬇️ ${repoFull} import qilinmoqda...`);
@@ -1147,6 +1269,11 @@ Bugun nima quramiz?`, false);
         this.appendBubble('ai', `✅ **${repoFull}** loyihaga import qilindi!\n\nFayllar Loyihalar → Fayllar bo'limida ko'rinadi. Qanday o'zgartirish qilishni so'rang.`);
       } catch (e) { toast('Import xatosi: ' + e.message); }
       return;
+    }
+
+    // If GitHub tool active but context not loaded yet — auto-load first
+    if (State.activeTools.has('github') && !State.githubCtx && Git.token()) {
+      await this._loadGithubContext();
     }
 
     const resolved = await this.resolveRefs(msg);
@@ -1188,25 +1315,49 @@ Bugun nima quramiz?`, false);
         if (streamBubble) {
           // Finalize
           streamBubble.innerHTML = MD.render(FS.stripCommands(reply));
-          const writes = FS.parseWrites(reply);
-          if (writes.length) {
-            State.pendingWrites = writes;
-            const btn = document.createElement('button');
-            btn.className = 'apply-btn';
-            btn.textContent = `📝 ${writes.length} ta faylni qo'llash`;
-            btn.onclick = () => DiffView.show();
-            streamBubble.appendChild(btn);
-            toast(`📝 ${writes.length} ta fayl tayyor`);
+          // Execute GitHub tool commands if any
+          let finalReply = reply;
+          if (GitTools.has(reply)) {
+            streamBubble.innerHTML = MD.render('⚙️ *GitHub API chaqirilmoqda...*');
+            const { cleanReply, toolResults } = await GitTools.execute(reply);
+            finalReply = cleanReply + (toolResults.length ? '\n\n' + toolResults.join('\n\n---\n\n') : '');
+            // Re-run AI with tool results injected
+            if (toolResults.length && cleanReply.trim().length < 50) {
+              const toolMsg = toolResults.join('\n\n');
+              State.chatHistory.push({ role: 'assistant', content: reply });
+              State.chatHistory.push({ role: 'user', content: '[GitHub tool natijalari]:\n' + toolMsg + '\n\nYuqoridagi ma\'lumotlarga asoslanib javob bering.' });
+              const msgs2 = [{ role: 'system', content: this.system() }, ...State.chatHistory.slice(-16)];
+              try {
+                let followUp = '';
+                if (StreamAI.enabled() && State.model.stream) {
+                  followUp = await StreamAI.call(msgs2, null, (full) => {
+                    streamBubble.innerHTML = MD.render(toolMsg + '\n\n---\n\n' + full) + '<span class="stream-cursor"></span>';
+                    chatEl.scrollTop = chatEl.scrollHeight;
+                  });
+                } else {
+                  followUp = await AIRouter.call(msgs2);
+                }
+                finalReply = toolMsg + '\n\n---\n\n' + followUp;
+                State.chatHistory.push({ role: 'assistant', content: followUp });
+              } catch { /* use tool results as reply */ }
+              streamBubble.innerHTML = MD.render(FS.stripCommands(finalReply));
+              this._addBubbleActions(streamBubble, finalReply);
+              const approxTokens = Math.floor(finalReply.length / 4);
+              Analytics.track(approxTokens);
+              Tasks.update(taskId, { progress: 100, status: 'done' });
+              Tasks.remove(taskId);
+              this.busy = false;
+              if (App.screen === 'home') Home.refresh();
+              return;
+            }
           }
-          const chips = document.createElement('div');
-          chips.className = 'bubble-chips';
-          chips.innerHTML = [['Improve','Yaxshilash'],['Explain','Tushuntirish'],['Shorter','Qisqartirish'],['Fix bugs','Xatolarni tuzat']].map(([a,uz]) =>
-            `<button class="bubble-chip" onclick="AI.quickAction('${a}')">${uz}</button>`).join('');
-          streamBubble.appendChild(chips);
 
-          const approxTokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + reply.length) / 4);
+          streamBubble.innerHTML = MD.render(FS.stripCommands(finalReply));
+          this._addBubbleActions(streamBubble, finalReply);
+
+          const approxTokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + finalReply.length) / 4);
           Analytics.track(approxTokens);
-          State.chatHistory.push({ role: 'assistant', content: reply });
+          State.chatHistory.push({ role: 'assistant', content: finalReply });
           Tasks.update(taskId, { progress: 100, status: 'done' });
           Tasks.remove(taskId);
           this.busy = false;
@@ -1224,12 +1375,32 @@ Bugun nima quramiz?`, false);
       this.showTyping();
       Tasks.update(taskId, { progress: 60 });
       try {
-        const reply = await AIRouter.call(messages);
+        let reply = await AIRouter.call(messages);
         this.hideTyping();
+
+        // Execute GitHub tools if any
+        if (GitTools.has(reply)) {
+          this.appendBubble('ai', '⚙️ *GitHub API chaqirilmoqda...*', false);
+          const { cleanReply, toolResults } = await GitTools.execute(reply);
+          if (toolResults.length) {
+            const toolMsg = toolResults.join('\n\n---\n\n');
+            // Feed results back for AI to summarize
+            State.chatHistory.push({ role: 'assistant', content: reply });
+            State.chatHistory.push({ role: 'user', content: '[GitHub tool natijalari]:\n' + toolMsg + '\n\nYuqoridagi ma\'lumotlarga asoslanib o\'zbek tilida javob bering.' });
+            const msgs2 = [{ role: 'system', content: this.system() }, ...State.chatHistory.slice(-16)];
+            this.showTyping();
+            try { reply = toolMsg + '\n\n---\n\n' + await AIRouter.call(msgs2); }
+            catch { reply = toolMsg; }
+            this.hideTyping();
+          } else {
+            reply = cleanReply;
+          }
+          // remove "thinking" bubble
+          document.getElementById('chat-messages')?.lastElementChild?.remove();
+        }
 
         const approxTokens = Math.floor((messages.reduce((s,m) => s + m.content.length, 0) + reply.length) / 4);
         Analytics.track(approxTokens);
-
         const writes = FS.parseWrites(reply);
         if (writes.length) {
           State.pendingWrites = writes;
@@ -1250,6 +1421,24 @@ Bugun nima quramiz?`, false);
 
     this.busy = false;
     if (App.screen === 'home') Home.refresh();
+  },
+
+  _addBubbleActions(el, reply) {
+    const writes = FS.parseWrites(reply);
+    if (writes.length) {
+      State.pendingWrites = writes;
+      const btn = document.createElement('button');
+      btn.className = 'apply-btn';
+      btn.textContent = `📝 ${writes.length} ta faylni qo'llash`;
+      btn.onclick = () => DiffView.show();
+      el.appendChild(btn);
+      toast(`📝 ${writes.length} ta fayl tayyor`);
+    }
+    const chips = document.createElement('div');
+    chips.className = 'bubble-chips';
+    chips.innerHTML = [['Improve','Yaxshilash'],['Explain','Tushuntirish'],['Shorter','Qisqartirish'],['Fix bugs','Xatolarni tuzat']].map(([a,uz]) =>
+      `<button class="bubble-chip" onclick="AI.quickAction('${a}')">${uz}</button>`).join('');
+    el.appendChild(chips);
   },
 
   async resolveRefs(text) {
