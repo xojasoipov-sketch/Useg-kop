@@ -1,8 +1,9 @@
 /**
- * OmniBrain — Tool Protocol Parser & Executor hooks
- * AI javobidagi XML taglarni parse qiladi.
- * Multi-file: bir javobda 8 taggacha.
+ * OmniBrain — Tool Protocol Parser & Executor
+ * Multi-file + RUN_CMD sandbox terminal
  */
+
+import { runCommand, TERMINAL_TOOL_DOC } from './terminal.js';
 
 const TAG_SPECS = [
   {
@@ -40,6 +41,12 @@ const TAG_SPECS = [
     selfClosing: false,
     needsApproval: true,
     re: /<WRITE_FILE\b([^>]*)>([\s\S]*?)<\/WRITE_FILE>/gi,
+  },
+  {
+    name: 'RUN_CMD',
+    selfClosing: false,
+    needsApproval: false,
+    re: /<RUN_CMD\b([^>]*)>([\s\S]*?)<\/RUN_CMD>/gi,
   },
 ];
 
@@ -82,10 +89,18 @@ export function parseTools(responseText) {
 export async function executeTools(tools, deps) {
   const results = [];
   const pendingApproval = [];
-  const { Git, FS, DiffView, onStatus, canWritePath, isSelfRepo, auditWrite, IDENTITY } =
-    deps;
+  const {
+    Git,
+    FS,
+    PM,
+    DiffView,
+    onStatus,
+    canWritePath,
+    isSelfRepo,
+    auditWrite,
+    IDENTITY,
+  } = deps;
 
-  // Multi-file: 8 taggacha
   for (const tool of tools.slice(0, 8)) {
     try {
       if (tool.needsApproval) {
@@ -127,6 +142,13 @@ export async function executeTools(tools, deps) {
             tool.attrs.path
           );
           break;
+        case 'RUN_CMD': {
+          const cmd = (tool.content || tool.attrs.cmd || '').trim();
+          const out = runCommand(cmd, { FS, PM });
+          result = out;
+          onStatus?.(out.ok ? '$ ' + cmd : '✗ $ ' + cmd);
+          break;
+        }
         default:
           result = { skipped: true };
       }
@@ -153,6 +175,11 @@ READ (avtomatik):
 <GH_LIST_FILES owner="xojasoipov-sketch" repo="Useg-kop" path="omnicode/frontend"/>
 <GH_READ_FILE owner="xojasoipov-sketch" repo="Useg-kop" path="omnicode/frontend/brain/index.js"/>
 
+TERMINAL sandbox (avtomatik, xavfsiz):
+<RUN_CMD>ls</RUN_CMD>
+<RUN_CMD>cat path/to/file.js</RUN_CMD>
+<RUN_CMD>find auth</RUN_CMD>
+
 WRITE (foydalanuvchi tasdiqlaydi, multi-file mumkin):
 <WRITE_FILE path="relative/path.js">
 ...kod...
@@ -167,4 +194,7 @@ Qoidalar:
 - Self-edit faqat Useg-kop reposida
 - Katta o'zgarishda avval qisqa reja yoz
 - Bir nechta fayl uchun har biri alohida WRITE_FILE / GH_WRITE_FILE
+- RUN_CMD da curl/sudo/node/python YO'Q — faqat ls/cat/find/...
+
+${TERMINAL_TOOL_DOC}
 `.trim();
