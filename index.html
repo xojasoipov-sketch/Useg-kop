@@ -4,117 +4,126 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#09090b">
-<title>OmniCode AI</title>
+<meta name="theme-color" content="#0a0a0c">
+<title>OmniCode</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="header">
-<div class="logo"><div class="dot" id="dot"></div> OmniCode AI</div>
-<div class="header-right">
-<button class="hbtn" onclick="clearChat()" title="Tozalash">🗑</button>
-</div>
+  <div class="logo"><div class="dot" id="dot"></div> OmniCode</div>
+  <div class="header-right">
+    <button class="hbtn" onclick="ghListRepos()" title="Repos">⌥</button>
+    <button class="hbtn" onclick="clearChat()" title="Tozalash">⌫</button>
+  </div>
 </div>
 <div class="pipe" id="pipe">
-<span class="ps" id="ps1">Tushun</span><span class="pa">→</span>
-<span class="ps" id="ps2">Reja</span><span class="pa">→</span>
-<span class="ps" id="ps3">Kod</span><span class="pa">→</span>
-<span class="ps" id="ps4">Review</span><span class="pa">→</span>
-<span class="ps" id="ps5">Git</span>
+  <span class="ps" id="ps1">Brain</span><span class="pa">→</span>
+  <span class="ps" id="ps2">Plan</span><span class="pa">→</span>
+  <span class="ps" id="ps3">Code</span><span class="pa">→</span>
+  <span class="ps" id="ps4">Review</span><span class="pa">→</span>
+  <span class="ps" id="ps5">Git</span>
 </div>
 <div class="view active" id="v-chat">
-<div class="messages" id="msgs">
-<div class="msg ai">
-<div class="msg-role">OmniCode AI <span class="badge">OS</span></div>
-<div class="msg-body">
-Men AI Software Engineering Operatsion Tizimiman.<br><br>
-<strong>8 agent:</strong> Core Brain → Planner → Context → Editor → Reviewer → Memory<br><br>
-<em>Sozlamalardan Pollinations tanlang, keyin <b>Agent OS</b> rejimida vazifa yozing.</em>
-</div>
-</div>
-</div>
-<div class="input-area">
-<div class="mode-row">
-<div class="mode-chip active" id="chip-fast" onclick="setMode('fast')">⚡ Tez</div>
-<div class="mode-chip" id="chip-os" onclick="setMode('os')">🤖 Agent OS</div>
-</div>
-<div class="input-box">
-<textarea class="chat-input" id="inp" placeholder="Vazifani yozing..." rows="1"
-onkeydown="onKey(event)" oninput="grow(this)"></textarea>
-<button class="send-btn" id="send" onclick="send()">↑</button>
-</div>
-</div>
+  <div class="messages" id="msgs">
+    <div class="msg ai">
+      <div class="msg-role">OmniCode <span class="badge">v2</span></div>
+      <div class="msg-body">
+        <strong>Vibe coding</strong> — suhbat qiling, qolganini men qilaman.<br><br>
+        Core Brain → Planner → Context → Editor → Reviewer → Memory<br><br>
+        <em>⚙️ Sozlama:</em> API key + GitHub token<br>
+        <em>🤖 Agent OS</em> rejimida vazifa yozing.
+      </div>
+    </div>
+  </div>
+  <div class="input-area">
+    <div class="mode-row">
+      <div class="mode-chip" id="chip-fast" onclick="setMode('fast')">⚡ Tez</div>
+      <div class="mode-chip active" id="chip-os" onclick="setMode('os')">🤖 Agent OS</div>
+    </div>
+    <div class="input-box">
+      <textarea class="chat-input" id="inp" placeholder="Nima qilamiz?" rows="1"
+        onkeydown="onKey(event)" oninput="grow(this)"></textarea>
+      <button class="send-btn" id="send" onclick="send()">↑</button>
+    </div>
+  </div>
 </div>
 <div class="view" id="v-files">
-<div class="files-toolbar">
-<button class="btn primary" onclick="newFile()">+ Yangi</button>
-<button class="btn" onclick="saveFile()">Saqlash</button>
-<button class="btn" onclick="dlFile()">Yuklash</button>
-<button class="btn danger" onclick="delFile()">O‘chirish</button>
-</div>
-<div class="files-list" id="fileList"></div>
-<div class="ed-name" id="edName">Fayl tanlanmagan</div>
-<textarea class="editor" id="ed" placeholder="Kod..." spellcheck="false"></textarea>
+  <div class="files-toolbar">
+    <button class="btn primary" onclick="newFile()">+ Yangi</button>
+    <button class="btn" onclick="saveFile()">Saqlash</button>
+    <button class="btn" onclick="dlFile()">↓</button>
+    <button class="btn" onclick="ghPushAll()">GitHub ↑</button>
+    <button class="btn danger" onclick="delFile()">✕</button>
+  </div>
+  <div class="files-list" id="fileList"></div>
+  <div class="ed-name" id="edName">Fayl tanlanmagan</div>
+  <textarea class="editor" id="ed" placeholder="// kod..." spellcheck="false"></textarea>
 </div>
 <div class="view" id="v-agents">
-<div class="scroll-page">
-<div class="agents-list" id="agentList"></div>
-</div>
+  <div class="scroll-page"><div class="agents-list" id="agentList"></div></div>
 </div>
 <div class="view" id="v-stats">
-<div class="scroll-page">
-<div class="stats-g">
-<div class="stat"><div class="n" id="sReq">0</div><div class="l">So‘rovlar</div></div>
-<div class="stat"><div class="n" id="sTok">0</div><div class="l">Tokenlar</div></div>
-<div class="stat"><div class="n" id="sFil">0</div><div class="l">Fayllar</div></div>
-<div class="stat"><div class="n" id="sPrj">0</div><div class="l">Loyihalar</div></div>
-</div>
-</div>
+  <div class="scroll-page">
+    <div class="stats-g">
+      <div class="stat"><div class="n" id="sReq">0</div><div class="l">So‘rovlar</div></div>
+      <div class="stat"><div class="n" id="sTok">0</div><div class="l">Tokenlar</div></div>
+      <div class="stat"><div class="n" id="sFil">0</div><div class="l">Fayllar</div></div>
+      <div class="stat"><div class="n" id="sPrj">0</div><div class="l">Loyihalar</div></div>
+    </div>
+  </div>
 </div>
 <div class="view" id="v-set">
-<div class="scroll-page">
-<div class="card">
-<h3>🤖 AI Provayder</h3>
-<div class="label">Provayder</div>
-<select class="field" id="prov" onchange="onProv()">
-<option value="pollinations">Pollinations (bepul)</option>
-<option value="openrouter">OpenRouter</option>
-<option value="groq">Groq</option>
-<option value="custom">Custom</option>
-</select>
-<div id="keyBox">
-<div class="label" id="keyLbl">API Key</div>
-<input class="field" id="key" type="password" placeholder="sk-... / gsk_...">
-</div>
-<div class="label">Model</div>
-<select class="field" id="model"></select>
-<div id="urlBox" style="display:none">
-<div class="label">Base URL</div>
-<input class="field" id="url" placeholder="https://api.example.com/v1">
-</div>
-<button class="save" onclick="saveSet()">Saqlash</button>
-<div class="hint">Key faqat telefoningizda saqlanadi.</div>
-</div>
-<div class="card">
-<h3>🎛 Boshqa</h3>
-<div class="label">Max tokens</div>
-<input class="field" id="maxTok" type="number" value="8192">
-<button class="save" onclick="saveSet()">Saqlash</button>
-</div>
-<div class="card">
-<button class="btn danger" style="width:100%;padding:12px" onclick="wipe()">Barcha ma’lumotlarni o‘chirish</button>
-</div>
-</div>
+  <div class="scroll-page">
+    <div class="card">
+      <h3>🤖 AI Provayder</h3>
+      <div class="label">Provayder</div>
+      <select class="field" id="prov" onchange="onProv()">
+        <option value="pollinations">Pollinations (bepul)</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="groq">Groq</option>
+        <option value="custom">Custom OpenAI-compatible</option>
+      </select>
+      <div id="keyBox">
+        <div class="label" id="keyLbl">API Key</div>
+        <input class="field" id="key" type="password" placeholder="sk-... / gsk_...">
+      </div>
+      <div class="label">Model</div>
+      <select class="field" id="model"></select>
+      <div id="urlBox" style="display:none">
+        <div class="label">Base URL</div>
+        <input class="field" id="url" placeholder="https://api.example.com/v1">
+      </div>
+      <div class="label">Max tokens</div>
+      <input class="field" id="maxTok" type="number" value="8192">
+      <button class="save" onclick="saveSet()">Saqlash</button>
+      <div class="hint">Key faqat shu qurilmada (localStorage).</div>
+    </div>
+    <div class="card">
+      <h3>🐙 GitHub</h3>
+      <div class="label">Personal Access Token</div>
+      <input class="field" id="ghToken" type="password" placeholder="ghp_...">
+      <div class="label">Owner (username)</div>
+      <input class="field" id="ghOwner" placeholder="xojasoipov-sketch">
+      <div class="label">Repository</div>
+      <input class="field" id="ghRepo" placeholder="Useg-kop">
+      <button class="save" onclick="saveSet()">Saqlash</button>
+      <div class="hint" id="ghStatus">Ulanmagan</div>
+      <div class="hint">Token: repo huquqi. Fayllar → GitHub ↑ orqali push.</div>
+    </div>
+    <div class="card">
+      <button class="btn danger" style="width:100%;padding:12px" onclick="wipe()">Barcha ma’lumotlarni o‘chirish</button>
+    </div>
+  </div>
 </div>
 <nav class="bottom-nav">
-<button class="nav-btn active" data-v="chat" onclick="go('chat')"><span class="ico">💬</span>Chat</button>
-<button class="nav-btn" data-v="files" onclick="go('files')"><span class="ico">📁</span>Fayllar</button>
-<button class="nav-btn" data-v="agents" onclick="go('agents')"><span class="ico">🤖</span>Agentlar</button>
-<button class="nav-btn" data-v="stats" onclick="go('stats')"><span class="ico">📊</span>Stat</button>
-<button class="nav-btn" data-v="set" onclick="go('set')"><span class="ico">⚙️</span>Sozlama</button>
+  <button class="nav-btn active" data-v="chat" onclick="go('chat')"><span class="ico">⌘</span>Chat</button>
+  <button class="nav-btn" data-v="files" onclick="go('files')"><span class="ico">📄</span>Fayllar</button>
+  <button class="nav-btn" data-v="agents" onclick="go('agents')"><span class="ico">⬡</span>Agentlar</button>
+  <button class="nav-btn" data-v="stats" onclick="go('stats')"><span class="ico">◉</span>Stat</button>
+  <button class="nav-btn" data-v="set" onclick="go('set')"><span class="ico">⚙</span>Sozlama</button>
 </nav>
 <div class="toast" id="toast"></div>
-</body>
 <script src="agents.js"></script>
 <script src="app.js"></script>
+</body>
 </html>
