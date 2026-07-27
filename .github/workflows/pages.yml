@@ -19,27 +19,10 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p site
-          cp omnicode/frontend/index.html site/index.html
-          cp omnicode/frontend/app.js site/app.js
-          cp -r omnicode/frontend/brain site/brain
-          cp -r omnicode/frontend/styles site/styles
+          # Asosiy OmniCode AI OS (mobil)
+          cp index.html site/index.html
           cp app.html site/app.html 2>/dev/null || true
-
-          # ES module — qotib qolishni tuzatish
-          sed -i 's|<script src="app.js|<script type="module" src="app.js|g' site/index.html
-          sed -i 's|app.js?v=[^"]*|app.js?v=3.2-fix|' site/index.html || true
-
-          # GitHub Pages base
-          if ! grep -q 'base href' site/index.html; then
-            sed -i 's|<head>|<head>\n<base href="/Useg-kop/">|' site/index.html || true
-          fi
-
-          # Brain modules must be .js with correct paths
           echo "build=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > site/VERSION.txt
-          echo "files:" >> site/VERSION.txt
-          find site -type f | sort >> site/VERSION.txt
-          head -5 site/index.html
-          grep -n 'script' site/index.html | tail -3
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
