@@ -16,15 +16,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare static site
+      - name: Prepare static site (premium dashboard)
         run: |
           mkdir -p site
-          cp index.html site/index.html
-          cp style.css site/style.css 2>/dev/null || true
-          cp app.js site/app.js 2>/dev/null || true
+          # Premium 3-column dashboard from omnicode/frontend
+          cp omnicode/frontend/index.html site/index.html
+          mkdir -p site/styles
+          cp omnicode/frontend/styles/pro-dashboard.css site/styles/pro-dashboard.css
+          cp omnicode/frontend/app.js site/app.js
+          # Brain modules (ES modules)
+          mkdir -p site/brain
+          cp -r omnicode/frontend/brain/* site/brain/ 2>/dev/null || true
+          # Utils if any
+          mkdir -p site/utils
+          cp -r omnicode/frontend/utils/* site/utils/ 2>/dev/null || true
+          # Fallback root assets
           cp agents.js site/agents.js 2>/dev/null || true
-          cp app.html site/app.html 2>/dev/null || true
           echo "build=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > site/VERSION.txt
+          echo "source=omnicode/frontend" >> site/VERSION.txt
+          ls -la site/
+          ls -la site/styles/ 2>/dev/null || true
+          ls -la site/brain/ 2>/dev/null || true
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
