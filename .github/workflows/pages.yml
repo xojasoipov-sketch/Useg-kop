@@ -19,8 +19,9 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p site
-          # Asosiy OmniCode AI OS (mobil)
           cp index.html site/index.html
+          cp style.css site/style.css 2>/dev/null || true
+          cp app.js site/app.js 2>/dev/null || true
           cp app.html site/app.html 2>/dev/null || true
           echo "build=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > site/VERSION.txt
 
