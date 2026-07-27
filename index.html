@@ -3,35 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0c">
-<title>OmniCode</title>
+<meta name="theme-color" content="#07070a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>OmniCode AI</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="header">
-  <div class="logo"><div class="dot" id="dot"></div> OmniCode</div>
+  <div class="logo">
+    <div class="logo-mark">⬡</div>
+    <span class="logo-text">OmniCode</span>
+    <span class="pro-badge">PRO</span>
+  </div>
   <div class="header-right">
-    <button type="button" class="hbtn" data-action="ghListRepos">⌥</button>
-    <button type="button" class="hbtn" data-action="clearChat">⌫</button>
+    <span class="chip-h" id="repoChip">useg-kop</span>
+    <div class="dot" id="dot"></div>
   </div>
 </div>
 <div class="pipe" id="pipe">
-  <span class="ps" id="ps1">Brain</span><span class="pa">→</span>
-  <span class="ps" id="ps2">Plan</span><span class="pa">→</span>
-  <span class="ps" id="ps3">Code</span><span class="pa">→</span>
-  <span class="ps" id="ps4">Review</span><span class="pa">→</span>
+  <span class="ps" id="ps1">Tahlil</span><span class="pa">→</span>
+  <span class="ps" id="ps2">Reja</span><span class="pa">→</span>
+  <span class="ps" id="ps3">Kod</span><span class="pa">→</span>
+  <span class="ps" id="ps4">Tekshir</span><span class="pa">→</span>
   <span class="ps" id="ps5">Git</span>
 </div>
 <div class="view active" id="v-chat">
   <div class="messages" id="msgs">
-    <div class="msg ai">
-      <div class="msg-role">OmniCode <span class="badge">Brain</span></div>
-      <div class="msg-body">
-        <div class="brain-mini">🧠</div>
-        <strong>OmniCode Brain</strong><br>
-        Claude Code uslubi: Steer · Plan · Agents<br>
-        ⚙️ Sozlama → API + GitHub
-      </div>
+    <div class="hero-block">
+      <div class="hero-cube">⬡</div>
+      <div class="hero-hi">Salom, <span>Saidburxon</span></div>
+      <div class="hero-title">Bugun nima yaratamiz?</div>
+      <div class="hero-sub">Kod yozish, refaktor, debug va deploy — hammasi shu yerda.</div>
     </div>
   </div>
   <div class="input-area">
@@ -40,15 +42,15 @@
       <div class="mode-chip active" id="chip-os" data-mode="os">🤖 Agent OS</div>
     </div>
     <div class="input-box">
-      <textarea class="chat-input" id="inp" placeholder="Oddiy gapiring..." rows="1"></textarea>
+      <textarea class="chat-input" id="inp" placeholder="OmniCode'dan so'rang..." rows="1"></textarea>
       <button type="button" class="send-btn" id="send" data-action="send">↑</button>
     </div>
   </div>
 </div>
 <div class="view" id="v-work">
   <div class="brain-stage">
-    <div class="brain-orb" id="brainAnim">🧠</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">AI Working</div>
+    <div class="brain-orb" id="brainAnim">⬡</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;font-weight:600">AI ishlamoqda</div>
     <div class="work-steps" id="workSteps"></div>
   </div>
 </div>
@@ -62,71 +64,140 @@
     <button type="button" class="btn danger" data-action="delFile">✕</button>
   </div>
   <div class="files-list" id="fileList"></div>
-  <div class="ed-name" id="edName">—</div>
+  <div class="ed-name" id="edName">Fayl tanlanmagan</div>
   <textarea class="editor" id="ed" placeholder="// kod..." spellcheck="false"></textarea>
 </div>
-<div class="view" id="v-explorer"><div class="scroll-page"><h3 style="font-size:14px;margin-bottom:10px">Explorer</h3><div class="files-list" id="explorerList"></div></div></div>
+<div class="view" id="v-explorer">
+  <div class="scroll-page">
+    <h3 style="font-size:14px;margin-bottom:12px">Loyiha konteksti</h3>
+    <div class="files-list" id="explorerList"></div>
+  </div>
+</div>
 <div class="view" id="v-term">
   <div class="term-wrap">
     <div class="term-out" id="termOut"></div>
     <div class="term-in-row">
       <span style="color:var(--text3);margin-right:6px">$</span>
-      <input class="term-in" id="termIn" placeholder="ls | cat | clear">
+      <input class="term-in" id="termIn" placeholder="ls · cat · clear">
       <button type="button" class="btn" data-action="termRun" style="margin-left:6px">Run</button>
     </div>
   </div>
 </div>
-<div class="view" id="v-projects"><div class="scroll-page"><h3 style="font-size:14px;margin-bottom:12px">Projects</h3><div id="projList"></div></div></div>
-<div class="view" id="v-deploy"><div class="scroll-page"><h3 style="font-size:14px;margin-bottom:12px">Deploy</h3><div id="deployList"></div></div></div>
-<div class="view" id="v-agents"><div class="scroll-page"><div class="agents-list" id="agentList"></div></div></div>
-<div class="view" id="v-stats"><div class="scroll-page"><div class="stats-g">
-  <div class="stat"><div class="n" id="sReq">0</div><div class="l">So‘rov</div></div>
-  <div class="stat"><div class="n" id="sTok">0</div><div class="l">Token</div></div>
-  <div class="stat"><div class="n" id="sFil">0</div><div class="l">Fayl</div></div>
-  <div class="stat"><div class="n" id="sPrj">0</div><div class="l">Loyiha</div></div>
-</div></div></div>
-<div class="view" id="v-set"><div class="scroll-page">
-  <div class="card"><h3>AI Provayder</h3>
-    <div class="label">Provayder</div>
-    <select class="field" id="prov"><option value="pollinations">Pollinations</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="custom">Custom</option></select>
-    <div id="keyBox"><div class="label" id="keyLbl">API Key</div><input class="field" id="key" type="password"></div>
-    <div class="label">Model</div><select class="field" id="model"></select>
-    <div id="urlBox" style="display:none"><div class="label">URL</div><input class="field" id="url"></div>
-    <div class="label">Max tokens</div><input class="field" id="maxTok" type="number" value="8192">
-    <button type="button" class="save" data-action="saveSet">Saqlash</button>
+<div class="view" id="v-projects">
+  <div class="scroll-page">
+    <h3 style="font-size:14px;margin-bottom:12px">Loyihalar</h3>
+    <div id="projList"></div>
+    <div class="card" style="margin-top:8px">
+      <h3>AI tahlil</h3>
+      <div class="insight-row"><span>Kod sifati</span><span class="insight-ok">A'lo</span></div>
+      <div class="insight-row"><span>Unumdorlik</span><span class="insight-mid">Yaxshi</span></div>
+      <div class="insight-row"><span>Xavfsizlik</span><span class="insight-ok">A'lo</span></div>
+      <div class="insight-row"><span>Testlar</span><span class="insight-mid">Yaxshi</span></div>
+    </div>
   </div>
-  <div class="card"><h3>GitHub</h3>
-    <div class="label">Token</div><input class="field" id="ghToken" type="password">
-    <div class="label">Owner</div><input class="field" id="ghOwner" placeholder="xojasoipov-sketch">
-    <div class="label">Repo</div><input class="field" id="ghRepo" placeholder="Useg-kop">
-    <div class="label">Branch</div><input class="field" id="ghBranch" value="main">
-    <button type="button" class="save" data-action="saveSet">Saqlash</button>
-    <div class="hint" id="ghStatus">Ulanmagan</div>
+</div>
+<div class="view" id="v-deploy">
+  <div class="scroll-page">
+    <h3 style="font-size:14px;margin-bottom:12px">Deploy</h3>
+    <div id="deployList"></div>
   </div>
-  <div class="card"><h3>Control (Claude Code)</h3>
-    <div class="label">Plan Mode</div>
-    <select class="field" id="planMode"><option value="on">ON — avval reja</option><option value="off">OFF</option></select>
-    <div class="label">Permissions</div>
-    <select class="field" id="permMode"><option value="ask">Har doim so‘ra</option><option value="auto">Auto</option></select>
-    <div class="hint">Steer · Extend · Delegate · Control · Automate</div>
+</div>
+<div class="view" id="v-agents">
+  <div class="scroll-page">
+    <h3 style="font-size:14px;margin-bottom:12px">AI Agentlar</h3>
+    <div class="agents-list" id="agentList"></div>
   </div>
-  <div class="card"><button type="button" class="btn danger" style="width:100%;padding:12px" data-action="wipe">Tozalash</button></div>
-</div></div>
-<div class="view" id="v-more"><div class="scroll-page">
-  <div class="card" data-v="work" style="cursor:pointer"><h3>🧠 AI Working</h3></div>
-  <div class="card" data-v="term" style="cursor:pointer"><h3>💻 Terminal</h3></div>
-  <div class="card" data-v="explorer" style="cursor:pointer"><h3>📁 Explorer</h3></div>
-  <div class="card" data-v="projects" style="cursor:pointer"><h3>📦 Projects</h3></div>
-  <div class="card" data-v="deploy" style="cursor:pointer"><h3>🚀 Deploy</h3></div>
-  <div class="card" data-v="agents" style="cursor:pointer"><h3>⬡ Agentlar</h3></div>
-  <div class="card" data-v="stats" style="cursor:pointer"><h3>◉ Stat</h3></div>
-</div></div>
+</div>
+<div class="view" id="v-stats">
+  <div class="scroll-page">
+    <div class="stats-g">
+      <div class="stat"><div class="n" id="sReq">0</div><div class="l">So'rovlar</div></div>
+      <div class="stat"><div class="n" id="sTok">0</div><div class="l">Tokenlar</div></div>
+      <div class="stat"><div class="n" id="sFil">0</div><div class="l">Fayllar</div></div>
+      <div class="stat"><div class="n" id="sPrj">0</div><div class="l">Loyihalar</div></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Tizim holati</h3>
+      <div class="insight-row"><span>AI dvigatel</span><span class="insight-ok">Faol</span></div>
+      <div class="insight-row"><span>GitHub</span><span id="sysGh">—</span></div>
+      <div class="insight-row"><span>Provayder</span><span id="sysProv">Pollinations</span></div>
+    </div>
+  </div>
+</div>
+<div class="view" id="v-set">
+  <div class="scroll-page">
+    <div class="card">
+      <h3>AI provayder</h3>
+      <div class="label">Provayder</div>
+      <select class="field" id="prov">
+        <option value="pollinations">Pollinations (bepul)</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="groq">Groq</option>
+        <option value="custom">Custom</option>
+      </select>
+      <div id="keyBox">
+        <div class="label" id="keyLbl">API kalit</div>
+        <input class="field" id="key" type="password" placeholder="sk-...">
+      </div>
+      <div class="label">Model</div>
+      <select class="field" id="model"></select>
+      <div id="urlBox" style="display:none">
+        <div class="label">Base URL</div>
+        <input class="field" id="url">
+      </div>
+      <div class="label">Max token</div>
+      <input class="field" id="maxTok" type="number" value="8192">
+      <button type="button" class="save" data-action="saveSet">Saqlash</button>
+    </div>
+    <div class="card">
+      <h3>GitHub</h3>
+      <div class="label">Token</div>
+      <input class="field" id="ghToken" type="password" placeholder="ghp_...">
+      <div class="label">Owner</div>
+      <input class="field" id="ghOwner" placeholder="xojasoipov-sketch">
+      <div class="label">Repo</div>
+      <input class="field" id="ghRepo" placeholder="Useg-kop">
+      <div class="label">Branch</div>
+      <input class="field" id="ghBranch" value="main">
+      <button type="button" class="save" data-action="saveSet">Saqlash</button>
+      <div class="hint" id="ghStatus">Ulanmagan</div>
+    </div>
+    <div class="card">
+      <h3>Boshqaruv (Claude Code)</h3>
+      <div class="label">Plan Mode</div>
+      <select class="field" id="planMode">
+        <option value="on">YOQIQ — avval reja</option>
+        <option value="off">O'CHIQ</option>
+      </select>
+      <div class="label">Ruxsatlar</div>
+      <select class="field" id="permMode">
+        <option value="ask">Har doim so'ra</option>
+        <option value="auto">Avto</option>
+      </select>
+      <div class="hint">Steer · Extend · Delegate · Control · Automate</div>
+    </div>
+    <div class="card">
+      <button type="button" class="btn danger" style="width:100%;padding:12px" data-action="wipe">Barcha ma'lumotlarni o'chirish</button>
+    </div>
+  </div>
+</div>
+<div class="view" id="v-more">
+  <div class="scroll-page">
+    <div class="card" data-v="work" style="cursor:pointer"><h3>🧠 AI ishlamoqda</h3><div class="hint">Qadamlar va animatsiya</div></div>
+    <div class="card" data-v="term" style="cursor:pointer"><h3>💻 Terminal</h3><div class="hint">ls · cat · clear</div></div>
+    <div class="card" data-v="explorer" style="cursor:pointer"><h3>📁 Explorer</h3><div class="hint">Loyiha fayllari</div></div>
+    <div class="card" data-v="deploy" style="cursor:pointer"><h3>🚀 Deploy</h3><div class="hint">GitHub Pages</div></div>
+    <div class="card" data-v="agents" style="cursor:pointer"><h3>⬡ Agentlar</h3></div>
+    <div class="card" data-v="stats" style="cursor:pointer"><h3>◉ Statistika</h3></div>
+    <div class="card" data-v="set" style="cursor:pointer"><h3>⚙ Sozlamalar</h3></div>
+  </div>
+</div>
 <nav class="bottom-nav">
-  <button type="button" class="nav-btn active" data-v="chat"><span class="ico">⌘</span>Chat</button>
-  <button type="button" class="nav-btn" data-v="files"><span class="ico">📄</span>Fayllar</button>
-  <button type="button" class="nav-btn" data-v="work"><span class="ico">🧠</span>Brain</button>
-  <button type="button" class="nav-btn" data-v="more"><span class="ico">☰</span>More</button>
-  <button type="button" class="nav-btn" data-v="set"><span class="ico">⚙</span>Sozlama</button>
+  <button type="button" class="nav-btn active" data-v="chat"><span class="ico">💬</span>Chat</button>
+  <button type="button" class="nav-btn" data-v="projects"><span class="ico">📁</span>Loyiha</button>
+  <button type="button" class="nav-btn" data-v="agents"><span class="ico">⬡</span>Agent</button>
+  <button type="button" class="nav-btn" data-v="files"><span class="ico">📄</span>Fayl</button>
+  <button type="button" class="nav-btn" data-v="more"><span class="ico">☰</span>Yana</button>
 </nav>
 <div class="toast" id="toast"></div>
 <script src="agents.js"></script>
