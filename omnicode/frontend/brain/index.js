@@ -3,11 +3,12 @@
  *
  * handle(userMessage) → intent → context → plan → model → parse → tools → critic
  * Self-* → self pipeline (+ minimal agent team)
+ * RAG codebase index (keyword+symbol, free)
  *
  * deps (inject):
  *   AIRouter  — { chat(messages): Promise }
  *   Git       — listRepos, listFiles, getFileContent, pushFile...
- *   FS, PM, DiffView, Deploy, SelfImport, SelfHeal, Store
+ *   FS, PM, DiffView, Deploy, SelfImport, SelfHeal, Store, RAG
  *   onStatus(msg), onMessage({role, content}), getMessages()
  */
 
@@ -19,6 +20,7 @@ import { review, MAX_RETRIES } from './critic.js';
 import { runSelfPipeline } from './self.js';
 import { IDENTITY, canWritePath, isSelfRepo } from './identity.js';
 import { auditWrite, maskSecrets, escapeHtml } from './safety.js';
+import { RAG } from './rag.js';
 
 /**
  * @param {object} deps
@@ -31,9 +33,12 @@ export function createBrain(deps = {}) {
     lastPlan: null,
   };
 
+  // RAG ni deps ga biriktir
+  if (!deps.RAG) deps.RAG = RAG;
+
   async function handle(userMessage) {
     const text = (userMessage || '').trim();
-    if (!text) return { ok: false, error: 'Bo\'sh xabar' };
+    if (!text) return { ok: false, error: "Bo'sh xabar" };
 
     state.phase = 'RECEIVE_MESSAGE';
     deps.onStatus?.('…');
@@ -59,6 +64,39 @@ export function createBrain(deps = {}) {
       await deps.SB?.pullAll?.();
       state.phase = 'IDLE';
       return { ok: true, intent: 'command' };
+    }
+
+    // /index — codebase index qurish
+    if (classified.slash === '/index' || /^\s*\/reindex\b/i.test(text)) {
+      state.phase = 'RAG_BUILD';
+      const project = deps.PM?.current?.();
+      if (!project?.id) {
+        deps.onMessage?.({
+          role: 'assistant',
+          content: "Loyiha tanlanmagan. Avval loyiha oching yoki yarating.",
+        });
+        state.phase = 'IDLE';
+        return { ok: false, error: 'no_project' };
+      }
+      if (!deps.FS) {
+        deps.onMessage?.({ role: 'assistant', content: "FS moduli yo'q." });
+        state.phase = 'IDLE';
+        return { ok: false, error: 'no_fs' };
+      }
+      try {
+        deps.onStatus?.('Codebase index qurilmoqda...');
+        const result = await RAG.buildFromFS(project.id, deps.FS);
+        deps.onMessage?.({
+          role: 'assistant',
+          content: `✅ Index tayyor\n- Fayllar: ${result.files}\n- Chunklar: ${result.chunks}\n- Termlar: ${result.terms}\n\nEndi kod haqida so'rang — RAG avtomatik kontekst qo'shadi.`,
+        });
+        state.phase = 'IDLE';
+        return { ok: true, intent: 'command', rag: result };
+      } catch (e) {
+        deps.onMessage?.({ role: 'assistant', content: 'Index xato: ' + e.message });
+        state.phase = 'IDLE';
+        return { ok: false, error: e.message };
+      }
     }
 
     if (isSelfIntent(classified.intent) || classified.slash === '/self' || classified.slash === '/rebuild') {
@@ -95,7 +133,8 @@ export function createBrain(deps = {}) {
       intent: classified.intent,
       messages: [...messages, { role: 'user', content: text }],
       project,
-      deps,
+      deps: enrichDeps(deps),
+      userText: text,
     });
 
     state.phase = 'PLAN';
@@ -110,7 +149,8 @@ export function createBrain(deps = {}) {
     if (!deps.AIRouter?.chat) {
       deps.onMessage?.({
         role: 'assistant',
-        content: 'AIRouter ulanmagan. Sozlamalarda API kalit kiriting yoki Pollinations ishlatiladi.',
+        content:
+          "AIRouter ulanmagan. Sozlamalarda API kalit kiriting yoki Pollinations ishlatiladi.",
       });
       state.phase = 'IDLE';
       return { ok: false, error: 'no_router' };
@@ -139,7 +179,13 @@ export function createBrain(deps = {}) {
 
         state.phase = 'CRITIC';
         const criticResult = review({ text: answer, tools, toolResults: results });
-        last = { answer: criticResult.maskedText || answer, tools, results, pendingApproval, criticResult };
+        last = {
+          answer: criticResult.maskedText || answer,
+          tools,
+          results,
+          pendingApproval,
+          criticResult,
+        };
 
         if (criticResult.shouldRetry && attempt <= MAX_RETRIES) {
           deps.onStatus?.(`Qayta urinish ${attempt}/${MAX_RETRIES}...`);
@@ -158,7 +204,7 @@ export function createBrain(deps = {}) {
         if (attempt > MAX_RETRIES) {
           deps.onMessage?.({
             role: 'assistant',
-            content: `❌ AI so\'rov xatosi: ${err.message}`,
+            content: `❌ AI so'rov xatosi: ${err.message}`,
           });
           state.phase = 'IDLE';
           return { ok: false, error: err.message };
@@ -173,6 +219,7 @@ export function createBrain(deps = {}) {
   function enrichDeps(d) {
     return {
       ...d,
+      RAG,
       canWritePath,
       isSelfRepo,
       auditWrite,
@@ -185,14 +232,20 @@ export function createBrain(deps = {}) {
     classifyIntent,
     getState: () => ({ ...state }),
     IDENTITY,
+    RAG,
     runSelf: (mode, msg) =>
       runSelfPipeline({ mode, userMessage: msg || mode, deps: enrichDeps(deps) }),
+    reindex: async () => {
+      const project = deps.PM?.current?.();
+      if (!project?.id || !deps.FS) return { ok: false, error: 'no_project' };
+      return RAG.buildFromFS(project.id, deps.FS);
+    },
     utils: { maskSecrets, escapeHtml, canWritePath, parseTools },
   };
 }
 
 if (typeof window !== 'undefined') {
-  window.OmniBrain = { createBrain, IDENTITY };
+  window.OmniBrain = { createBrain, IDENTITY, RAG };
 }
 
-export default { createBrain, IDENTITY };
+export default { createBrain, IDENTITY, RAG };

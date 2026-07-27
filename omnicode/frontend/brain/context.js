@@ -1,14 +1,16 @@
 /**
  * OmniBrain — Context Builder
- * Token budget bilan kontekst yig'adi.
+ * Token budget + RAG (keyword/symbol codebase index)
  */
 
 import { TOOL_PROTOCOL_DOC } from './tools.js';
 import { IDENTITY } from './identity.js';
 import { isSelfIntent } from './intent.js';
+import { RAG } from './rag.js';
 
 const DEFAULT_CHAT_N = 12;
 const MAX_FILE_CHARS = 12000;
+const MAX_RAG_CHARS = 10000;
 const MAX_TOTAL_CHARS = 48000;
 
 /**
@@ -16,10 +18,11 @@ const MAX_TOTAL_CHARS = 48000;
  * @param {string} opts.intent
  * @param {Array<{role:string, content:string}>} opts.messages
  * @param {object} opts.project — PM.current()
- * @param {object} opts.deps — { FS, Git, Store }
+ * @param {object} opts.deps — { FS, Git, Store, RAG }
+ * @param {string} [opts.userText] — so'nggi user xabari (RAG query)
  */
 export async function buildContext(opts) {
-  const { intent, messages = [], project, deps = {} } = opts;
+  const { intent, messages = [], project, deps = {}, userText = '' } = opts;
   const parts = [];
 
   parts.push({
@@ -39,13 +42,34 @@ export async function buildContext(opts) {
     parts.push({ role: m.role, content: truncate(m.content, 4000) });
   }
 
-  if (['code', 'fix', 'refactor', 'self_edit', 'self_heal', 'self_rebuild'].includes(intent)) {
-    const fileCtx = await safeFileContext(deps, project);
-    if (fileCtx) {
+  const codeIntents = [
+    'code',
+    'fix',
+    'refactor',
+    'self_edit',
+    'self_heal',
+    'self_rebuild',
+    'explain',
+    'review',
+  ];
+
+  if (codeIntents.includes(intent) || userText) {
+    // 1) RAG — relevant chunks
+    const ragCtx = await safeRagContext(deps, project, userText || lastUserText(messages));
+    if (ragCtx) {
       parts.push({
         role: 'system',
-        content: `Fayl konteksti:\n${fileCtx}`,
+        content: `Codebase (RAG top-k):\n${ragCtx}`,
       });
+    } else {
+      // 2) Fallback: FS.context (eski usul)
+      const fileCtx = await safeFileContext(deps, project);
+      if (fileCtx) {
+        parts.push({
+          role: 'system',
+          content: `Fayl konteksti:\n${fileCtx}`,
+        });
+      }
     }
   }
 
@@ -53,14 +77,32 @@ export async function buildContext(opts) {
     parts.push({
       role: 'system',
       content: [
-        'Self-bootstrap: o\'z kodini GitHubdan o\'qib, tahrirlab, tasdiq bilan push qilishing mumkin.',
-        'Avval GH_LIST_FILES / GH_READ_FILE bilan tuzilmani o\'rgan.',
-        'Keyin plan yoz, so\'ng WRITE/GH_WRITE taklif qil.',
+        "Self-bootstrap: o'z kodini GitHubdan o'qib, tahrirlab, tasdiq bilan push qilishing mumkin.",
+        "Avval GH_LIST_FILES / GH_READ_FILE bilan tuzilmani o'rgan.",
+        "Keyin plan yoz, so'ng WRITE/GH_WRITE taklif qil.",
       ].join('\n'),
     });
   }
 
   return fitBudget(parts, MAX_TOTAL_CHARS);
+}
+
+async function safeRagContext(deps, project, query) {
+  try {
+    if (!project?.id || !query) return null;
+    const rag = deps.RAG || RAG;
+
+    // Index yo'q bo'lsa — FS dan qurib ol
+    const st = await rag.stats(project.id);
+    if (!st.exists && deps.FS) {
+      await rag.buildFromFS(project.id, deps.FS);
+    }
+
+    const ctx = await rag.context(project.id, query, MAX_RAG_CHARS);
+    return ctx || null;
+  } catch {
+    return null;
+  }
 }
 
 async function safeFileContext(deps, project) {
@@ -72,6 +114,13 @@ async function safeFileContext(deps, project) {
   } catch {
     return null;
   }
+}
+
+function lastUserText(messages) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') return messages[i].content || '';
+  }
+  return '';
 }
 
 function truncate(s, max) {
