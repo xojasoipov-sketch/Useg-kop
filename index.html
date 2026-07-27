@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#07070a">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>OmniCode AI</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="favicon.svg">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -39,7 +42,7 @@
   <div class="input-area">
     <div class="mode-row">
       <div class="mode-chip" id="chip-fast" data-mode="fast">⚡ Tez</div>
-      <div class="mode-chip active" id="chip-os" data-mode="os">🤖 Agent OS</div>
+      <div class="mode-chip active" id="chip-os" data-mode="os">⬡ Agent OS</div>
     </div>
     <div class="input-box">
       <textarea class="chat-input" id="inp" placeholder="OmniCode'dan so'rang..." rows="1"></textarea>
@@ -150,6 +153,13 @@
       <button type="button" class="save" data-action="saveSet">Saqlash</button>
     </div>
     <div class="card">
+      <h3>Kalitlar (JSON bir martada)</h3>
+      <div class="label">JSON: provider, apiKey, ghToken, ghOwner, ghRepo, ghBranch</div>
+      <textarea class="field" id="keysJson" rows="5" placeholder='{"provider":"openrouter","apiKey":"sk-...","ghToken":"ghp_...","ghOwner":"xojasoipov-sketch","ghRepo":"Useg-kop","ghBranch":"main"}' style="font-family:ui-monospace,monospace;font-size:12px;min-height:90px;resize:vertical"></textarea>
+      <button type="button" class="save" data-action="importKeysJson">JSON dan yuklash</button>
+      <button type="button" class="btn" style="width:100%;margin-top:8px;padding:12px" data-action="exportKeysJson">JSON eksport</button>
+    </div>
+    <div class="card">
       <h3>GitHub</h3>
       <div class="label">Token</div>
       <input class="field" id="ghToken" type="password" placeholder="ghp_...">
@@ -161,6 +171,14 @@
       <input class="field" id="ghBranch" value="main">
       <button type="button" class="save" data-action="saveSet">Saqlash</button>
       <div class="hint" id="ghStatus">Ulanmagan</div>
+    </div>
+    <div class="card">
+      <h3>GitHub Actions / Pages</h3>
+      <div class="hint" style="margin-bottom:10px">Ilovadan workflow boshqaruvi: deploy ishga tushirish va holat.</div>
+      <button type="button" class="btn primary" style="width:100%;padding:12px;margin-bottom:8px" data-action="triggerPagesDeploy">▶ Pages Deploy ishga tushir</button>
+      <button type="button" class="btn" style="width:100%;padding:12px;margin-bottom:8px" data-action="listWorkflowRuns">◉ Oxirgi runs</button>
+      <button type="button" class="btn" style="width:100%;padding:12px" data-action="viewWorkflowFile">📄 pages.yml ko‘rish</button>
+      <div class="hint" id="actionsStatus" style="margin-top:10px">—</div>
     </div>
     <div class="card">
       <h3>Boshqaruv (Claude Code)</h3>
@@ -183,20 +201,20 @@
 </div>
 <div class="view" id="v-more">
   <div class="scroll-page">
-    <div class="card" data-v="work" style="cursor:pointer"><h3>🧠 AI ishlamoqda</h3><div class="hint">Qadamlar va animatsiya</div></div>
-    <div class="card" data-v="term" style="cursor:pointer"><h3>💻 Terminal</h3><div class="hint">ls · cat · clear</div></div>
-    <div class="card" data-v="explorer" style="cursor:pointer"><h3>📁 Explorer</h3><div class="hint">Loyiha fayllari</div></div>
-    <div class="card" data-v="deploy" style="cursor:pointer"><h3>🚀 Deploy</h3><div class="hint">GitHub Pages</div></div>
+    <div class="card" data-v="work" style="cursor:pointer"><h3>⬡ AI ishlamoqda</h3><div class="hint">Qadamlar va animatsiya</div></div>
+    <div class="card" data-v="term" style="cursor:pointer"><h3>$ Terminal</h3><div class="hint">ls · cat · clear</div></div>
+    <div class="card" data-v="explorer" style="cursor:pointer"><h3>▣ Explorer</h3><div class="hint">Loyiha fayllari</div></div>
+    <div class="card" data-v="deploy" style="cursor:pointer"><h3>▲ Deploy</h3><div class="hint">GitHub Pages</div></div>
     <div class="card" data-v="agents" style="cursor:pointer"><h3>⬡ Agentlar</h3></div>
-    <div class="card" data-v="stats" style="cursor:pointer"><h3>◉ Statistika</h3></div>
+    <div class="card" data-v="stats" style="cursor:pointer"><h3>◎ Statistika</h3></div>
     <div class="card" data-v="set" style="cursor:pointer"><h3>⚙ Sozlamalar</h3></div>
   </div>
 </div>
 <nav class="bottom-nav">
-  <button type="button" class="nav-btn active" data-v="chat"><span class="ico">💬</span>Chat</button>
-  <button type="button" class="nav-btn" data-v="projects"><span class="ico">📁</span>Loyiha</button>
+  <button type="button" class="nav-btn active" data-v="chat"><span class="ico">⌘</span>Chat</button>
+  <button type="button" class="nav-btn" data-v="projects"><span class="ico">▣</span>Loyiha</button>
   <button type="button" class="nav-btn" data-v="agents"><span class="ico">⬡</span>Agent</button>
-  <button type="button" class="nav-btn" data-v="files"><span class="ico">📄</span>Fayl</button>
+  <button type="button" class="nav-btn" data-v="files"><span class="ico">▤</span>Fayl</button>
   <button type="button" class="nav-btn" data-v="more"><span class="ico">☰</span>Yana</button>
 </nav>
 <div class="toast" id="toast"></div>
