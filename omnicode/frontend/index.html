@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>OmniCode AI Pro</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/pro-dashboard.css">
+</head>
+<body>
+
+<header class="pro-topbar">
+  <div class="pro-logo">
+    <div class="pro-logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+    OmniCode AI <span class="pro-badge">Pro</span>
+  </div>
+  <div class="pro-select"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg> <span id="repo-label">useg-kop</span></div>
+  <div class="pro-select"><span id="branch-label">main</span></div>
+  <div class="pro-select" onclick="App.openModelPicker()"><span id="model-label">Claude 3.5 Sonnet</span></div>
+  <div class="pro-credits">Credits <strong id="credits-val">12,450</strong> <button class="pro-icon-btn" style="width:26px;height:26px">+</button></div>
+  <button class="pro-icon-btn" onclick="App.showNotifs()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
+  <div class="pro-avatar"></div>
+</header>
+
+<div class="pro-layout">
+  <aside class="pro-sidebar">
+    <div class="pro-sidebar-scroll">
+      <button class="btn-new-chat" onclick="AI.clear();showWelcome()">+ New Chat</button>
+      <div class="search-chats"><input type="text" placeholder="Search chats..."><kbd>⌘K</kbd></div>
+      <div class="side-section-title">Chat History</div>
+      <div id="chat-history-list">
+        <div class="chat-item active" onclick="loadChat(this)"><div class="chat-item-dot"></div><div class="chat-item-info"><div class="chat-item-name">Dashboard analytics page</div><div class="chat-item-time">Today, 09:41 AM</div></div></div>
+        <div class="chat-item" onclick="loadChat(this)"><div class="chat-item-info"><div class="chat-item-name">Authentication flow fix</div><div class="chat-item-time">Today, 08:15 AM</div></div><span class="chat-item-arrow">›</span></div>
+        <div class="chat-item" onclick="loadChat(this)"><div class="chat-item-info"><div class="chat-item-name">Database schema design</div><div class="chat-item-time">Yesterday, 11:20 PM</div></div><span class="chat-item-arrow">›</span></div>
+        <div class="chat-item" onclick="loadChat(this)"><div class="chat-item-info"><div class="chat-item-name">Payment integration</div><div class="chat-item-time">Yesterday, 04:45 PM</div></div><span class="chat-item-arrow">›</span></div>
+        <div class="chat-item" onclick="loadChat(this)"><div class="chat-item-info"><div class="chat-item-name">API error handling</div><div class="chat-item-time">Yesterday, 02:30 PM</div></div><span class="chat-item-arrow">›</span></div>
+        <div class="chat-item" onclick="loadChat(this)"><div class="chat-item-info"><div class="chat-item-name">Responsive sidebar</div><div class="chat-item-time">Jul 24, 10:10 AM</div></div><span class="chat-item-arrow">›</span></div>
+      </div>
+      <div class="side-section-title">Project Context</div>
+      <div class="ctx-file">README.md</div><div class="ctx-file">package.json</div><div class="ctx-file">src/</div><div class="ctx-file">components/</div><div class="ctx-file">pages/</div>
+      <div class="side-section-title">Quick Actions</div>
+      <button class="qa-btn" onclick="AI.send('Code review')">Code Review</button>
+      <button class="qa-btn" onclick="AI.send('Generate docs')">Generate Docs</button>
+      <button class="qa-btn" onclick="AI.send('Find issues')">Find Issues</button>
+      <button class="qa-btn" onclick="AI.send('Explain code')">Explain Code</button>
+      <button class="qa-btn" onclick="AI.send('Refactor')">Refactor Code</button>
+      <button class="qa-btn" onclick="AI.send('Optimize')">Optimize Performance</button>
+      <div class="sys-status">
+        <div class="side-section-title" style="margin-top:0">System Status</div>
+        <div class="sys-row"><span class="label">All Systems</span><span class="val green">Operational</span></div>
+        <div class="sys-row"><span class="label">AI Engine</span><span class="val green">Active</span></div>
+        <div class="sys-row"><span class="label">GitHub Sync</span><span class="val green">Synced</span></div>
+        <div class="sys-row"><span class="label">Supabase</span><span class="val green">Connected</span></div>
+      </div>
+    </div>
+    <div class="side-footer">
+      <button class="pro-icon-btn" onclick="App.nav('settings')">⚙</button>
+      <button class="pro-icon-btn">?</button>
+      <button class="pro-icon-btn">☾</button>
+    </div>
+  </aside>
+
+  <main class="pro-center">
+    <div class="pro-chat-scroll" id="chat-messages">
+      <div id="welcome-block" class="welcome-block">
+        <div class="cube-placeholder"><svg viewBox="0 0 64 64" fill="none"><path d="M32 4L56 18V46L32 60L8 46V18L32 4Z" stroke="#FF2D2D" stroke-width="1.5" fill="rgba(255,45,45,0.08)"/><path d="M32 4V60M8 18L56 46M56 18L8 46" stroke="#FF2D2D" stroke-width="1" opacity="0.5"/></svg></div>
+        <h1>Hello, <span id="user-name">Saidburxon</span></h1>
+        <h1 style="margin-top:-4px">What can I build<br>for you today?</h1>
+        <p>✦ I can help you code, refactor, debug and deploy.</p>
+      </div>
+    </div>
+    <div class="pro-composer">
+      <div class="composer-box">
+        <textarea id="chat-input" class="composer-input" placeholder="Ask OmniCode AI anything..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();AI.send();}"></textarea>
+        <div class="composer-actions">
+          <button class="composer-tool">+</button>
+          <button class="composer-tool">></button>
+          <button class="composer-tool ctx">@ Context</button>
+          <button class="composer-send" onclick="AI.send()" style="margin-left:auto">➤</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="pro-right">
+    <div class="pro-right-scroll">
+      <div class="panel-card">
+        <div class="panel-title">Project Info</div>
+        <div class="proj-name"><span class="name">useg-kop</span><span class="pct">97%</span></div>
+        <div class="proj-meta">Next.js · TypeScript</div>
+        <div class="proj-stat"><span class="label">Last Commit</span><span class="val">2h ago</span></div>
+        <div class="proj-stat"><span class="label">Branches</span><span class="val">12</span></div>
+        <div class="proj-stat"><span class="label">Pull Requests</span><span class="val">8</span></div>
+        <div class="proj-stat"><span class="label">Issues</span><span class="val">3</span></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-title">AI Insights</div>
+        <div class="insight-row"><span class="label">● Code Quality</span><span class="badge excellent">Excellent</span></div>
+        <div class="insight-row"><span class="label">● Performance</span><span class="badge good">Good</span></div>
+        <div class="insight-row"><span class="label">● Security</span><span class="badge excellent">Excellent</span></div>
+        <div class="insight-row"><span class="label">● Tests</span><span class="badge good">Good</span></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-title">Recent Changes</div>
+        <div class="change-item"><span class="name">Dashboard layout</span><span class="time">2h ago</span></div>
+        <div class="change-item"><span class="name">Charts integration</span><span class="time">5h ago</span></div>
+        <div class="change-item"><span class="name">API optimization</span><span class="time">Yesterday</span></div>
+        <div class="change-item"><span class="name">Bug fixes</span><span class="time">2 days ago</span></div>
+        <button class="view-all-btn">View all changes</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<nav class="pro-nav">
+  <div class="pro-nav-item active" onclick="App.nav('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Chat</span></div>
+  <div class="pro-nav-item" onclick="App.nav('projects')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span>Projects</span></div>
+  <div class="pro-nav-item" onclick="App.nav('agents')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="10" height="8" rx="2"/><path d="M12 10v3"/></svg><span>Agents</span></div>
+  <div class="pro-nav-item" onclick="App.nav('memory')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg><span>Memory</span></div>
+  <div class="pro-nav-item" onclick="App.nav('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg><span>More</span></div>
+</nav>
+
+<div id="toast" class="toast"></div>
+<div id="model-sheet" class="overlay"><div class="sheet"><div class="sh-handle"></div><div class="sh-title">AI Model</div><div id="model-list"></div></div></div>
+
+<script type="module" src="app.js?v=4.0"></script>
+<script>
+if (window.Telegram?.WebApp) {
+  const tg = window.Telegram.WebApp;
+  tg.ready(); tg.expand();
+  tg.setHeaderColor('#050505'); tg.setBackgroundColor('#050505');
+  const u = tg.initDataUnsafe?.user;
+  if (u?.first_name) { const el = document.getElementById('user-name'); if (el) el.textContent = u.first_name; }
+}
+window.loadChat = function(el) {
+  document.querySelectorAll('.chat-item').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const box = document.getElementById('chat-messages');
+  box.innerHTML = `<div class="user-prompt-bubble">Create a dashboard page for my project with analytics, users, revenue and charts.<span class="time">09:41 AM</span></div>
+  <div class="ai-card"><div class="ai-card-header"><div class="logo-sm"></div><span class="name">OmniCode AI</span><span class="time">09:41 AM</span></div>
+  <div class="ai-card-body">I'll create a modern dashboard page for your project with the following:
+  <ul><li><span class="check">✓</span> Overview statistics (Users, Revenue, Orders)</li>
+  <li><span class="check">✓</span> Interactive charts and analytics</li>
+  <li><span class="check">✓</span> Recent activity and user table</li>
+  <li><span class="check">✓</span> Responsive and beautiful UI</li></ul>
+  <div class="timeline">
+    <div class="tl-item"><div class="tl-dot done"></div><span class="tl-label">Analyzing project...</span><span class="tl-status done">Completed</span></div>
+    <div class="tl-item"><div class="tl-dot active"></div><span class="tl-label">Planning & building...</span><span class="tl-status active">In progress</span></div>
+    <div class="tl-item"><div class="tl-dot"></div><span class="tl-label">Writing code...</span><span class="tl-status pending">Pending</span></div>
+    <div class="tl-item"><div class="tl-dot"></div><span class="tl-label">Testing & optimizing...</span><span class="tl-status pending">Pending</span></div>
+    <div class="tl-item"><div class="tl-dot"></div><span class="tl-label">Ready to review</span><span class="tl-status pending">Pending</span></div>
+  </div></div></div>
+  <div class="file-gen"><div class="file-gen-header"><span>Generating files...</span><span class="count">4 / 8</span></div>
+  <div class="file-row"><div class="icon ts">TS</div><span class="path">pages/dashboard/index.tsx</span><span class="status created">Created ✓</span></div>
+  <div class="file-row"><div class="icon ts">TS</div><span class="path">components/charts/RevenueChart.tsx</span><span class="status created">Created ✓</span></div>
+  <div class="file-row"><div class="icon ts">TS</div><span class="path">components/charts/UsersChart.tsx</span><span class="status created">Created ✓</span></div>
+  <div class="file-row"><div class="icon ts">TS</div><span class="path">components/tables/RecentUsers.tsx</span><span class="status progress">In progress</span></div>
+  <div class="file-row"><div class="icon ts">TS</div><span class="path">lib/analytics.ts</span><span class="status pending">Pending</span></div>
+  <div class="file-row"><div class="icon ts">TS</div><span class="path">types/dashboard.ts</span><span class="status pending">Pending</span></div>
+  <div class="file-row"><div class="icon css">CSS</div><span class="path">styles/dashboard.module.css</span><span class="status pending">Pending</span></div>
+  <div class="file-row"><div class="icon ts">TS</div><span class="path">components/ui/StatCard.tsx</span><span class="status pending">Pending</span></div>
+  </div>`;
+};
+window.showWelcome = function() {
+  document.getElementById('chat-messages').innerHTML = document.getElementById('welcome-block') ? document.getElementById('welcome-block').outerHTML : '<div class="welcome-block"><h1>Hello</h1></div>';
+};
+</script>
+</body>
+</html>
