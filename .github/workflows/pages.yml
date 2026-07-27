@@ -1,21 +1,39 @@
-name: Deploy to GitHub Pages
+name: Deploy Pages
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prepare site
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          touch _site/.nojekyll
+          for f in style.css app.js agents.js; do
+            [ -f "$f" ] && cp "$f" _site/ || true
+          done
+          ls -la _site/
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ./_site
           publish_branch: gh-pages
           force_orphan: true
-          exclude_assets: '.github,omnicode,.git'
