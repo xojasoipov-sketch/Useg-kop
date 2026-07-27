@@ -26,12 +26,13 @@
 <div class="view active" id="v-chat">
   <div class="messages" id="msgs">
     <div class="msg ai">
-      <div class="msg-role">OmniCode <span class="badge">v2</span></div>
+      <div class="msg-role">OmniCode <span class="badge">Self</span></div>
       <div class="msg-body">
-        <strong>Vibe coding</strong> — suhbat qiling, qolganini men qilaman.<br><br>
-        Core Brain → Planner → Context → Editor → Reviewer → Memory<br><br>
-        <em>⚙️ Sozlama:</em> API key + GitHub token<br>
-        <em>🤖 Agent OS</em> rejimida vazifa yozing.
+        <strong>O'zini boshqaruvchi AI</strong><br><br>
+        1. ⚙️ GitHub token + owner + repo<br>
+        2. Chat: <code>o'zingni yangila: UI ni yaxshila</code><br>
+        3. Yoki: <code>o'z kodimni yukla</code><br><br>
+        Men o'z kodimni o'qiyman, tahrirlayman, push qilaman.
       </div>
     </div>
   </div>
@@ -41,7 +42,7 @@
       <div class="mode-chip active" id="chip-os" onclick="setMode('os')">🤖 Agent OS</div>
     </div>
     <div class="input-box">
-      <textarea class="chat-input" id="inp" placeholder="Nima qilamiz?" rows="1"
+      <textarea class="chat-input" id="inp" placeholder="Nima qilamiz? yoki o'zingni yangila: ..." rows="1"
         onkeydown="onKey(event)" oninput="grow(this)"></textarea>
       <button class="send-btn" id="send" onclick="send()">↑</button>
     </div>
@@ -53,6 +54,7 @@
     <button class="btn" onclick="saveFile()">Saqlash</button>
     <button class="btn" onclick="dlFile()">↓</button>
     <button class="btn" onclick="ghPushAll()">GitHub ↑</button>
+    <button class="btn" onclick="ghLoadSelf()">↓ Self</button>
     <button class="btn danger" onclick="delFile()">✕</button>
   </div>
   <div class="files-list" id="fileList"></div>
@@ -96,19 +98,21 @@
       <div class="label">Max tokens</div>
       <input class="field" id="maxTok" type="number" value="8192">
       <button class="save" onclick="saveSet()">Saqlash</button>
-      <div class="hint">Key faqat shu qurilmada (localStorage).</div>
+      <div class="hint">Key faqat shu qurilmada.</div>
     </div>
     <div class="card">
-      <h3>🐙 GitHub</h3>
-      <div class="label">Personal Access Token</div>
+      <h3>🐙 GitHub (o'zini boshqarish)</h3>
+      <div class="label">Personal Access Token (repo)</div>
       <input class="field" id="ghToken" type="password" placeholder="ghp_...">
-      <div class="label">Owner (username)</div>
+      <div class="label">Owner</div>
       <input class="field" id="ghOwner" placeholder="xojasoipov-sketch">
       <div class="label">Repository</div>
       <input class="field" id="ghRepo" placeholder="Useg-kop">
+      <div class="label">Branch</div>
+      <input class="field" id="ghBranch" placeholder="main" value="main">
       <button class="save" onclick="saveSet()">Saqlash</button>
       <div class="hint" id="ghStatus">Ulanmagan</div>
-      <div class="hint">Token: repo huquqi. Fayllar → GitHub ↑ orqali push.</div>
+      <div class="hint">Token: Contents: Read and write. Keyin chatda "o'zingni yangila: ..." yozing.</div>
     </div>
     <div class="card">
       <button class="btn danger" style="width:100%;padding:12px" onclick="wipe()">Barcha ma’lumotlarni o‘chirish</button>
