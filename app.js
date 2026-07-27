@@ -1,27 +1,31 @@
-const OS_PROMPT = `Sen oddiy chatbot emassan. Sen Professional AI Software Engineering Operating Systemsan.
-Vazifa: mavjud kodni tushunish, tahlil qilish, yaxshilash va production darajasiga olib chiqish.
-Yangi loyiha yozishga shoshilma — avval mavjud kodni tushun, keyin yaxshila.
-Hech qachon mavjud arxitekturani buzma. Taxmin qilma. API o'ylab topma.
-Ishlash: Scan → Analyze → Plan → Modify → Review → Optimize → Test → Git Diff → User Approval.
-Kod stil: Production-ready, SOLID, Clean Architecture, modular, secure, scalable.
-UI: Apple/Cursor/Linear/Notion uslubi — minimal, dark mode, pixel perfect.
-Javob formati:
-1. Vazifa 2. Tahlil 3. Reja 4. Fayllar 5. Risk 6. Kod 7. Review 8. Test 9. Git 10. Keyingi tavsiya
-O'zbek tilida javob ber agar foydalanuvchi o'zbekcha yozsa. Kod to'liq va ishlaydigan bo'lsin.`;
+const OS_PROMPT = `Sen oddiy chatbot emassan. Sen Professional AI Software Engineering Operating Systemsan (OmniCode AI Engine).
+Agentlar: Core Brain, Planner, Project Analyzer, Context Engine, Tool Engine, Code Editor, Reviewer, Memory Engine.
+Avval mavjud kodni tushun, keyin yaxshila. Arxitekturani buzma. Taxmin qilma.
+O'zbekcha yozsa o'zbekcha javob ber. Kod to'liq ishlaydigan bo'lsin.`;
+
+/* AGENT_PROMPTS in agents.js */
+if (typeof AGENT_PROMPTS === 'undefined') {
+  var AGENT_PROMPTS = {
+    core_brain: 'Sen Core Brain. Qaror qabul qil.',
+    planner: 'Sen Planner. Reja tuz.',
+    project_analyzer: 'Sen Project Analyzer. Loyihani tahlil qil.',
+    context_engine: 'Sen Context Engine. Kerakli fayllarni tanla.',
+    tool_engine: 'Sen Tool Engine. Amallar rejasini ber.',
+    code_editor: 'Sen Code Editor. Minimal kod yoz.',
+    reviewer: 'Sen Reviewer. Tekshir va git commit yoz.',
+    memory_engine: 'Sen Memory Engine. Qisqa xotira yoz.'
+  };
+}
 
 const AGENTS = [
-  {i:'👔',n:'CEO',d:'Strategiya'},
-  {i:'📋',n:'Planner',d:'Rejalashtirish'},
-  {i:'🔍',n:'Research',d:'Tahlil'},
-  {i:'🏗️',n:'Architect',d:'Arxitektura'},
-  {i:'🎨',n:'Frontend',d:'UI/UX'},
-  {i:'⚙️',n:'Backend',d:'Server/API'},
-  {i:'🗄️',n:'Database',d:'DB'},
-  {i:'🔒',n:'Security',d:'Xavfsizlik'},
-  {i:'🧪',n:'Testing',d:'Test'},
-  {i:'✅',n:'Reviewer',d:'Kod review'},
-  {i:'📦',n:'Git',d:'Commit'},
-  {i:'🚀',n:'Deploy',d:'Deploy'}
+  {i:'🧠',n:'Core Brain',d:'Qaror qabul',k:'core_brain'},
+  {i:'📋',n:'Planner',d:'Rejalashtirish',k:'planner'},
+  {i:'🔍',n:'Analyzer',d:'Loyiha tahlili',k:'project_analyzer'},
+  {i:'📎',n:'Context',d:'Fayl tanlash',k:'context_engine'},
+  {i:'🔧',n:'Tools',d:'Amallar',k:'tool_engine'},
+  {i:'✏️',n:'Editor',d:'Kod tahrir',k:'code_editor'},
+  {i:'✅',n:'Reviewer',d:'Tekshiruv',k:'reviewer'},
+  {i:'💾',n:'Memory',d:'Xotira',k:'memory_engine'}
 ];
 
 const MODELS = {
@@ -35,16 +39,16 @@ const MODELS = {
   custom: [{v:'default',n:'Custom'}]
 };
 
-const SK = 'oc_os_mobile_v1';
+const SK = 'oc_os_mobile_v2';
 let S = {
   provider:'pollinations', apiKey:'', model:'openai', customUrl:'',
   maxTokens:8192, mode:'fast',
   messages:[], files:{}, curFile:null, projects:{},
-  stats:{req:0, tok:0}
+  memory:[], stats:{req:0, tok:0}
 };
 
 function load(){ try{ const r=localStorage.getItem(SK); if(r) Object.assign(S,JSON.parse(r)); }catch(e){} }
-function save(){ localStorage.setItem(SK, JSON.stringify({...S, messages:S.messages.slice(-50)})); }
+function save(){ localStorage.setItem(SK, JSON.stringify({...S, messages:S.messages.slice(-40), memory:S.memory.slice(-20)})); }
 
 function toast(m,t=''){ const e=document.getElementById('toast'); e.textContent=m; e.className='toast show '+t; setTimeout(()=>e.classList.remove('show'),2500); }
 function grow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
@@ -124,9 +128,10 @@ function renderMsgs(){
   box.scrollTop=box.scrollHeight;
 }
 
-async function callAI(msgs){
-  const messages=[{role:'system',content:OS_PROMPT},...msgs];
-  const body={model:S.model,messages,max_tokens:S.maxTokens,temperature:0.6};
+async function callAI(msgs, systemOverride){
+  const sys = systemOverride || OS_PROMPT;
+  const messages=[{role:'system',content:sys},...msgs];
+  const body={model:S.model,messages,max_tokens:S.maxTokens,temperature:0.55};
   let url, headers={'Content-Type':'application/json'};
   if(S.provider==='pollinations') url='https://text.pollinations.ai/openai';
   else if(S.provider==='openrouter'){
@@ -149,10 +154,34 @@ async function callAI(msgs){
   if(!res.ok){ const t=await res.text().catch(()=>''); throw new Error('HTTP '+res.status+': '+t.slice(0,100)); }
   const data=await res.json();
   const content=data.choices?.[0]?.message?.content;
-  if(!content) throw new Error('Bo\'sh javob');
+  if(!content) throw new Error('Bo‘sh javob');
   const tokens=data.usage?.total_tokens||Math.ceil((JSON.stringify(messages)+content).length/4);
   S.stats.req++; S.stats.tok+=tokens; save();
   return {content,tokens,model:data.model||S.model};
+}
+
+function filesContext(){
+  const keys=Object.keys(S.files);
+  if(!keys.length) return 'Loyihada lokal fayl yo‘q.';
+  let s='Mavjud fayllar:\n';
+  keys.forEach(k=>{
+    const body=S.files[k]||'';
+    s+=`--- ${k} (${body.length} chars) ---\n${body.slice(0,1500)}\n`;
+  });
+  return s;
+}
+
+function memContext(){
+  if(!S.memory.length) return '';
+  return '\nXotira:\n'+S.memory.slice(-8).map(m=>'- '+m).join('\n');
+}
+
+async function runAgent(key, userMsg, agentLabel){
+  const prompt = AGENT_PROMPTS[key] || OS_PROMPT;
+  const r = await callAI([{role:'user', content:userMsg}], prompt);
+  S.messages.push({role:'ai', content:r.content, agent:agentLabel, meta:`~${r.tokens} tok`});
+  renderMsgs();
+  return r;
 }
 
 async function send(){
@@ -195,48 +224,65 @@ async function runOS(task){
   pipe.classList.add('show');
   const ids=['ps1','ps2','ps3','ps4','ps5'];
   ids.forEach(id=>document.getElementById(id).className='ps');
-
-  const filesCtx=Object.keys(S.files).length
-    ? '\nMavjud fayllar: '+Object.keys(S.files).join(', ')
-    : '';
-
   function step(i,st){ document.getElementById(ids[i]).className='ps '+st; }
 
-  step(0,'run'); step(1,'run');
-  const plan=await callAI([{role:'user',content:
-    `Vazifa: ${task}${filesCtx}\n\nQisqa: 1) Muammoni tushun 2) 5-7 qadamli reja 3) Arxitektura tavsiyasi. O'zbekcha.`
-  }]);
-  step(0,'done'); step(1,'done');
-  S.messages.push({role:'ai',content:plan.content,agent:'Planner',meta:`~${plan.tokens} tok`});
-  renderMsgs();
-  document.getElementById('tip')?.remove();
+  const ctx = filesContext() + memContext();
 
-  const box=document.getElementById('msgs');
-  const tip=document.createElement('div');
-  tip.className='msg ai'; tip.id='tip';
-  tip.innerHTML=`<div class="msg-role">OmniCode AI <span class="badge">Coder</span></div><div class="typing"><span></span><span></span><span></span></div>`;
-  box.appendChild(tip); box.scrollTop=box.scrollHeight;
+  step(0,'run');
+  document.getElementById('tip')?.remove();
+  const tip0=document.createElement('div');
+  tip0.className='msg ai'; tip0.id='tip';
+  tip0.innerHTML=`<div class="msg-role">OmniCode AI <span class="badge">Core Brain</span></div><div class="typing"><span></span><span></span><span></span></div>`;
+  document.getElementById('msgs').appendChild(tip0);
+  const brain = await runAgent('core_brain',
+    `Foydalanuvchi vazifasi:\n${task}\n\n${ctx}\n\nQaror qabul qil: qaysi agentlar kerak, qisqa yo‘l.`,
+    'Core Brain');
+  step(0,'done');
+
+  step(1,'run');
+  const tip1=document.createElement('div');
+  tip1.className='msg ai'; tip1.id='tip';
+  tip1.innerHTML=`<div class="msg-role">OmniCode AI <span class="badge">Planner</span></div><div class="typing"><span></span><span></span><span></span></div>`;
+  document.getElementById('msgs').appendChild(tip1);
+  const plan = await runAgent('planner',
+    `Vazifa: ${task}\n\nCore Brain qarori:\n${brain.content}\n\n${ctx}\n\nReja tuz.`,
+    'Planner');
+  step(1,'done');
 
   step(2,'run');
-  const code=await callAI([{role:'user',content:
-    `Vazifa: ${task}\n\nReja:\n${plan.content}\n\nTo'liq ishlaydigan kod yoz. Har fayl uchun:\n\`\`\`til\n// filename: nom.ext\nkod\n\`\`\``
-  }]);
-  step(2,'done');
-  S.messages.push({role:'ai',content:code.content,agent:'Coder',meta:`~${code.tokens} tok`});
-  extractFiles(code.content);
-
-  document.getElementById('tip')?.remove();
   const tip2=document.createElement('div');
   tip2.className='msg ai'; tip2.id='tip';
-  tip2.innerHTML=`<div class="msg-role">OmniCode AI <span class="badge">Reviewer</span></div><div class="typing"><span></span><span></span><span></span></div>`;
-  box.appendChild(tip2); box.scrollTop=box.scrollHeight;
+  tip2.innerHTML=`<div class="msg-role">OmniCode AI <span class="badge">Context</span></div><div class="typing"><span></span><span></span><span></span></div>`;
+  document.getElementById('msgs').appendChild(tip2);
+  const ctxR = await runAgent('context_engine',
+    `Vazifa: ${task}\nReja:\n${plan.content}\n\n${ctx}\n\nFaqat kerakli fayllarni tanla. Agar yangi kod kerak bo‘lsa, ayt.`,
+    'Context');
+
+  const tip3=document.createElement('div');
+  tip3.className='msg ai'; tip3.id='tip';
+  tip3.innerHTML=`<div class="msg-role">OmniCode AI <span class="badge">Editor</span></div><div class="typing"><span></span><span></span><span></span></div>`;
+  document.getElementById('msgs').appendChild(tip3);
+  const code = await runAgent('code_editor',
+    `Vazifa: ${task}\n\nReja:\n${plan.content}\n\nContext:\n${ctxR.content}\n\n${ctx}\n\nMinimal o‘zgarish bilan ishlaydigan kod yoz. Yangi fayl uchun:\n\`\`\`til\n// filename: nom.ext\nkod\n\`\`\``,
+    'Editor');
+  extractFiles(code.content);
+  step(2,'done');
 
   step(3,'run'); step(4,'run');
-  const rev=await callAI([{role:'user',content:
-    `Kodni review qil, xavfsizlik/performance tekshir, test tavsiya qil, git commit xabari yoz.\n\n${code.content.slice(0,5000)}`
-  }]);
+  const tip4=document.createElement('div');
+  tip4.className='msg ai'; tip4.id='tip';
+  tip4.innerHTML=`<div class="msg-role">OmniCode AI <span class="badge">Reviewer</span></div><div class="typing"><span></span><span></span><span></span></div>`;
+  document.getElementById('msgs').appendChild(tip4);
+  const rev = await runAgent('reviewer',
+    `Kodni review qil:\n${code.content.slice(0,4500)}\n\nXavfsizlik, performance, test, git commit xabari.`,
+    'Reviewer');
+
+  const mem = await runAgent('memory_engine',
+    `Quyidagi sessiyadan qisqa xotira yoz:\nVazifa: ${task}\nReja qisqacha: ${plan.content.slice(0,400)}\nNatija: ${rev.content.slice(0,400)}`,
+    'Memory');
+  S.memory.push(mem.content.slice(0,300));
+  save();
   step(3,'done'); step(4,'done');
-  S.messages.push({role:'ai',content:rev.content,agent:'Reviewer',meta:`~${rev.tokens} tok`});
 }
 
 function extractFiles(text){
