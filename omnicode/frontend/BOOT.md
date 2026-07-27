@@ -2,13 +2,16 @@
 
 ## Muhim (1 qator)
 
-`index.html` oxiridagi scriptni shunday qiling:
+`index.html` oxiridagi script (classic — type="module" kerak emas):
 
 ```html
-<script type="module" src="app.js?v=3.1"></script>
+<script src="app.js?v=3.1"></script>
 ```
 
-`type="module"` bo'lmasa `import { createBrain }` ishlamaydi.
+`app.js` classic: `Brain` ni `import('./brain/index.js')` orqali dynamic yuklaydi.
+`type="module"` ham ishlaydi, lekin majburiy emas.
+
+Hozirgi index: `app.js?v=20250726-10&bust=force` — ishlaydi; cache-bust uchun `v=3.1` tavsiya.
 
 ## Nima ulangan
 
