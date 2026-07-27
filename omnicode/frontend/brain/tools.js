@@ -1,7 +1,7 @@
 /**
  * OmniBrain — Tool Protocol Parser & Executor hooks
  * AI javobidagi XML taglarni parse qiladi.
- * Haqiqiy API chaqiriqlar deps orqali (Git, FS, DiffView).
+ * Multi-file: bir javobda 8 taggacha.
  */
 
 const TAG_SPECS = [
@@ -63,7 +63,7 @@ export function parseTools(responseText) {
     let m;
     while ((m = re.exec(responseText || '')) !== null) {
       const attrs = parseAttrs(m[1] || '');
-      const content = spec.selfClosing ? undefined : (m[2] || '');
+      const content = spec.selfClosing ? undefined : m[2] || '';
       tools.push({
         name: spec.name,
         attrs,
@@ -82,9 +82,11 @@ export function parseTools(responseText) {
 export async function executeTools(tools, deps) {
   const results = [];
   const pendingApproval = [];
-  const { Git, FS, DiffView, onStatus, canWritePath, isSelfRepo, auditWrite, IDENTITY } = deps;
+  const { Git, FS, DiffView, onStatus, canWritePath, isSelfRepo, auditWrite, IDENTITY } =
+    deps;
 
-  for (const tool of tools.slice(0, 3)) {
+  // Multi-file: 8 taggacha
+  for (const tool of tools.slice(0, 8)) {
     try {
       if (tool.needsApproval) {
         const path = tool.attrs.path || tool.attrs.name || '';
@@ -96,15 +98,15 @@ export async function executeTools(tools, deps) {
         );
         if (!audit.ok) {
           results.push({ tool: tool.name, ok: false, error: audit.issues.join('; ') });
-          onStatus?.(`⛔ ${tool.name}: ${audit.issues[0]}`);
+          onStatus?.('⛔ ' + tool.name + ': ' + audit.issues[0]);
           continue;
         }
         pendingApproval.push(tool);
-        onStatus?.(`⏳ Tasdiq kutilmoqda: ${tool.name} ${path}`);
+        onStatus?.('⏳ Tasdiq: ' + tool.name + ' ' + path);
         continue;
       }
 
-      onStatus?.(`🔧 ${tool.name}...`);
+      onStatus?.('🔧 ' + tool.name + '...');
       let result;
 
       switch (tool.name) {
@@ -132,7 +134,7 @@ export async function executeTools(tools, deps) {
       results.push({ tool: tool.name, ok: true, data: result });
     } catch (err) {
       results.push({ tool: tool.name, ok: false, error: err.message || String(err) });
-      onStatus?.(`✗ ${tool.name}: ${err.message}`);
+      onStatus?.('✗ ' + tool.name + ': ' + err.message);
     }
   }
 
@@ -151,7 +153,7 @@ READ (avtomatik):
 <GH_LIST_FILES owner="xojasoipov-sketch" repo="Useg-kop" path="omnicode/frontend"/>
 <GH_READ_FILE owner="xojasoipov-sketch" repo="Useg-kop" path="omnicode/frontend/brain/index.js"/>
 
-WRITE (foydalanuvchi tasdiqlaydi):
+WRITE (foydalanuvchi tasdiqlaydi, multi-file mumkin):
 <WRITE_FILE path="relative/path.js">
 ...kod...
 </WRITE_FILE>
@@ -164,4 +166,5 @@ Qoidalar:
 - Secret, .env, token hech qachon yozma
 - Self-edit faqat Useg-kop reposida
 - Katta o'zgarishda avval qisqa reja yoz
+- Bir nechta fayl uchun har biri alohida WRITE_FILE / GH_WRITE_FILE
 `.trim();
