@@ -26,13 +26,13 @@
 <div class="view active" id="v-chat">
   <div class="messages" id="msgs">
     <div class="msg ai">
-      <div class="msg-role">OmniCode <span class="badge">Self</span></div>
+      <div class="msg-role">OmniCode <span class="badge">Brain</span></div>
       <div class="msg-body">
-        <strong>O'zini boshqaruvchi AI</strong><br><br>
-        1. ⚙️ GitHub token + owner + repo<br>
-        2. Chat: <code>o'zingni yangila: UI ni yaxshila</code><br>
-        3. Yoki: <code>o'z kodimni yukla</code><br><br>
-        Men o'z kodimni o'qiyman, tahrirlayman, push qilaman.
+        <div class="brain-mini">🧠</div>
+        <strong>OmniCode Brain</strong> — vibe coding<br><br>
+        Oddiy gapiring: <em>"login sahifa qil"</em>, <em>"o'zingni yangila"</em><br><br>
+        ⚙️ Sozlama → API + GitHub token<br>
+        Men tushunaman, rejalashtiraman, kod yozaman.
       </div>
     </div>
   </div>
@@ -42,7 +42,7 @@
       <div class="mode-chip active" id="chip-os" onclick="setMode('os')">🤖 Agent OS</div>
     </div>
     <div class="input-box">
-      <textarea class="chat-input" id="inp" placeholder="Nima qilamiz? yoki o'zingni yangila: ..." rows="1"
+      <textarea class="chat-input" id="inp" placeholder="Oddiy gapiring..." rows="1"
         onkeydown="onKey(event)" oninput="grow(this)"></textarea>
       <button class="send-btn" id="send" onclick="send()">↑</button>
     </div>
@@ -112,7 +112,7 @@
       <input class="field" id="ghBranch" placeholder="main" value="main">
       <button class="save" onclick="saveSet()">Saqlash</button>
       <div class="hint" id="ghStatus">Ulanmagan</div>
-      <div class="hint">Token: Contents: Read and write. Keyin chatda "o'zingni yangila: ..." yozing.</div>
+      <div class="hint">Token: Contents Read/Write. Keyin: "o'zingni yangila: ..."</div>
     </div>
     <div class="card">
       <button class="btn danger" style="width:100%;padding:12px" onclick="wipe()">Barcha ma’lumotlarni o‘chirish</button>
