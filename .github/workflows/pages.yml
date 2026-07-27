@@ -20,16 +20,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare site
+      - name: Prepare site (OmniCode frontend = primary)
         run: |
-          mkdir -p _site
-          cp index.html _site/
+          set -e
+          mkdir -p _site/legacy _site/styles
+
+          # ── Primary: omnicode/frontend ─────────────────────────
+          if [ ! -f omnicode/frontend/index.html ]; then
+            echo "ERROR: omnicode/frontend/index.html missing"
+            exit 1
+          fi
+
+          cp omnicode/frontend/index.html _site/index.html
+          cp omnicode/frontend/*.js _site/ 2>/dev/null || true
+          if [ -d omnicode/frontend/styles ]; then
+            cp -r omnicode/frontend/styles/* _site/styles/
+          fi
+
+          # Favicon (root or frontend)
+          if [ -f favicon.svg ]; then
+            cp favicon.svg _site/favicon.svg
+          elif [ -f omnicode/frontend/favicon.svg ]; then
+            cp omnicode/frontend/favicon.svg _site/favicon.svg
+          fi
+
+          # Ensure favicon link exists in index if we have the file
+          if [ -f _site/favicon.svg ] && ! grep -q 'rel="icon"' _site/index.html; then
+            sed -i 's|<title>|<link rel="icon" type="image/svg+xml" href="favicon.svg">\n<title>|' _site/index.html
+          fi
+
           touch _site/.nojekyll
-          for f in style.css app.js agents.js favicon.svg; do
-            [ -f "$f" ] && cp "$f" _site/ || true
-          done
           echo "build=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > _site/VERSION.txt
-          ls -la _site/
+          echo "primary=omnicode/frontend" >> _site/VERSION.txt
+
+          # ── Legacy: old root SPA (optional backup at /legacy/) ─
+          if [ -f index.html ]; then
+            cp index.html _site/legacy/
+            for f in style.css app.js agents.js favicon.svg; do
+              [ -f "$f" ] && cp "$f" _site/legacy/ || true
+            done
+            # Fix relative asset paths for /legacy/ subpath if needed
+            # (legacy index already uses style.css / app.js in same folder)
+          fi
+
+          echo "=== _site tree ==="
+          find _site -type f | sort
+          echo "=== index head ==="
+          head -n 20 _site/index.html
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
