@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -23,37 +23,25 @@ jobs:
       - name: Prepare site (omnicode/frontend)
         run: |
           set -euo pipefail
-
           if [ ! -f omnicode/frontend/index.html ]; then
             echo "ERROR: omnicode/frontend/index.html missing"
             exit 1
           fi
-
           rm -rf _site
           mkdir -p _site
-
-          # Full frontend copy
           cp -a omnicode/frontend/. _site/
-
-          # Favicon from root if missing
           if [ ! -f _site/favicon.svg ] && [ -f favicon.svg ]; then
             cp favicon.svg _site/favicon.svg
           fi
-
-          # Ensure favicon link
           if [ -f _site/favicon.svg ] && ! grep -q 'rel="icon"' _site/index.html; then
             sed -i 's|<title>|<link rel="icon" type="image/svg+xml" href="favicon.svg">\n<title>|' _site/index.html
           fi
-
           touch _site/.nojekyll
-
           {
             echo "build=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "primary=omnicode/frontend"
             echo "commit=${GITHUB_SHA}"
-            echo "method=github-actions-official"
           } > _site/VERSION.txt
-
           for f in index.html app.js brain.js pro-ui.js features.js styles/main.css; do
             if [ ! -f "_site/$f" ]; then
               echo "ERROR: missing required asset: $f"
@@ -61,17 +49,22 @@ jobs:
               exit 1
             fi
           done
-
           echo "=== _site files ==="
           find _site -type f | sort
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./_site
+
+      - name: Deploy to gh-pages branch (fallback)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: 'deploy: OmniCode ${{ github.sha }}'
 
   deploy:
     needs: build
@@ -83,3 +76,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true
