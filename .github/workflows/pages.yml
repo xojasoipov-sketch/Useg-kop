@@ -11,29 +11,35 @@ permissions:
   id-token: write
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'omnicode/frontend/package-lock.json'
-
-      - name: Install dependencies
-        working-directory: omnicode/frontend
-        run: npm install
-
-      - name: Build frontend
-        working-directory: omnicode/frontend
-        run: npm run build
+      - name: Prepare static site (latest frontend, no vite)
+        run: |
+          mkdir -p site
+          # Asosiy OmniCode UI (yangilangan)
+          cp omnicode/frontend/index.html site/index.html
+          cp omnicode/frontend/app.js site/app.js
+          cp -r omnicode/frontend/brain site/brain
+          cp -r omnicode/frontend/styles site/styles
+          # Standalone app.html ham
+          cp app.html site/app.html
+          # GitHub Pages base path uchun
+          if ! grep -q 'base href' site/index.html; then
+            sed -i 's|<head>|<head>\n<base href="/Useg-kop/">|' site/index.html || true
+          fi
+          # Cache bust
+          sed -i 's|app.js?v=[^"]*|app.js?v=3.2-pages|' site/index.html || true
+          echo "Deployed at $(date -u +%Y-%m-%dT%H:%M:%SZ)" > site/VERSION.txt
+          ls -la site/
+          ls -la site/brain/ || true
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./omnicode/frontend/dist
+          publish_dir: ./site
           publish_branch: gh-pages
+          force_orphan: true
