@@ -1,4 +1,4 @@
-name: Deploy Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -6,22 +6,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
-# IMPORTANT: do NOT cancel in-progress deploys — that breaks gh-pages mid-push
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare site (full omnicode/frontend → _site)
+      - name: Prepare site (omnicode/frontend)
         run: |
           set -euo pipefail
 
@@ -33,30 +32,28 @@ jobs:
           rm -rf _site
           mkdir -p _site
 
-          # Copy entire frontend tree (html, js, css, assets, subfolders)
+          # Full frontend copy
           cp -a omnicode/frontend/. _site/
 
-          # Favicon fallback from repo root
+          # Favicon from root if missing
           if [ ! -f _site/favicon.svg ] && [ -f favicon.svg ]; then
             cp favicon.svg _site/favicon.svg
           fi
 
-          # Ensure favicon link in index
+          # Ensure favicon link
           if [ -f _site/favicon.svg ] && ! grep -q 'rel="icon"' _site/index.html; then
             sed -i 's|<title>|<link rel="icon" type="image/svg+xml" href="favicon.svg">\n<title>|' _site/index.html
           fi
 
-          # GitHub Pages: disable Jekyll so _files work
           touch _site/.nojekyll
 
-          # Build stamp (cache-bust proof)
           {
             echo "build=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "primary=omnicode/frontend"
             echo "commit=${GITHUB_SHA}"
+            echo "method=github-actions-official"
           } > _site/VERSION.txt
 
-          # Required assets must exist
           for f in index.html app.js brain.js pro-ui.js features.js styles/main.css; do
             if [ ! -f "_site/$f" ]; then
               echo "ERROR: missing required asset: $f"
@@ -65,26 +62,24 @@ jobs:
             fi
           done
 
-          # Optional legacy backup
-          mkdir -p _site/legacy
-          if [ -f index.html ]; then
-            cp index.html _site/legacy/ 2>/dev/null || true
-            for f in style.css app.js agents.js favicon.svg; do
-              [ -f "$f" ] && cp "$f" _site/legacy/ || true
-            done
-          fi
-
           echo "=== _site files ==="
           find _site -type f | sort
-          echo "=== script tags in index ==="
-          grep -E 'src=|href=' _site/index.html | head -40
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
-          publish_branch: gh-pages
-          # Keep history of last deploy content stable; orphan still OK if full copy verified above
-          force_orphan: true
-          commit_message: 'deploy: OmniCode frontend ${{ github.sha }}'
+          path: ./_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
