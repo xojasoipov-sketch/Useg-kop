@@ -6,7 +6,7 @@
 <title>OmniCode · SadiPrime</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles/main.css?v=4">
+<link rel="stylesheet" href="styles/main.css?v=5">
 <style>
 #activity-bar{display:flex;gap:12px;padding:6px 16px;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
 .sp-badge{font-size:10px;font-weight:800;background:linear-gradient(135deg,#ff4d4f,#a855f7);color:#fff;padding:2px 8px;border-radius:8px;margin-left:6px}
@@ -14,10 +14,6 @@
 .nav-icon{color:var(--text3)}.nav-item.active .nav-icon{color:var(--accent)}
 .qa-icon.red{color:#ff6b6b}.qa-icon.blue{color:#60a5fa}.qa-icon.purple{color:#c084fc}.qa-icon.green{color:#4ade80}.qa-icon.orange{color:#fb923c}
 .tool-chip .ic{width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:4px}
-.key-input-row{display:flex;gap:8px;align-items:center;padding:0 20px 4px}
-.key-input-row .sh-input{margin:0;flex:1;width:auto}
-.key-test-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer}
-.key-status{font-size:11px;padding:0 20px 10px;color:var(--text3)}.key-status.ok{color:var(--green)}.key-status.err{color:var(--accent)}
 .qa-grid{grid-template-columns:repeat(4,1fr)!important}
 .apply-btn{display:block;margin-top:12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;width:100%}
 .chat-actions{display:flex;gap:6px;padding:4px 20px;flex-wrap:wrap;flex-shrink:0}
@@ -30,52 +26,82 @@
 .tool-chip{flex-shrink:0;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer;display:flex;align-items:center;gap:5px}
 .tool-chip.active{background:rgba(255,77,79,0.12);border-color:rgba(255,77,79,0.4);color:#FF4D4F}
 .composer{flex-shrink:0!important;display:block!important;padding:8px 14px 10px!important;background:transparent!important;border:none!important;z-index:50;position:relative}
-.composer-attach-chips{display:none;flex-wrap:wrap;gap:6px;padding:0 4px 8px}
-.composer-attach-chips.show{display:flex}
-.attach-chip{font-size:11px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:5px 10px;display:inline-flex;align-items:center;gap:4px;color:#fff}
-.attach-chip button{border:none;background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;font-size:14px}
-.attach-menu{display:none;position:absolute;bottom:100%;left:14px;margin-bottom:8px;background:#1A1A1A;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:6px;z-index:80;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:160px}
-.attach-menu.open{display:block}
-.attach-menu button{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;color:#fff;font-size:14px;font-weight:600;padding:12px 14px;border-radius:10px;cursor:pointer;text-align:left}
-.attach-menu button:active{background:rgba(255,255,255,0.06)}
-.attach-menu .am-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
-.am-ico.file{background:rgba(59,130,246,0.15);color:#60a5fa}
-.am-ico.img{background:rgba(168,85,247,0.15);color:#c084fc}
-.am-ico.voice{background:rgba(255,77,79,0.15);color:#ff6b6b}
 .composer-bar{display:flex!important;align-items:center;gap:8px;background:#141414;border:1px solid rgba(255,255,255,0.1);border-radius:28px;padding:6px;min-height:52px;box-shadow:0 0 0 1px rgba(255,77,79,0.05),0 4px 24px rgba(0,0,0,0.35)}
 .composer-bar:focus-within{border-color:rgba(255,77,79,0.45);box-shadow:0 0 0 1px rgba(255,77,79,0.2),0 4px 28px rgba(255,77,79,0.12)}
 .comp-plus{width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:#fff;font-size:22px;font-weight:300;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-.comp-plus:active,.comp-plus.open{background:rgba(255,77,79,0.2);color:#FF4D4F}
-.comp-plus.open{transform:rotate(45deg)}
+.comp-plus.open{background:rgba(255,77,79,0.2);color:#FF4D4F;transform:rotate(45deg)}
 #chat-input,#smm-input{flex:1;border:none;background:transparent;color:#fff;font-size:15px;font-family:inherit;resize:none;outline:none;max-height:100px;line-height:1.45;padding:8px 4px;min-height:24px}
-#chat-input::placeholder,#smm-input::placeholder{color:rgba(255,255,255,0.32)}
+#chat-input::placeholder{color:rgba(255,255,255,0.32)}
 .composer-send{width:40px;height:40px;border-radius:50%;border:none;background:#FF4D4F;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-shadow:0 2px 12px rgba(255,77,79,0.4)}
-.composer-send:active{transform:scale(0.92)}
 #ai .chat-messages,#smm .chat-messages{flex:1;overflow-y:auto;min-height:0}
 .nav{z-index:100;height:78px!important}
-/* Brain panels */
-.brain-panels{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 16px;flex-shrink:0}
-.brain-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;max-height:140px;overflow:auto}
-.brain-card h4{margin:0 0 8px;font-size:11px;font-weight:800;letter-spacing:.04em;color:rgba(255,255,255,0.45);text-transform:uppercase}
-#ai-timeline .tl-item{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;font-size:12px}
-#ai-timeline .tl-dot{width:8px;height:8px;border-radius:50%;background:#555;margin-top:4px;flex-shrink:0}
+.attach-menu{display:none;position:absolute;bottom:100%;left:14px;margin-bottom:8px;background:#1A1A1A;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:6px;z-index:80;min-width:160px}
+.attach-menu.open{display:block}
+.attach-menu button{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;color:#fff;font-size:14px;font-weight:600;padding:12px 14px;border-radius:10px;cursor:pointer;text-align:left}
+.brain-panels{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 12px;flex-shrink:0}
+.brain-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:8px 10px;max-height:110px;overflow:auto}
+.brain-card h4{margin:0 0 6px;font-size:10px;font-weight:800;letter-spacing:.04em;color:rgba(255,255,255,0.4);text-transform:uppercase}
+#ai-timeline .tl-item{display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;font-size:11px}
+#ai-timeline .tl-dot{width:7px;height:7px;border-radius:50%;background:#555;margin-top:3px;flex-shrink:0}
 #ai-timeline .tl-item.active .tl-dot{background:#FF4D4F;box-shadow:0 0 8px rgba(255,77,79,.6)}
 #ai-timeline .tl-item.done .tl-dot{background:#22c55e}
-#ai-timeline .tl-step{font-weight:700;color:#fff}
-#ai-timeline .tl-detail{color:rgba(255,255,255,.4);font-size:11px}
-#ai-timeline .tl-empty{font-size:12px;color:rgba(255,255,255,.35)}
-.ins-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:rgba(255,255,255,.7)}
+#ai-timeline .tl-step{font-weight:700;color:#fff;font-size:11px}
+#ai-timeline .tl-detail{color:rgba(255,255,255,.35);font-size:10px}
+#ai-timeline .tl-empty,.ch-empty,.pi-empty,.fg-empty{font-size:11px;color:rgba(255,255,255,.35)}
+.ins-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;color:rgba(255,255,255,.65)}
 .ins-ok{color:#22c55e;font-weight:700}.ins-mid{color:#fb923c;font-weight:700}
-.ins-meta{margin-top:6px;font-size:10px;color:rgba(255,255,255,.35)}
+.ins-meta{margin-top:4px;font-size:10px;color:rgba(255,255,255,.3)}
+/* Pro side drawers */
+.pro-drawer{display:none;position:fixed;top:0;bottom:78px;width:min(86vw,320px);background:#111;border-right:1px solid rgba(255,255,255,.08);z-index:90;flex-direction:column;overflow:hidden}
+.pro-drawer.open{display:flex}
+.pro-drawer.right{right:0;left:auto;border-right:none;border-left:1px solid rgba(255,255,255,.08)}
+.pro-drawer-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:800;font-size:14px}
+.pro-drawer-body{flex:1;overflow-y:auto;padding:10px 12px}
+.ch-item{padding:10px 12px;border-radius:10px;cursor:pointer;margin-bottom:4px;border:1px solid transparent}
+.ch-item:active,.ch-item.active{background:rgba(255,77,79,.1);border-color:rgba(255,77,79,.25)}
+.ch-title{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-meta{font-size:10px;color:rgba(255,255,255,.35);margin-top:2px}
+.pi-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);color:rgba(255,255,255,.5)}
+.pi-row strong{color:#fff;font-weight:600;text-align:right}
+.pi-files{margin-top:10px}
+.pi-file{font-size:12px;padding:6px 8px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.7)}
+.pi-file:active{background:rgba(255,255,255,.06)}
+.fg-item{display:flex;justify-content:space-between;padding:8px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:4px;background:rgba(255,255,255,.03)}
+.fg-path{color:#fff;font-weight:600;font-family:JetBrains Mono,monospace;font-size:11px}
+.fg-lines{color:rgba(255,255,255,.35);font-size:10px}
+.fg-prev-path{font-size:11px;color:#FF4D4F;font-weight:700;margin-bottom:6px}
+.fg-prev-code{font-size:10px;line-height:1.4;color:rgba(255,255,255,.7);white-space:pre-wrap;max-height:180px;overflow:auto;font-family:JetBrains Mono,monospace}
+#hidden-term{background:#0d0d0d;border-top:1px solid rgba(255,255,255,.06);padding:6px 12px;max-height:72px;overflow:auto;flex-shrink:0;font-family:JetBrains Mono,monospace;font-size:10px}
+.ht-line{color:rgba(255,255,255,.45);margin-bottom:2px}
+.ht-t{color:rgba(255,77,79,.6);margin-right:6px}
+.pro-scrim{display:none;position:fixed;inset:0 0 78px 0;background:rgba(0,0,0,.45);z-index:85}
+.pro-scrim.open{display:block}
 </style>
 </head>
 <body>
+
+<div id="pro-scrim" class="pro-scrim" onclick="ProUI.closeDrawers()"></div>
+
+<div id="drawer-history" class="pro-drawer">
+  <div class="pro-drawer-head"><span>Chat History</span><button class="chip-mini" onclick="ChatSessions.newChat()">+ Yangi</button></div>
+  <div class="pro-drawer-body" id="chat-history-list"></div>
+</div>
+
+<div id="drawer-project" class="pro-drawer right">
+  <div class="pro-drawer-head"><span>Project Info</span><button class="chip-mini" onclick="ProUI.closeDrawers()">✕</button></div>
+  <div class="pro-drawer-body">
+    <div id="project-info-body"></div>
+    <h4 style="margin:16px 0 8px;font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase">File Generator</h4>
+    <div id="file-gen-list"></div>
+    <div id="file-gen-preview"></div>
+  </div>
+</div>
 
 <div id="home" class="screen active">
   <div class="scroll-area">
     <div class="home-top">
       <div class="home-greeting"><h2 id="greeting-text">Xayrli kun</h2><p>OmniCode · Agent OS · Cloud</p></div>
-      <button class="notif-btn" onclick="KeyVault.open()" data-ic="key" data-ic-size="18"></button>
+      <button class="notif-btn" onclick="typeof KeyVault!=='undefined'&&KeyVault.open()" data-ic="key" data-ic-size="18"></button>
     </div>
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Kalitlar</div><div class="stat-row"><div class="stat-value" id="usage-pct">—</div><div class="stat-badge red" data-ic="zap" data-ic-size="18"></div></div><div class="stat-progress"><div class="stat-bar" id="usage-bar" style="width:0%"></div></div><div class="stat-sub">AI · GitHub</div></div>
@@ -88,11 +114,11 @@
         <div class="qa-item" onclick="typeof AutoMode!=='undefined'&&AutoMode.run()"><div class="qa-icon orange" data-ic="zap"></div><span class="qa-label">Auto Mode</span></div>
         <div class="qa-item" onclick="App.nav('agents')"><div class="qa-icon purple" data-ic="agents"></div><span class="qa-label">Agents</span></div>
         <div class="qa-item" onclick="App.newProject()"><div class="qa-icon blue" data-ic="plus"></div><span class="qa-label">Loyiha</span></div>
-        <div class="qa-item" onclick="SMMAI.open()"><div class="qa-icon green" data-ic="phone"></div><span class="qa-label">TG SMM</span></div>
-        <div class="qa-item" onclick="PromptLib.open()"><div class="qa-icon purple" data-ic="spark"></div><span class="qa-label">Promptlar</span></div>
+        <div class="qa-item" onclick="typeof SMMAI!=='undefined'&&SMMAI.open()"><div class="qa-icon green" data-ic="phone"></div><span class="qa-label">TG SMM</span></div>
+        <div class="qa-item" onclick="typeof PromptLib!=='undefined'&&PromptLib.open()"><div class="qa-icon purple" data-ic="spark"></div><span class="qa-label">Promptlar</span></div>
         <div class="qa-item" onclick="App.nav('deploy')"><div class="qa-icon green" data-ic="rocket"></div><span class="qa-label">Deploy</span></div>
         <div class="qa-item" onclick="typeof SB!=='undefined'&&SB.syncAll()"><div class="qa-icon green" data-ic="sync"></div><span class="qa-label">Cloud</span></div>
-        <div class="qa-item" onclick="KeyVault.open()"><div class="qa-icon blue" data-ic="key"></div><span class="qa-label">Kalitlar</span></div>
+        <div class="qa-item" onclick="typeof KeyVault!=='undefined'&&KeyVault.open()"><div class="qa-icon blue" data-ic="key"></div><span class="qa-label">Kalitlar</span></div>
         <div class="qa-item" onclick="App.nav('settings')"><div class="qa-icon purple" data-ic="settings"></div><span class="qa-label">Sozlama</span></div>
         <div class="qa-item" onclick="App.nav('monitor')"><div class="qa-icon orange" data-ic="zap"></div><span class="qa-label">Monitor</span></div>
         <div class="qa-item" onclick="typeof RepoIndexer!=='undefined'&&State.projectId&&(RepoIndexer.build(State.projectId),toast('Index yangilandi'))"><div class="qa-icon blue" data-ic="search"></div><span class="qa-label">Index</span></div>
@@ -108,25 +134,26 @@
 <div id="ai" class="screen">
   <div class="chat-header">
     <div class="chat-header-left">
-      <span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span>
+      <span class="chat-menu" onclick="ProUI.toggleHistory()" data-ic="menu" data-ic-size="20"></span>
       <span class="chat-title">Coding Brain</span><span class="sp-badge">Agent OS</span>
       <span class="active-proj-chip" id="active-project-label" style="display:none"></span>
     </div>
-    <span class="chat-edit" onclick="AI.clear()" data-ic="edit" data-ic-size="18"></span>
+    <span class="chat-edit" onclick="ProUI.toggleProject()" style="font-size:12px;font-weight:700;color:var(--accent);padding:4px 8px">Info</span>
   </div>
   <div id="activity-bar"><span class="act-item" style="color:var(--green)">+0</span><span class="act-item" style="color:var(--accent)">-0</span><span class="act-item">0 fayl</span><span class="act-item">0 agent</span></div>
   <div class="chat-actions">
     <span class="chip-mini auto" onclick="typeof AutoMode!=='undefined'&&AutoMode.run()">Auto Mode</span>
     <span class="chip-mini" onclick="typeof AgentGraph!=='undefined'&&AgentGraph.run(document.getElementById('chat-input').value||'Improve project',['architect','frontend','reviewer'])">Multi-Agent</span>
     <span class="chip-mini" onclick="typeof RepoIndexer!=='undefined'&&State.projectId&&(RepoIndexer.build(State.projectId),toast('Repo indexed'))">Index</span>
-    <span class="chip-mini" onclick="PromptLib.open()">Prompt</span>
-    <span class="chip-mini" onclick="Preview.open()">Preview</span>
+    <span class="chip-mini" onclick="ChatSessions.newChat()">Yangi chat</span>
+    <span class="chip-mini" onclick="typeof PromptLib!=='undefined'&&PromptLib.open()">Prompt</span>
   </div>
   <div class="brain-panels">
     <div class="brain-card"><h4>AI Timeline</h4><div id="ai-timeline"><div class="tl-empty">Timeline bo'sh</div></div></div>
     <div class="brain-card"><h4>AI Insights</h4><div id="ai-insights"></div></div>
   </div>
   <div id="chat-messages" class="chat-messages"></div>
+  <div id="hidden-term"></div>
   <div class="chat-tools-bar">
     <div class="tool-chip active" onclick="AI.toggleTool(this,'code')"><span data-ic="code" data-ic-size="14"></span> Kod</div>
     <div class="tool-chip" onclick="typeof Deploy!=='undefined'&&Deploy.start()"><span data-ic="github" data-ic-size="14"></span> Push</div>
@@ -134,19 +161,15 @@
     <div class="tool-chip" onclick="typeof AutoMode!=='undefined'&&AutoMode.run()"><span data-ic="zap" data-ic-size="14"></span> Auto</div>
     <div class="tool-chip" onclick="App.openModelPicker()"><span data-ic="brain" data-ic-size="14"></span> <span id="model-label">Llama 3.3</span></div>
   </div>
-
   <div class="composer" id="chat-composer">
     <div id="attach-menu" class="attach-menu">
-      <button type="button" onclick="Composer.pickFile();Composer.closeMenu()"><span class="am-ico file">📄</span> Fayl qo‘shish</button>
-      <button type="button" onclick="Composer.pickImage();Composer.closeMenu()"><span class="am-ico img">🖼</span> Rasm qo‘shish</button>
-      <button type="button" onclick="typeof Voice!=='undefined'&&Voice.start();Composer.closeMenu()"><span class="am-ico voice">🎤</span> Ovozli kiritish</button>
+      <button type="button" onclick="typeof Composer!=='undefined'&&Composer.pickFile();ProUI.closeMenu()">📄 Fayl</button>
+      <button type="button" onclick="typeof Composer!=='undefined'&&Composer.pickImage();ProUI.closeMenu()">🖼 Rasm</button>
     </div>
-    <div id="composer-attach-chips" class="composer-attach-chips"></div>
     <div class="composer-bar">
-      <button type="button" class="comp-plus" id="comp-plus-btn" onclick="Composer.toggleMenu()" aria-label="Qo'shish">+</button>
-      <textarea id="chat-input" placeholder="Yozing… Auto Mode · @fayl · multi-agent" rows="1"
-        onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
-      <button type="button" class="composer-send" onclick="AI.send()" data-ic="send" data-ic-size="18" aria-label="Yuborish"></button>
+      <button type="button" class="comp-plus" id="comp-plus-btn" onclick="ProUI.toggleMenu()">+</button>
+      <textarea id="chat-input" placeholder="Yozing… Auto · @fayl · multi-agent" rows="1" onkeydown="AI.onKey(event)" oninput="AI.autoGrow(this)"></textarea>
+      <button type="button" class="composer-send" onclick="AI.send()" data-ic="send" data-ic-size="18"></button>
     </div>
   </div>
 </div>
@@ -154,7 +177,7 @@
 <div id="prompts" class="screen">
   <div class="chat-header"><span class="chat-title">Prompt kutubxonasi</span></div>
   <div class="scroll-area">
-    <div class="search-box"><span class="search-icon" data-ic="search" data-ic-size="16"></span><input id="prompts-search" type="text" placeholder="Qidirish..." oninput="PromptLib.render()"></div>
+    <div class="search-box"><span class="search-icon" data-ic="search" data-ic-size="16"></span><input id="prompts-search" type="text" placeholder="Qidirish..." oninput="typeof PromptLib!=='undefined'&&PromptLib.render()"></div>
     <div id="prompts-list"></div>
   </div>
 </div>
@@ -168,9 +191,6 @@
   <div class="chat-header">
     <span class="chat-menu" onclick="App.nav('ai')" data-ic="menu" data-ic-size="20"></span>
     <span class="chat-title">Preview</span>
-    <span class="chip-mini" onclick="Preview.setWidth('mobile')">Mobil</span>
-    <span class="chip-mini" onclick="Preview.setWidth('desktop')">Desktop</span>
-    <span class="chip-mini" onclick="Preview.refresh()">Yangilash</span>
   </div>
   <div id="preview-wrap" class="preview-wrap mobile"><iframe id="preview-frame" title="preview" sandbox="allow-scripts"></iframe></div>
 </div>
@@ -181,18 +201,12 @@
       <span class="chat-menu" onclick="App.nav('home')" data-ic="menu" data-ic-size="20"></span>
       <span class="chat-title">TG SMM AI</span><span class="sp-badge">Agency</span>
     </div>
-    <span class="chat-edit" onclick="SMMAI.clear()" data-ic="edit" data-ic-size="18"></span>
-  </div>
-  <div class="chat-actions">
-    <span class="chip-mini" onclick="document.getElementById('smm-input').value='Instagram Reel yoz: ';document.getElementById('smm-input').focus()">Reel</span>
-    <span class="chip-mini" onclick="document.getElementById('smm-input').value='Post yoz: ';document.getElementById('smm-input').focus()">Post</span>
-    <span class="chip-mini" onclick="document.getElementById('smm-input').value='Strategy: ';document.getElementById('smm-input').focus()">Strategy</span>
   </div>
   <div id="smm-messages" class="chat-messages"></div>
   <div class="composer">
     <div class="composer-bar">
-      <textarea id="smm-input" placeholder="Brend, post, Reel..." rows="1" onkeydown="SMMAI.onKey(event)"></textarea>
-      <button type="button" class="composer-send" onclick="SMMAI.send()" data-ic="send" data-ic-size="18"></button>
+      <textarea id="smm-input" placeholder="Brend, post, Reel..." rows="1" onkeydown="typeof SMMAI!=='undefined'&&SMMAI.onKey(event)"></textarea>
+      <button type="button" class="composer-send" onclick="typeof SMMAI!=='undefined'&&SMMAI.send()" data-ic="send" data-ic-size="18"></button>
     </div>
   </div>
 </div>
@@ -201,11 +215,6 @@
   <div class="chat-header"><span class="chat-title">Loyihalar</span><button class="notif-btn" onclick="Projects.newProject()" data-ic="plus" data-ic-size="18"></button></div>
   <div class="scroll-area">
     <div class="search-box"><span class="search-icon" data-ic="search" data-ic-size="16"></span><input type="text" placeholder="Qidirish..." oninput="Projects.search(this.value)"></div>
-    <div class="filter-tabs">
-      <div class="filter-tab active" onclick="Projects.filter('all',this)">Barchasi</div>
-      <div class="filter-tab" onclick="Projects.filter('recent',this)">So'nggi</div>
-      <div class="filter-tab" onclick="typeof SB!=='undefined'&&SB.pullProjects().then(function(p){toast((p&&p.length||0)+' cloud')})">Cloud</div>
-    </div>
     <div id="projects-tree"></div>
   </div>
 </div>
@@ -218,25 +227,21 @@
     <button onclick="Editor.aiEdit()" style="background:rgba(255,77,79,0.15);border:1px solid rgba(255,77,79,0.3);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px">AI</button>
   </div>
   <div class="code-view" id="code-view" style="padding:0;overflow:auto;flex:1"></div>
-  <div class="terminal-panel">
-    <div class="term-tabs"><div class="term-tab active">Terminal</div></div>
-    <div class="term-body" id="term-body"><div><span class="t-prompt">$ </span><span class="t-dim">Fayl oching</span></div></div>
-  </div>
 </div>
 
 <div id="agents" class="screen">
-  <div class="chat-header"><span class="chat-title">Agent OS</span><span class="chat-edit" onclick="Agents.runMaster()" data-ic="send" data-ic-size="18"></span></div>
+  <div class="chat-header"><span class="chat-title">Agent OS</span></div>
   <div class="scroll-area"><div class="agents-page">
     <div class="master-card" onclick="typeof AutoMode!=='undefined'?AutoMode.run():Agents.runMaster()"><div class="master-left"><h3>Auto Mode + Graph</h3><p>Architect → Frontend → Backend → Test → Review</p><span class="master-badge">100% AI</span></div><div class="orb master-orb"></div></div>
     <div class="agents-grid">
-      <div class="agent-card" onclick="Agents.run('planner')"><div class="ac-top"><div class="ac-icon orange" data-ic="spark"></div><div class="ac-sdot green"></div></div><div class="ac-name">Reja</div><div class="ac-desc">Planner</div></div>
-      <div class="agent-card" onclick="Agents.run('coder')"><div class="ac-top"><div class="ac-icon green" data-ic="code"></div><div class="ac-sdot green"></div></div><div class="ac-name">Kod</div><div class="ac-desc">Coder</div></div>
-      <div class="agent-card" onclick="Agents.run('backend')"><div class="ac-top"><div class="ac-icon blue" data-ic="shield"></div><div class="ac-sdot green"></div></div><div class="ac-name">Backend</div><div class="ac-desc">API</div></div>
-      <div class="agent-card" onclick="Agents.run('frontend')"><div class="ac-top"><div class="ac-icon purple" data-ic="phone"></div><div class="ac-sdot green"></div></div><div class="ac-name">Frontend</div><div class="ac-desc">UI</div></div>
-      <div class="agent-card" onclick="Agents.run('reviewer')"><div class="ac-top"><div class="ac-icon red" data-ic="search"></div><div class="ac-sdot green"></div></div><div class="ac-name">Review</div><div class="ac-desc">Tekshiruv</div></div>
-      <div class="agent-card" onclick="Agents.run('security')"><div class="ac-top"><div class="ac-icon red" data-ic="shield"></div><div class="ac-sdot green"></div></div><div class="ac-name">Xavfsizlik</div><div class="ac-desc">Audit</div></div>
-      <div class="agent-card" onclick="Agents.run('tester')"><div class="ac-top"><div class="ac-icon green" data-ic="check"></div><div class="ac-sdot green"></div></div><div class="ac-name">Test</div><div class="ac-desc">Testing</div></div>
-      <div class="agent-card" onclick="Agents.run('devops')"><div class="ac-top"><div class="ac-icon orange" data-ic="rocket"></div><div class="ac-sdot green"></div></div><div class="ac-name">DevOps</div><div class="ac-desc">Deploy</div></div>
+      <div class="agent-card" onclick="Agents.run('planner')"><div class="ac-top"><div class="ac-icon orange" data-ic="spark"></div></div><div class="ac-name">Reja</div></div>
+      <div class="agent-card" onclick="Agents.run('coder')"><div class="ac-top"><div class="ac-icon green" data-ic="code"></div></div><div class="ac-name">Kod</div></div>
+      <div class="agent-card" onclick="Agents.run('backend')"><div class="ac-top"><div class="ac-icon blue" data-ic="shield"></div></div><div class="ac-name">Backend</div></div>
+      <div class="agent-card" onclick="Agents.run('frontend')"><div class="ac-top"><div class="ac-icon purple" data-ic="phone"></div></div><div class="ac-name">Frontend</div></div>
+      <div class="agent-card" onclick="Agents.run('reviewer')"><div class="ac-top"><div class="ac-icon red" data-ic="search"></div></div><div class="ac-name">Review</div></div>
+      <div class="agent-card" onclick="Agents.run('security')"><div class="ac-top"><div class="ac-icon red" data-ic="shield"></div></div><div class="ac-name">Xavfsizlik</div></div>
+      <div class="agent-card" onclick="Agents.run('tester')"><div class="ac-top"><div class="ac-icon green" data-ic="check"></div></div><div class="ac-name">Test</div></div>
+      <div class="agent-card" onclick="Agents.run('devops')"><div class="ac-top"><div class="ac-icon orange" data-ic="rocket"></div></div><div class="ac-name">DevOps</div></div>
     </div>
   </div></div>
 </div>
@@ -247,9 +252,9 @@
     <div class="deploy-hero"><div class="orb deploy-orb"></div><button class="deploy-btn" onclick="Deploy.start()">Hozir joylashtirish</button></div>
     <div class="deploy-status">
       <div class="step-row"><div class="step-ico blue" data-ic="github"></div><div class="step-inf"><div class="step-n">GitHub</div></div><div class="step-dot gray" id="step-github"></div></div>
-      <div class="step-row"><div class="step-ico green" data-ic="code"></div><div class="step-inf"><div class="step-n">Build</div><div class="step-d" id="step-build-desc">Kutilmoqda</div></div><div class="step-dot gray" id="step-build"></div></div>
+      <div class="step-row"><div class="step-ico green" data-ic="code"></div><div class="step-inf"><div class="step-n">Build</div></div><div class="step-dot gray" id="step-build"></div></div>
       <div class="step-row"><div class="step-ico purple" data-ic="check"></div><div class="step-inf"><div class="step-n">Test</div></div><div class="step-dot gray" id="step-tests"></div></div>
-      <div class="step-row"><div class="step-ico orange" data-ic="rocket"></div><div class="step-inf"><div class="step-n">Deploy</div><div class="step-d" id="step-deploy-desc">Kutilmoqda</div></div><div class="step-dot gray" id="step-deploy"></div></div>
+      <div class="step-row"><div class="step-ico orange" data-ic="rocket"></div><div class="step-inf"><div class="step-n">Deploy</div></div><div class="step-dot gray" id="step-deploy"></div></div>
     </div>
     <div class="logs-box" id="deploy-logs"></div>
   </div>
@@ -259,10 +264,10 @@
   <div class="chat-header"><span class="chat-title">Sozlamalar</span></div>
   <div class="scroll-area settings-wrap">
     <div class="s-section"><div class="s-section-title">API</div><div class="s-group">
-      <div class="s-row" onclick="KeyVault.open()"><div class="s-ico red" data-ic="key" data-ic-size="18"></div><span class="s-label">Kalitlar + JSON test</span><span class="s-chevron">›</span></div>
-      <div class="s-row" onclick="KeyVault.open()"><div class="s-ico gray" data-ic="github" data-ic-size="18"></div><span class="s-label">GitHub</span><span id="gh-status" class="s-val">—</span></div>
-      <div class="s-row" onclick="KeyVault.open()"><div class="s-ico green" data-ic="shield" data-ic-size="18"></div><span class="s-label">Supabase</span><span id="sb-status" class="s-val">—</span></div>
-      <div class="s-row" onclick="KeyVault.open()"><div class="s-ico blue" data-ic="zap" data-ic-size="18"></div><span class="s-label">OpenRouter / Groq</span><span id="or-status" class="s-val">—</span></div>
+      <div class="s-row" onclick="typeof KeyVault!=='undefined'?KeyVault.open():Settings.openConnector('openrouter')"><div class="s-ico red" data-ic="key" data-ic-size="18"></div><span class="s-label">Kalitlar</span><span class="s-chevron">›</span></div>
+      <div class="s-row"><div class="s-ico gray" data-ic="github" data-ic-size="18"></div><span class="s-label">GitHub</span><span id="gh-status" class="s-val">—</span></div>
+      <div class="s-row"><div class="s-ico green" data-ic="shield" data-ic-size="18"></div><span class="s-label">Supabase</span><span id="sb-status" class="s-val">—</span></div>
+      <div class="s-row"><div class="s-ico blue" data-ic="zap" data-ic-size="18"></div><span class="s-label">OpenRouter / Groq</span><span id="or-status" class="s-val">—</span></div>
     </div></div>
   </div>
 </div>
@@ -270,7 +275,7 @@
 <nav class="nav">
   <div class="nav-item active" id="nav-home" onclick="App.nav('home')"><div class="nav-icon" data-ic="home" data-ic-size="22"></div><div class="nav-label">Bosh</div></div>
   <div class="nav-item" id="nav-ai" onclick="App.nav('ai')"><div class="nav-icon" data-ic="brain" data-ic-size="22"></div><div class="nav-label">Prime</div></div>
-  <div class="nav-item" id="nav-smm" onclick="SMMAI.open()"><div class="nav-icon" data-ic="phone" data-ic-size="22"></div><div class="nav-label">SMM</div></div>
+  <div class="nav-item" id="nav-smm" onclick="typeof SMMAI!=='undefined'&&SMMAI.open()"><div class="nav-icon" data-ic="phone" data-ic-size="22"></div><div class="nav-label">SMM</div></div>
   <div class="nav-item" id="nav-projects" onclick="App.nav('projects')"><div class="nav-icon" data-ic="folder" data-ic-size="22"></div><div class="nav-label">Loyiha</div></div>
   <div class="nav-item" id="nav-settings" onclick="App.nav('settings')"><div class="nav-icon" data-ic="settings" data-ic-size="22"></div><div class="nav-label">Sozlama</div></div>
 </nav>
@@ -285,52 +290,51 @@
 
 <script src="app.js"></script>
 <script src="brain.js"></script>
+<script src="pro-ui.js"></script>
 <script src="features.js"></script>
-<script src="sadiprime.js"></script>
-<script src="premium.js"></script>
-<script src="supabase.js"></script>
-<script src="product.js"></script>
-<script src="smm-brain.js"></script>
-<script src="coding-brain.js"></script>
-<script src="composer.js"></script>
-<script src="agent-os.js"></script>
 <script>
-if (typeof Composer !== 'undefined') {
-  Composer.toggleMenu = function () {
+window.ProUI = {
+  toggleHistory: function () {
+    var d = document.getElementById('drawer-history');
+    var s = document.getElementById('pro-scrim');
+    var open = !d.classList.contains('open');
+    this.closeDrawers();
+    if (open) { d.classList.add('open'); s.classList.add('open'); ChatSessions.render(); }
+  },
+  toggleProject: function () {
+    var d = document.getElementById('drawer-project');
+    var s = document.getElementById('pro-scrim');
+    var open = !d.classList.contains('open');
+    this.closeDrawers();
+    if (open) { d.classList.add('open'); s.classList.add('open'); ProjectInfo.render(); FileGen.show(State.pendingWrites||[]); }
+  },
+  closeDrawers: function () {
+    document.getElementById('drawer-history')?.classList.remove('open');
+    document.getElementById('drawer-project')?.classList.remove('open');
+    document.getElementById('pro-scrim')?.classList.remove('open');
+  },
+  toggleMenu: function () {
     var m = document.getElementById('attach-menu');
     var b = document.getElementById('comp-plus-btn');
     if (!m) return;
     var open = m.classList.toggle('open');
     if (b) b.classList.toggle('open', open);
-  };
-  Composer.closeMenu = function () {
-    var m = document.getElementById('attach-menu');
-    var b = document.getElementById('comp-plus-btn');
-    if (m) m.classList.remove('open');
-    if (b) b.classList.remove('open');
-  };
-  document.addEventListener('click', function (e) {
-    var m = document.getElementById('attach-menu');
-    var b = document.getElementById('comp-plus-btn');
-    if (!m || !m.classList.contains('open')) return;
-    if (m.contains(e.target) || (b && b.contains(e.target))) return;
-    Composer.closeMenu();
-  });
-}
-setTimeout(async function(){
-  if(typeof renderIcons==='function')renderIcons();
-  if(typeof KeyVault!=='undefined')KeyVault.refreshStatusUI();
-  if(typeof AI!=='undefined'&&AI.addWelcome)AI.addWelcome();
-  if(typeof Insights!=='undefined')Insights.render(State.projectId);
-  if(typeof TimelineUI!=='undefined')TimelineUI.render(State.projectId);
-  if(typeof SB!=='undefined'&&SB.ready()){
-    const r=await SB.test();
-    const el=document.getElementById('sb-status'),h=document.getElementById('sb-status-home'),b=document.getElementById('sb-bar');
-    if(el){el.textContent=r.ok?'Ulangan':'Sozla';el.className=r.ok?'s-connected':'s-val'}
-    if(h)h.textContent=r.ok?'ON':'OFF';
-    if(b)b.style.width=r.ok?'100%':'0%';
+  },
+  closeMenu: function () {
+    document.getElementById('attach-menu')?.classList.remove('open');
+    document.getElementById('comp-plus-btn')?.classList.remove('open');
   }
-},500);
+};
+setTimeout(async function () {
+  if (typeof renderIcons === 'function') renderIcons();
+  if (typeof KeyVault !== 'undefined') KeyVault.refreshStatusUI();
+  if (typeof AI !== 'undefined' && AI.addWelcome) AI.addWelcome();
+  if (typeof Insights !== 'undefined') Insights.render(State.projectId);
+  if (typeof TimelineUI !== 'undefined') TimelineUI.render(State.projectId);
+  if (typeof ChatSessions !== 'undefined') ChatSessions.render();
+  if (typeof ProjectInfo !== 'undefined') ProjectInfo.render();
+  if (typeof Settings !== 'undefined') Settings.refresh();
+}, 400);
 </script>
 </body>
 </html>
